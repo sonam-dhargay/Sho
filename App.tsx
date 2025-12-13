@@ -14,9 +14,16 @@ import { GoogleGenAI } from "@google/genai";
 import Peer, { DataConnection } from 'peerjs';
 
 // --- Configuration ---
-// Removed custom iceServers to rely on PeerJS defaults which are often more reliable for simple data
+// Enhanced PeerJS config with explicit STUN servers to ensure connectivity
 const PEER_CONFIG = {
-    debug: 1
+    debug: 2,
+    config: {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+    }
 };
 
 // --- Helpers for Serialization ---
@@ -1124,8 +1131,26 @@ const App: React.FC = () => {
   const setupHost = async () => {
       setJoinError(null);
       setHasOpponentJoined(false);
-      const peer = new Peer(PEER_CONFIG);
-      peer.on('open', (id) => { setGameId(id); addLog(`ID: ${id}. Waiting...`, 'action'); });
+      setGameId(''); 
+      
+      // Explicitly pass undefined as ID to let PeerJS generate one.
+      // Pass the config as the second argument.
+      const peer = new Peer(undefined, PEER_CONFIG);
+      
+      peer.on('open', (id) => { 
+          setGameId(id); 
+          addLog(`ID Generated: ${id}. Waiting...`, 'action'); 
+      });
+
+      peer.on('error', (err) => {
+          console.error("PeerJS Host Error:", err);
+          setJoinError(`Connection Failed: ${err.type}`);
+          // If in waiting screen, show alert
+          if (gameMode === GameMode.ONLINE_HOST && !hasOpponentJoined) {
+              addLog(`Error: ${err.type}`, 'alert');
+          }
+      });
+
       peer.on('connection', (conn) => {
           connRef.current = conn;
           conn.on('data', (data: any) => {
@@ -1156,11 +1181,29 @@ const App: React.FC = () => {
   const joinGame = async () => {
       if (!joinId) return;
       setIsJoining(true); setJoinError(null);
-      const peer = new Peer(PEER_CONFIG);
+      
+      const peer = new Peer(undefined, PEER_CONFIG);
+      
+      peer.on('error', (err) => {
+          console.error("PeerJS Join Error:", err);
+          setJoinError(`Join Failed: ${err.type}`);
+          setIsJoining(false);
+      });
+
       peer.on('open', (id) => {
           const conn = peer.connect(joinId);
           connRef.current = conn;
-          setTimeout(() => { if (!conn.open) { setJoinError("Connection timed out. Check ID."); setIsJoining(false); } }, 10000);
+          
+          // Connection timeout failsafe
+          setTimeout(() => { 
+              if (!conn.open) { 
+                  if (isJoining) { // Only if still trying to join
+                      setJoinError("Connection timed out. Check ID."); 
+                      setIsJoining(false); 
+                  }
+              } 
+          }, 10000);
+
           conn.on('open', () => {
             conn.send({ 
                 type: 'JOIN_REQ', 
@@ -1171,6 +1214,7 @@ const App: React.FC = () => {
             setMyPlayerIndex(1); 
             setIsJoining(false);
           });
+          
           conn.on('data', (data: any) => {
               if (data.type === 'SYNC') {
                   const p = data.payload;
@@ -1181,9 +1225,9 @@ const App: React.FC = () => {
                   if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode);
               }
           });
+
           conn.on('close', () => { 
             setPeerConnected(false); 
-            // Don't quit, just show status
             addLog("Connection lost.", 'alert'); 
           });
       });
@@ -1325,13 +1369,27 @@ const App: React.FC = () => {
 
         {showWaitingForOpponent && (
             <div className="fixed inset-0 z-50 bg-stone-950 flex flex-col items-center justify-center text-amber-500 p-4 text-center">
-                <h2 className="text-2xl md:text-3xl mb-4">Game ID: <span className="font-mono text-white bg-stone-800 p-2 rounded select-all block mt-2 md:inline md:mt-0">{gameId || '...'}</span></h2>
+                <h2 className="text-2xl md:text-3xl mb-4">Game ID: <span className="font-mono text-white bg-stone-800 p-2 rounded select-all block mt-2 md:inline md:mt-0">{gameId || 'Generating...'}</span></h2>
                 <p>Waiting for opponent to join...</p>
                 <div className="mt-8 flex gap-4 items-center">
                     <div className="w-3 h-3 bg-amber-500 rounded-full animate-ping"></div>
                     <span className="text-stone-400 text-sm">Share this ID with a friend</span>
                 </div>
-                <button onClick={() => setGameMode(null)} className="mt-8 text-stone-500 underline hover:text-stone-300">Cancel</button>
+                
+                {joinError && (
+                    <div className="mt-6 p-4 bg-red-900/30 border border-red-500 text-red-200 rounded max-w-sm">
+                        <p className="font-bold mb-1">Connection Error</p>
+                        <p className="text-xs mb-3 font-mono">{joinError}</p>
+                        <div className="flex justify-center gap-2">
+                            <button onClick={() => setGameMode(null)} className="text-xs bg-stone-800 hover:bg-stone-700 px-3 py-1 rounded">Back</button>
+                            <button onClick={() => setupHost()} className="text-xs bg-amber-700 hover:bg-amber-600 px-3 py-1 rounded font-bold">Retry</button>
+                        </div>
+                    </div>
+                )}
+                
+                {!joinError && (
+                    <button onClick={() => setGameMode(null)} className="mt-8 text-stone-500 underline hover:text-stone-300">Cancel</button>
+                )}
             </div>
         )}
 
