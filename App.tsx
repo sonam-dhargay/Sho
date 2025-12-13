@@ -1350,10 +1350,10 @@ const App: React.FC = () => {
                 )}
 
                 {/* Sidebar - Controls */}
-                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[52dvh] md:h-full md:max-h-full order-1 overflow-hidden">
+                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[60dvh] md:h-full md:max-h-full order-1 overflow-hidden">
                     
-                    {/* Fixed Top Section (Controls) - Flex shrink allow controls to push down log if needed */}
-                    <div className="flex-shrink-1 p-2 md:p-6 flex flex-col gap-1 md:gap-4 overflow-y-auto no-scrollbar min-h-0">
+                    {/* Controls Wrapper - Use flex-1 to take available space, allow scroll */}
+                    <div className="flex-1 p-2 md:p-6 flex flex-col gap-2 md:gap-4 overflow-y-auto no-scrollbar">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4 flex-shrink-0">
                             <div onClick={() => setGameMode(null)} className="cursor-pointer flex items-center gap-2 group">
                                 <ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1>
@@ -1374,37 +1374,39 @@ const App: React.FC = () => {
                             ))}
                         </div>
 
-                        {phase === GamePhase.GAME_OVER ? (
-                            <div className="text-center p-4 md:p-8 bg-stone-800/50 rounded-xl border border-amber-500/50"><h2 className="text-2xl md:text-4xl text-amber-400 mb-2">Victory!</h2><p className="text-white mb-4 md:mb-6">{winner?.name} won!</p><button onClick={() => initializeGame()} className="bg-amber-600 text-white px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-sm md:text-base">New Game</button></div>
-                        ) : (
-                            <>
-                                <div className={!canInteract() ? "opacity-50 pointer-events-none grayscale" : ""}><DiceArea currentRoll={lastRoll} onRoll={requestRoll} canRoll={phase === GamePhase.ROLLING && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={flexiblePool} /></div>
-                                
-                                {showSkipButton ? (
-                                    <button 
-                                        onClick={requestSkip}
-                                        className="mt-1 md:mt-2 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 px-4 py-2 md:py-3 rounded-xl font-cinzel font-bold flex items-center justify-center gap-2 animate-pulse text-sm md:text-base"
-                                    >
-                                        <span>⏭️</span> SKIP TURN
-                                    </button>
-                                ) : (
-                                    <div onClick={() => { 
-                                        if (canInteract() && phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0) {
-                                            SFX.playSelect();
-                                            setSelectedSourceIndex(0); 
-                                            if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4);
-                                        }
-                                    }} className={`mt-1 md:mt-2 p-2 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer flex-shrink-0 ${phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0 && canInteract() ? (selectedSourceIndex === 0 ? 'border-green-500 bg-stone-800' : 'border-stone-700 hover:border-stone-500') : 'border-stone-800 opacity-50'}`}>
-                                        <div className="flex items-center gap-3"><div className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-stone-600 flex items-center justify-center font-bold text-stone-500 text-sm md:text-base">0</div><div className="flex flex-col"><span className="font-bold text-stone-200 text-sm md:text-base">Hand</span><span className="text-[10px] md:text-xs text-stone-500">{currentPlayer.coinsInHand} coins</span></div></div>
-                                        {selectedSourceIndex === 0 && <span className="text-green-500 text-xs md:text-sm font-bold">SELECTED</span>}
-                                    </div>
-                                )}
-                            </>
-                        )}
+                        <div className="flex-shrink-0">
+                            {phase === GamePhase.GAME_OVER ? (
+                                <div className="text-center p-4 md:p-8 bg-stone-800/50 rounded-xl border border-amber-500/50"><h2 className="text-2xl md:text-4xl text-amber-400 mb-2">Victory!</h2><p className="text-white mb-4 md:mb-6">{winner?.name} won!</p><button onClick={() => initializeGame()} className="bg-amber-600 text-white px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-sm md:text-base">New Game</button></div>
+                            ) : (
+                                <>
+                                    <div className={!canInteract() ? "opacity-50 pointer-events-none grayscale" : ""}><DiceArea currentRoll={lastRoll} onRoll={requestRoll} canRoll={phase === GamePhase.ROLLING && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={flexiblePool} /></div>
+                                    
+                                    {showSkipButton ? (
+                                        <button 
+                                            onClick={requestSkip}
+                                            className="mt-1 md:mt-2 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 px-4 py-2 md:py-3 rounded-xl font-cinzel font-bold flex items-center justify-center gap-2 animate-pulse text-sm md:text-base"
+                                        >
+                                            <span>⏭️</span> SKIP TURN
+                                        </button>
+                                    ) : (
+                                        <div onClick={() => { 
+                                            if (canInteract() && phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0) {
+                                                SFX.playSelect();
+                                                setSelectedSourceIndex(0); 
+                                                if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4);
+                                            }
+                                        }} className={`mt-1 md:mt-2 p-2 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer flex-shrink-0 ${phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0 && canInteract() ? (selectedSourceIndex === 0 ? 'border-green-500 bg-stone-800' : 'border-stone-700 hover:border-stone-500') : 'border-stone-800 opacity-50'}`}>
+                                            <div className="flex items-center gap-3"><div className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-stone-600 flex items-center justify-center font-bold text-stone-500 text-sm md:text-base">0</div><div className="flex flex-col"><span className="font-bold text-stone-200 text-sm md:text-base">Hand</span><span className="text-[10px] md:text-xs text-stone-500">{currentPlayer.coinsInHand} coins</span></div></div>
+                                            {selectedSourceIndex === 0 && <span className="text-green-500 text-xs md:text-sm font-bold">SELECTED</span>}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Flexible Bottom Section (Logs) - Collapsible/Shrinkable */}
-                    <div className="flex-grow-0 md:flex-grow min-h-0 px-2 pb-2 md:px-6 md:pb-6 flex flex-col h-24 md:h-auto overflow-hidden">
+                    {/* Logs - Fixed small height on mobile */}
+                    <div className="flex-none h-12 md:h-auto md:flex-grow md:min-h-0 px-2 pb-2 md:px-6 md:pb-6 flex flex-col overflow-hidden bg-stone-950 border-t border-stone-800 md:border-t-0">
                          <div className="flex-grow bg-black/40 rounded-lg border border-stone-800/50 p-1.5 md:p-3 overflow-y-auto font-mono text-[10px] md:text-xs">
                              {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400' : 'text-stone-500'}`}>{log.message}</div>)}
                          </div>

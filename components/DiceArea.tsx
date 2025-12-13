@@ -20,7 +20,7 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
   flexiblePool 
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-2 md:p-6 bg-stone-800 rounded-xl border border-stone-600 shadow-xl transition-all duration-300">
+    <div className="flex flex-col items-center justify-center p-1 md:p-6 bg-stone-800 rounded-xl border border-stone-600 shadow-xl transition-all duration-300">
         
         {/* Status / Values */}
         <div className="space-y-1 md:space-y-4 w-full flex flex-col items-center">
@@ -53,4 +53,33 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
                 </div>
             )}
 
-            {/* Empty State / Prompt */}
+            {/* Empty State / Prompt - Hidden on Mobile */}
+            {!waitingForPaRa && flexiblePool === null && pendingValues.length === 0 && (
+                 <div className="hidden md:block text-stone-500 text-[10px] md:text-sm italic py-0.5 md:py-2">
+                     {canRoll ? "Ready to roll..." : "Waiting..."}
+                 </div>
+            )}
+
+            {/* Action Button */}
+            <button
+                onClick={onRoll}
+                disabled={!canRoll && !waitingForPaRa}
+                className={`
+                    w-full px-4 py-2 md:px-6 md:py-4 rounded-lg font-cinzel font-bold text-base md:text-xl transition-all transform tracking-wider
+                    ${(canRoll || waitingForPaRa)
+                        ? 'bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white shadow-lg hover:scale-[1.02] active:scale-95 border border-amber-500/20' 
+                        : 'bg-stone-700 text-stone-500 cursor-not-allowed border border-stone-600'}
+                    ${waitingForPaRa ? 'animate-bounce border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]' : ''}
+                `}
+            >
+                {waitingForPaRa 
+                    ? "ROLL BONUS!" 
+                    : canRoll 
+                        ? "ROLL DICE" 
+                        : "SELECT MOVE"
+                }
+            </button>
+        </div>
+    </div>
+  );
+};
