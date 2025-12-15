@@ -522,6 +522,14 @@ const App: React.FC = () => {
     const mySettings = { name: playerName || 'Host', color: selectedColor };
     let opponentSettings = p2Config || { name: 'Player 2', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6' };
     
+    // START CHANGE: Handle Online Color Collision
+    if (p2Config && p2Config.color === mySettings.color) {
+         const alternativeColor = COLOR_PALETTE.find(c => c.hex !== mySettings.color)?.hex || '#3b82f6';
+         opponentSettings = { ...p2Config, color: alternativeColor };
+         addLog(`Color conflict resolved. Opponent set to ${COLOR_PALETTE.find(c => c.hex === alternativeColor)?.name || 'Blue'}.`, 'info');
+    }
+    // END CHANGE
+
     // For AI Mode override
     if ((gameMode === GameMode.AI || isTutorial) && !p2Config) {
        opponentSettings = { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6' };
@@ -1273,7 +1281,7 @@ const App: React.FC = () => {
   // Determine which screen to show
   const showLobby = !gameMode;
   const showWaitingForOpponent = gameMode === GameMode.ONLINE_HOST && !hasOpponentJoined;
-  const showGame = gameMode && (gameMode === GameMode.LOCAL || gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL || (gameMode !== GameMode.LOCAL && (hasOpponentJoined || gameMode === GameMode.ONLINE_GUEST)));
+  const showGame = gameMode === GameMode.LOCAL || gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL || gameMode === GameMode.ONLINE_GUEST || (gameMode === GameMode.ONLINE_HOST && hasOpponentJoined);
 
   const showSkipButton = canInteract() && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && currentValidMoves.length === 0;
 
@@ -1343,8 +1351,9 @@ const App: React.FC = () => {
                       <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">🤖</div><h3 className="text-xl md:text-2xl font-bold text-stone-200">Vs AI</h3>
                       <p className="text-xs text-stone-500 mt-2">Vs Gemini AI</p>
                   </div>
-                  <div className="bg-stone-900 border border-stone-800 p-6 md:p-8 rounded-xl hover:border-amber-600 text-center transition-all">
-                      <div className="text-4xl mb-4">🌍</div><h3 className="text-xl md:text-2xl font-bold mb-4 text-stone-200">Online</h3>
+                  <div className="bg-stone-900 border border-stone-800 p-6 md:p-8 rounded-xl hover:border-amber-600 text-center transition-all relative">
+                      <div className="text-4xl mb-4">🌍</div><h3 className="text-xl md:text-2xl font-bold mb-2 text-stone-200">Online</h3>
+                      <p className="text-xs text-stone-500 mb-4 h-8">One player Hosts, shares the ID, and the other Joins.</p>
                       <button onClick={setupHost} className="w-full bg-amber-700 hover:bg-amber-600 text-white py-2 rounded mb-2 font-bold transition-colors text-sm">HOST</button>
                       <div className="flex gap-2">
                           <input type="text" placeholder="Game ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-sm" value={joinId} onChange={e => setJoinId(e.target.value)} />
@@ -1369,11 +1378,24 @@ const App: React.FC = () => {
 
         {showWaitingForOpponent && (
             <div className="fixed inset-0 z-50 bg-stone-950 flex flex-col items-center justify-center text-amber-500 p-4 text-center">
-                <h2 className="text-2xl md:text-3xl mb-4">Game ID: <span className="font-mono text-white bg-stone-800 p-2 rounded select-all block mt-2 md:inline md:mt-0">{gameId || 'Generating...'}</span></h2>
-                <p>Waiting for opponent to join...</p>
+                <h2 className="text-2xl md:text-3xl mb-4">Game ID</h2>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                    <span className="font-mono text-white bg-stone-800 p-3 rounded text-xl select-all">{gameId || 'Generating...'}</span>
+                    <button onClick={() => navigator.clipboard.writeText(gameId)} className="bg-stone-700 hover:bg-stone-600 p-3 rounded text-white" title="Copy ID">📋</button>
+                </div>
+                
+                <div className="mt-8 p-4 bg-amber-900/20 border border-amber-700/30 rounded-lg max-w-md w-full">
+                    <h3 className="font-bold text-amber-500 mb-2">Instructions</h3>
+                    <ol className="text-left text-stone-400 text-sm list-decimal pl-5 space-y-2">
+                        <li>Copy the <strong>Game ID</strong> above.</li>
+                        <li>Send it to your friend (via chat, message, etc.).</li>
+                        <li>Wait for them to enter it in the "Join" box on their device.</li>
+                    </ol>
+                </div>
+
                 <div className="mt-8 flex gap-4 items-center">
                     <div className="w-3 h-3 bg-amber-500 rounded-full animate-ping"></div>
-                    <span className="text-stone-400 text-sm">Share this ID with a friend</span>
+                    <span className="text-stone-400 text-sm">Waiting for connection...</span>
                 </div>
                 
                 {joinError && (
@@ -1426,7 +1448,12 @@ const App: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2 md:gap-3 flex-shrink-0">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`p-1.5 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
-                                    <h3 className="font-bold font-serif truncate text-xs md:text-base" style={{ color: p.colorHex }}>{p.name}</h3>
+                                    <h3 className="font-bold font-serif truncate text-xs md:text-base" style={{ color: p.colorHex }}>
+                                        {p.name}
+                                        {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && i === myPlayerIndex && (
+                                            <span className="text-stone-500 text-xs ml-2">(You)</span>
+                                        )}
+                                    </h3>
                                     <div className="flex justify-between text-[10px] md:text-xs text-stone-400 mt-0.5 md:mt-2"><span>In: {p.coinsInHand}</span><span>Out: {p.coinsFinished}</span></div>
                                 </div>
                             ))}
