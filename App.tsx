@@ -1504,7 +1504,11 @@ const App: React.FC = () => {
                                             )}
                                         </h3>
                                     </div>
-                                    <div className="flex justify-between text-[10px] md:text-xs text-stone-400 mt-0.5 md:mt-2"><span>In: {p.coinsInHand}</span><span>Out: {p.coinsFinished}</span></div>
+                                    <div className="flex justify-between text-[10px] md:text-xs text-stone-400 mt-0.5 md:mt-2">
+                                        <div className="flex flex-col items-center"><span className="text-[9px] uppercase opacity-70">Hand</span><span className="font-bold">{p.coinsInHand}</span></div>
+                                        <div className="flex flex-col items-center"><span className="text-[9px] uppercase opacity-70">Board</span><span className="font-bold text-amber-500">{COINS_PER_PLAYER - p.coinsInHand - p.coinsFinished}</span></div>
+                                        <div className="flex flex-col items-center"><span className="text-[9px] uppercase opacity-70">Done</span><span className="font-bold text-green-500">{p.coinsFinished}</span></div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
