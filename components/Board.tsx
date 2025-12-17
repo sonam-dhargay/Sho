@@ -1,7 +1,8 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll } from '../types';
-import { CENTER_X, CENTER_Y, TOTAL_SHELLS } from '../constants';
+// Add COINS_PER_PLAYER to imports
+import { CENTER_X, CENTER_Y, TOTAL_SHELLS, COINS_PER_PLAYER } from '../constants';
 import * as d3 from 'd3';
 
 interface BoardProps {
@@ -36,14 +37,6 @@ const CowrieShell: React.FC<{ angle: number; isTarget: boolean }> = ({ angle, is
             <stop offset="60%" stopColor="#e7e5e4" />
             <stop offset="100%" stopColor="#a8a29e" />
           </radialGradient>
-          <filter id="inset-shadow">
-            <feOffset dx="0" dy="2" />
-            <feGaussianBlur stdDeviation="2" result="offset-blur" />
-            <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
-            <feFlood floodColor="black" floodOpacity="0.4" result="color" />
-            <feComposite operator="in" in="color" in2="inverse" result="shadow" />
-            <feComposite operator="over" in="shadow" in2="SourceGraphic" />
-          </filter>
         </defs>
         
         <ellipse cx="50" cy="65" rx="45" ry="60" fill="url(#shellBody)" stroke="#78716c" strokeWidth="1" />
@@ -60,8 +53,6 @@ const CowrieShell: React.FC<{ angle: number; isTarget: boolean }> = ({ angle, is
            <line x1="53" y1="75" x2="60" y2="75" />
            <line x1="52" y1="90" x2="58" y2="90" />
         </g>
-        <circle cx="30" cy="40" r="1.5" fill="#a8a29e" opacity="0.6" />
-        <circle cx="70" cy="80" r="2" fill="#a8a29e" opacity="0.6" />
       </svg>
     </div>
   );
@@ -95,28 +86,24 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
             <div className="absolute w-5 h-5 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
         </>
       )}
-      
-      {/* Specular Highlight */}
       <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-20 rounded-full blur-[1px] pointer-events-none"></div>
     </div>
   );
 };
 
 const BoardDie: React.FC<{ value: number; x: number; y: number; rotation: number; isRolling: boolean }> = ({ value, x, y, rotation, isRolling }) => {
-    // Internal state for "settling" animation
     const [animState, setAnimState] = useState<'initial' | 'settled'>('initial');
     const randomSpinOffset = useRef(Math.random() * 360 - 180).current;
 
     useEffect(() => {
         if (!isRolling) {
-            // Start at 'initial' (center), then immediately transition to 'settled'
             setAnimState('initial');
             const timer = requestAnimationFrame(() => {
                  setAnimState('settled');
             });
             return () => cancelAnimationFrame(timer);
         }
-    }, [isRolling, x, y, rotation]); // Re-run when landing coords change
+    }, [isRolling, x, y, rotation]);
 
     const dots: number[][] = [];
     if (value % 2 !== 0) dots.push([1, 1]);
@@ -125,12 +112,10 @@ const BoardDie: React.FC<{ value: number; x: number; y: number; rotation: number
     if (value === 6) { dots.push([1, 0], [1, 2]); }
     
     let style: React.CSSProperties = {};
-
     if (isRolling) {
         style = {}; 
     } else {
         const isSettled = animState === 'settled';
-        
         const currentX = isSettled ? x : 0;
         const currentY = isSettled ? y : 0;
         const currentRot = isSettled ? rotation : (rotation + randomSpinOffset);
@@ -145,28 +130,16 @@ const BoardDie: React.FC<{ value: number; x: number; y: number; rotation: number
     }
 
     return (
-        <div 
-            className={`
-                absolute w-10 h-10 bg-amber-100 rounded-md shadow-lg border border-amber-300 flex overflow-hidden
-                ${isRolling ? 'animate-bounce' : ''}
-            `}
-            style={style}
-        >
+        <div className={`absolute w-10 h-10 bg-amber-100 rounded-md shadow-lg border border-amber-300 flex overflow-hidden ${isRolling ? 'animate-bounce' : ''}`} style={style}>
              {dots.map(([r, c], i) => {
-                 // Paint Ace (1) red, and make it slightly larger for emphasis, common in Asian dice.
                  const isAce = value === 1; 
                  const dotColor = isAce ? 'bg-red-600' : 'bg-black';
                  const dotSize = isAce ? 'w-3 h-3' : 'w-2 h-2';
-
                  return (
                     <div 
                         key={i} 
                         className={`absolute ${dotColor} rounded-full ${dotSize}`}
-                        style={{
-                            top: `${r * 33 + 17}%`,
-                            left: `${c * 33 + 17}%`,
-                            transform: 'translate(-50%, -50%)'
-                        }}
+                        style={{ top: `${r * 33 + 17}%`, left: `${c * 33 + 17}%`, transform: 'translate(-50%, -50%)' }}
                     />
                  );
              })}
@@ -174,46 +147,19 @@ const BoardDie: React.FC<{ value: number; x: number; y: number; rotation: number
     );
 };
 
-
-// --- Helper: Pseudo Random ---
 const pseudoRandom = (seed: number) => {
     const x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
 };
 
 export const Board: React.FC<BoardProps> = ({ 
-  boardState, 
-  players, 
-  validMoves, 
-  onSelectMove, 
-  currentPlayer,
-  turnPhase,
-  onShellClick,
-  selectedSource,
-  lastMove,
-  currentRoll,
-  isRolling,
-  onInvalidMoveAttempt
+  boardState, players, validMoves, onSelectMove, currentPlayer, turnPhase, onShellClick, selectedSource, lastMove, currentRoll, isRolling, onInvalidMoveAttempt
 }) => {
-  const [dragState, setDragState] = useState<{
-    isDragging: boolean;
-    sourceIndex: number | null;
-    x: number;
-    y: number;
-  }>({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
-
+  const [dragState, setDragState] = useState<{ isDragging: boolean; sourceIndex: number | null; x: number; y: number; }>({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
   const [finishingParticles, setFinishingParticles] = useState<{id: number, x: number, y: number, color: string, avatar?: string}[]>([]);
-  const [stackingAnim, setStackingAnim] = useState<{
-    id: number, 
-    startX: number, 
-    startY: number, 
-    endX: number, 
-    endY: number, 
-    color: string,
-    avatar?: string
-  } | null>(null);
-
+  const [stackingAnim, setStackingAnim] = useState<{ id: number, startX: number, startY: number, endX: number, endY: number, color: string, avatar?: string } | null>(null);
   const [shakeShellId, setShakeShellId] = useState<number | null>(null);
+  const [blockedFeedback, setBlockedFeedback] = useState<{ shellId: number, message: string, id: number } | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const lastAnimatedMoveId = useRef<number | null>(null);
@@ -230,155 +176,106 @@ export const Board: React.FC<BoardProps> = ({
       return p ? p.avatar : undefined;
   };
 
-  // --- Organic Layout Calculation ---
   const shells = useMemo(() => {
     return Array.from({ length: TOTAL_SHELLS }, (_, i) => i + 1).map(idx => {
       const t = idx / TOTAL_SHELLS;
-      
       const baseAngle = t * Math.PI * 4.5 + 2.5; 
       const baseRadius = 120 + (t * 260); 
-
       const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.3; 
       const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 30; 
-      
       const angle = baseAngle + jitterAngle;
       const radius = baseRadius + jitterRadius;
-
       const x = CENTER_X + radius * Math.cos(angle);
       const y = CENTER_Y + radius * Math.sin(angle);
-      
       const nextT = (idx + 1) / TOTAL_SHELLS;
       const nextAngle = nextT * Math.PI * 4.5 + 2.5;
       const nextRadius = 120 + (nextT * 260);
       const nextX = CENTER_X + nextRadius * Math.cos(nextAngle);
       const nextY = CENTER_Y + nextRadius * Math.sin(nextAngle);
-      
       const tangentAngle = Math.atan2(nextY - y, nextX - x);
       const rotationJitter = (pseudoRandom(idx * 33.3) - 0.5) * 0.5;
-
-      return { 
-        id: idx, 
-        x, 
-        y, 
-        angle: tangentAngle + rotationJitter,
-        data: boardState.get(idx) 
-      };
+      return { id: idx, x, y, angle: tangentAngle + rotationJitter, data: boardState.get(idx) };
     });
   }, [boardState]);
 
-  // --- End Button Position Calculation ---
   const endBtnPos = useMemo(() => {
      if (shells.length === 0) return { x: 700, y: 700 };
-     
      const last = shells[shells.length - 1];
-     // Extend outwards from the last shell by ~90px in the direction of the spiral tangent
      const dist = 90;
      const x = last.x + Math.cos(last.angle) * dist;
      const y = last.y + Math.sin(last.angle) * dist;
-     
      return { x, y };
   }, [shells]);
 
-  // --- Move Animation Trigger (Stacking/Throwing) ---
   useEffect(() => {
     if (lastMove && lastMove.type !== MoveResultType.FINISH) {
-        // ID Check: If no ID is present, we skip animation to avoid bugs.
-        // If ID matches last animated ID, we skip to avoid replay.
         if (!lastMove.id) return;
         if (lastMove.id === lastAnimatedMoveId.current) return;
-        
         lastAnimatedMoveId.current = lastMove.id;
-
-        let startX = 0;
-        let startY = 0;
-        let endX = 0;
-        let endY = 0;
-
+        let startX = 0, startY = 0, endX = 0, endY = 0;
         if (lastMove.sourceIndex === 0) {
-            startX = 100;
-            startY = 750;
+            startX = 100; startY = 750;
         } else {
             const sourceShell = shells.find(s => s.id === lastMove.sourceIndex);
-            if (sourceShell) {
-                startX = sourceShell.x;
-                startY = sourceShell.y;
-            }
+            if (sourceShell) { startX = sourceShell.x; startY = sourceShell.y; }
         }
-
         const targetShell = shells.find(s => s.id === lastMove.targetIndex);
-        if (targetShell) {
-            endX = targetShell.x;
-            endY = targetShell.y;
-        }
-
+        if (targetShell) { endX = targetShell.x; endY = targetShell.y; }
         if ((startX || startY) && (endX || endY)) {
              const movedShell = boardState.get(lastMove.targetIndex);
              const moverId = movedShell?.owner || currentPlayer; 
              const moverColor = getPlayerColor(moverId);
              const moverAvatar = getPlayerAvatar(moverId);
-
-             setStackingAnim({
-                 id: Date.now(),
-                 startX, startY, endX, endY,
-                 color: moverColor,
-                 avatar: moverAvatar
-             });
-
-             const timer = setTimeout(() => {
-                 setStackingAnim(null);
-             }, 600); 
+             setStackingAnim({ id: Date.now(), startX, startY, endX, endY, color: moverColor, avatar: moverAvatar });
+             const timer = setTimeout(() => { setStackingAnim(null); }, 600); 
              return () => clearTimeout(timer);
         }
     }
   }, [lastMove, shells, boardState, currentPlayer, players]);
 
-
-  // --- Finish Animation Trigger ---
   useEffect(() => {
     if (lastMove && lastMove.type === MoveResultType.FINISH) {
         if (!lastMove.id) return;
         if (lastMove.id === lastAnimatedMoveId.current) return;
-        
         lastAnimatedMoveId.current = lastMove.id;
-
         const sourceShell = shells.find(s => s.id === lastMove.sourceIndex);
         if (sourceShell) {
             const pColor = getPlayerColor(currentPlayer);
             const pAvatar = getPlayerAvatar(currentPlayer);
-            const particles = Array.from({ length: 5 }).map((_, i) => ({
-                id: Date.now() + i,
-                x: sourceShell.x,
-                y: sourceShell.y,
-                color: pColor,
-                avatar: pAvatar
-            }));
-            
+            const particles = Array.from({ length: 5 }).map((_, i) => ({ id: Date.now() + i, x: sourceShell.x, y: sourceShell.y, color: pColor, avatar: pAvatar }));
             setFinishingParticles(particles);
-
-            const timer = setTimeout(() => {
-                setFinishingParticles([]);
-            }, 2000);
+            const timer = setTimeout(() => { setFinishingParticles([]); }, 2000);
             return () => clearTimeout(timer);
         }
     }
   }, [lastMove, shells, currentPlayer, players]);
 
+  const triggerBlockedFeedback = (targetId: number, sourceIdx: number) => {
+    setShakeShellId(targetId);
+    
+    // Determine the reason for blocking
+    const targetShell = boardState.get(targetId);
+    let msg = "BLOCKED";
+    if (targetShell?.owner && targetShell.owner !== currentPlayer) {
+        const sourceShell = sourceIdx === 0 ? null : boardState.get(sourceIdx);
+        // Uses COINS_PER_PLAYER imported from constants.ts
+        let moverSize = sourceIdx === 0 ? (players.find(p => p.id === currentPlayer)?.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (sourceShell?.stackSize || 1);
+        if (targetShell.stackSize > moverSize) msg = "TOO BIG";
+    }
 
-  // --- Drag and Drop Handlers ---
+    setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
+    setTimeout(() => setShakeShellId(null), 400);
+    setTimeout(() => setBlockedFeedback(null), 1200);
+    onInvalidMoveAttempt?.(sourceIdx, targetId);
+  };
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, index: number) => {
       if (turnPhase !== 'MOVING') return;
-
-      // If this shell is a valid move target for the CURRENT selection, let the click
-      // bubble to the generic onClick handler to execute the move instead of selecting it.
       const isTarget = validMoves.some(m => m.targetIndex === index);
       if (isTarget) return;
-
       const shell = boardState.get(index);
       if (!shell || shell.owner !== currentPlayer) return;
-
       e.preventDefault(); 
-      
       let clientX, clientY;
       if ('touches' in e) {
           clientX = e.touches[0].clientX;
@@ -387,97 +284,50 @@ export const Board: React.FC<BoardProps> = ({
           clientX = (e as React.MouseEvent).clientX;
           clientY = (e as React.MouseEvent).clientY;
       }
-
-      setDragState({
-          isDragging: true,
-          sourceIndex: index,
-          x: clientX,
-          y: clientY
-      });
-
+      setDragState({ isDragging: true, sourceIndex: index, x: clientX, y: clientY });
       if (onShellClick) onShellClick(index);
   };
 
   useEffect(() => {
       const handleMouseMove = (e: MouseEvent | TouchEvent) => {
           if (!dragState.isDragging) return;
-          
           let clientX, clientY;
-          if ('touches' in e) {
-              clientX = e.touches[0].clientX;
-              clientY = e.touches[0].clientY;
-          } else {
-              clientX = (e as MouseEvent).clientX;
-              clientY = (e as MouseEvent).clientY;
-          }
-          
+          if ('touches' in e) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; } 
+          else { clientX = (e as MouseEvent).clientX; clientY = (e as MouseEvent).clientY; }
           setDragState(prev => ({ ...prev, x: clientX, y: clientY }));
       };
-
       const handleMouseUp = (e: MouseEvent | TouchEvent) => {
           if (!dragState.isDragging) return;
-
           let clientX, clientY;
-               if ('changedTouches' in e) {
-                  clientX = e.changedTouches[0].clientX;
-                  clientY = e.changedTouches[0].clientY;
-              } else {
-                  clientX = (e as MouseEvent).clientX;
-                  clientY = (e as MouseEvent).clientY;
+          if ('changedTouches' in e) { clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY; } 
+          else { clientX = (e as MouseEvent).clientX; clientY = (e as MouseEvent).clientY; }
+          const draggedEl = document.getElementById('dragged-ghost');
+          if (draggedEl) draggedEl.style.display = 'none';
+          const elementUnder = document.elementFromPoint(clientX, clientY);
+          if (draggedEl) draggedEl.style.display = 'block';
+          const shellDiv = elementUnder?.closest('[data-shell-id]');
+          if (shellDiv) {
+              const targetId = parseInt(shellDiv.getAttribute('data-shell-id') || '0');
+              const move = validMoves.find(m => m.sourceIndex === dragState.sourceIndex && m.targetIndex === targetId);
+              if (move) { onSelectMove(move); } 
+              else if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) {
+                  triggerBlockedFeedback(targetId, dragState.sourceIndex);
               }
-
-              const draggedEl = document.getElementById('dragged-ghost');
-              if (draggedEl) draggedEl.style.display = 'none';
-
-              const elementUnder = document.elementFromPoint(clientX, clientY);
-              
-              if (draggedEl) draggedEl.style.display = 'block';
-
-              const shellDiv = elementUnder?.closest('[data-shell-id]');
-              if (shellDiv) {
-                  const targetId = parseInt(shellDiv.getAttribute('data-shell-id') || '0');
-                  const move = validMoves.find(m => m.sourceIndex === dragState.sourceIndex && m.targetIndex === targetId);
-                  if (move) {
-                      onSelectMove(move);
-                  } else {
-                      // Logic for invalid drop (e.g. bounce off opponent)
-                      if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) {
-                          setShakeShellId(targetId);
-                          setTimeout(() => setShakeShellId(null), 400);
-                          onInvalidMoveAttempt?.(dragState.sourceIndex, targetId);
-                      }
-                  }
-              }
-
-              const finishZone = elementUnder?.closest('[data-finish-zone]');
-              if (finishZone) {
-                  const move = validMoves.find(m => m.type === MoveResultType.FINISH);
-                  if (move) onSelectMove(move);
-              }
-
+          }
           setDragState({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
       };
-
       if (dragState.isDragging) {
-          window.addEventListener('mousemove', handleMouseMove);
-          window.addEventListener('mouseup', handleMouseUp);
-          window.addEventListener('touchmove', handleMouseMove, { passive: false });
-          window.addEventListener('touchend', handleMouseUp);
+          window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp);
+          window.addEventListener('touchmove', handleMouseMove, { passive: false }); window.addEventListener('touchend', handleMouseUp);
       }
-
       return () => {
-          window.removeEventListener('mousemove', handleMouseMove);
-          window.removeEventListener('mouseup', handleMouseUp);
-          window.removeEventListener('touchmove', handleMouseMove);
-          window.removeEventListener('touchend', handleMouseUp);
+          window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp);
+          window.removeEventListener('touchmove', handleMouseMove); window.removeEventListener('touchend', handleMouseUp);
       };
   }, [dragState, validMoves, onSelectMove, onInvalidMoveAttempt]);
 
-
   return (
     <div className="relative mx-auto select-none" style={{ width: 800, height: 800 }} ref={boardRef}>
-        
-        {/* Keyframe Injection for Shake */}
         <style dangerouslySetInnerHTML={{__html: `
             @keyframes shake {
                 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
@@ -486,9 +336,14 @@ export const Board: React.FC<BoardProps> = ({
                 60% { transform: translate(-54%, -50%) rotate(-5deg); }
                 80% { transform: translate(-46%, -50%) rotate(5deg); }
             }
-            .animate-shake-target {
-                 animation: shake 0.4s ease-in-out;
+            @keyframes blockedFadeUp {
+                0% { opacity: 0; transform: translateY(0); }
+                20% { opacity: 1; transform: translateY(-10px); }
+                80% { opacity: 1; transform: translateY(-20px); }
+                100% { opacity: 0; transform: translateY(-30px); }
             }
+            .animate-shake-target { animation: shake 0.4s ease-in-out; }
+            .animate-blocked-label { animation: blockedFadeUp 1.2s ease-out forwards; }
         `}} />
 
         {/* Center "Dice Pad" */}
@@ -501,7 +356,6 @@ export const Board: React.FC<BoardProps> = ({
                     <span className="font-serif text-[#8b5e3c] text-5xl mb-1">ཤོ</span>
                     <span className="font-cinzel text-[#8b5e3c] text-6xl font-bold tracking-widest drop-shadow-lg">SHO</span>
                 </div>
-
                 {(isRolling || currentRoll) && (
                     <div className="absolute inset-0">
                          {isRolling ? (
@@ -516,47 +370,20 @@ export const Board: React.FC<BoardProps> = ({
                          ) : (
                              currentRoll && currentRoll.visuals && (
                                 <>
-                                    <BoardDie 
-                                        value={currentRoll.die1} 
-                                        x={currentRoll.visuals.d1x} 
-                                        y={currentRoll.visuals.d1y} 
-                                        rotation={currentRoll.visuals.d1r} 
-                                        isRolling={false}
-                                    />
-                                    <BoardDie 
-                                        value={currentRoll.die2} 
-                                        x={currentRoll.visuals.d2x} 
-                                        y={currentRoll.visuals.d2y} 
-                                        rotation={currentRoll.visuals.d2r} 
-                                        isRolling={false}
-                                    />
+                                    <BoardDie value={currentRoll.die1} x={currentRoll.visuals.d1x} y={currentRoll.visuals.d1y} rotation={currentRoll.visuals.d1r} isRolling={false} />
+                                    <BoardDie value={currentRoll.die2} x={currentRoll.visuals.d2x} y={currentRoll.visuals.d2y} rotation={currentRoll.visuals.d2r} isRolling={false} />
                                 </>
                              )
                          )}
                     </div>
                 )}
-
             </div>
         </div>
 
-        {/* Faint Organic Guide Path */}
+        {/* Guides */}
         <svg width="100%" height="100%" className="absolute inset-0 z-0 pointer-events-none">
-             <path 
-                d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
-                fill="none" 
-                stroke="#44403c" 
-                strokeWidth="12" 
-                strokeLinecap="round"
-                className="opacity-20 blur-sm"
-            />
-             <path 
-                d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
-                fill="none" 
-                stroke="#d6d3d1" 
-                strokeWidth="1" 
-                strokeDasharray="2 6"
-                className="opacity-20"
-            />
+             <path d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} fill="none" stroke="#44403c" strokeWidth="12" strokeLinecap="round" className="opacity-20 blur-sm" />
+             <path d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} fill="none" stroke="#d6d3d1" strokeWidth="1" strokeDasharray="2 6" className="opacity-20" />
         </svg>
 
         {shells.map((shell) => {
@@ -566,40 +393,26 @@ export const Board: React.FC<BoardProps> = ({
             const owner = shell.data?.owner;
             const shellColor = owner ? getPlayerColor(owner) : '#666';
             const shellAvatar = owner ? getPlayerAvatar(owner) : undefined;
-
             const isBeingDragged = dragState.isDragging && dragState.sourceIndex === shell.id;
             const isSource = selectedSource === shell.id;
             const isOwner = owner === currentPlayer;
             const isShaking = shakeShellId === shell.id;
+            const hasBlockedMsg = blockedFeedback?.shellId === shell.id;
 
             return (
                 <div 
-                    key={shell.id}
-                    data-shell-id={shell.id}
-                    className={`
-                        absolute -ml-5 -mt-6 flex items-center justify-center z-20
-                        ${isTarget ? 'z-40' : ''}
-                    `}
+                    key={shell.id} data-shell-id={shell.id}
+                    className={`absolute -ml-5 -mt-6 flex items-center justify-center z-20 ${isTarget ? 'z-40' : ''}`}
                     style={{ left: shell.x, top: shell.y }}
                     onClick={(e) => {
                         e.stopPropagation();
                         if (!dragState.isDragging) {
-                            if (isTarget && moveTarget) {
-                                onSelectMove(moveTarget);
-                            } else if (selectedSource && selectedSource !== shell.id) {
-                                // Clicked a shell that is not a target but we have a source selected
-                                // Is it plausible invalid move?
+                            if (isTarget && moveTarget) { onSelectMove(moveTarget); } 
+                            else if (selectedSource && selectedSource !== shell.id) {
                                 const isMyOwn = shell.data?.owner === currentPlayer;
-                                if (!isMyOwn) {
-                                    setShakeShellId(shell.id);
-                                    setTimeout(() => setShakeShellId(null), 400);
-                                    onInvalidMoveAttempt?.(selectedSource, shell.id);
-                                } else if (onShellClick) {
-                                    onShellClick(shell.id);
-                                }
-                            } else if (onShellClick) {
-                                onShellClick(shell.id);
-                            }
+                                if (!isMyOwn) { triggerBlockedFeedback(shell.id, selectedSource); } 
+                                else if (onShellClick) { onShellClick(shell.id); }
+                            } else if (onShellClick) { onShellClick(shell.id); }
                         }
                     }}
                 >
@@ -607,40 +420,29 @@ export const Board: React.FC<BoardProps> = ({
                         <CowrieShell angle={shell.angle} isTarget={isTarget} />
                     </div>
 
-                    {isTarget && (
-                        <div className={`absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none ${dragState.isDragging ? 'bg-green-500/30' : ''}`}></div>
-                    )}
+                    {isTarget && <div className={`absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none ${dragState.isDragging ? 'bg-green-500/30' : ''}`}></div>}
+                    {isSource && !dragState.isDragging && <div className="absolute w-16 h-16 rounded-full border-2 border-amber-400 opacity-50 pointer-events-none"></div>}
                     
-                    {isSource && !dragState.isDragging && (
-                        <div className="absolute w-16 h-16 rounded-full border-2 border-amber-400 opacity-50 pointer-events-none"></div>
-                    )}
-                    
-                    {/* Shake Feedback Ring */}
-                    {isShaking && (
-                        <div className="absolute left-1/2 top-1/2 w-16 h-16 rounded-full border-4 border-red-500/60 opacity-80 pointer-events-none animate-shake-target"></div>
+                    {isShaking && <div className="absolute left-1/2 top-1/2 w-16 h-16 rounded-full border-4 border-red-500/60 opacity-80 pointer-events-none animate-shake-target"></div>}
+
+                    {hasBlockedMsg && (
+                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
+                            <span className="bg-red-600 text-white font-cinzel font-bold px-3 py-1 rounded-full text-xs shadow-xl border border-white/20 animate-blocked-label">
+                                {blockedFeedback?.message}
+                            </span>
+                        </div>
                     )}
 
                     {stackSize > 0 && owner && !isBeingDragged && (
-                        <div 
-                            className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} 
-                            style={{ top: '-10px' }}
-                            onMouseDown={(e) => handleMouseDown(e, shell.id)}
-                            onTouchStart={(e) => handleMouseDown(e, shell.id)}
-                        >
+                        <div className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} style={{ top: '-10px' }} onMouseDown={(e) => handleMouseDown(e, shell.id)} onTouchStart={(e) => handleMouseDown(e, shell.id)}>
                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => (
                                <div 
-                                key={i}
-                                className="absolute left-1/2 -translate-x-1/2 transition-all duration-500"
-                                style={{ 
-                                    top: `${-(i * 4)}px`, 
-                                    zIndex: i,
-                                    transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.id) * 20}deg)`
-                                }}
+                                key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500"
+                                style={{ top: `${-(i * 4)}px`, zIndex: i, transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.id) * 20}deg)` }}
                                >
                                    <AncientCoin color={shellColor} isSelected={false} avatar={shellAvatar} />
                                </div>
                            ))}
-                           
                            {stackSize > 1 && (
                                <div 
                                 className="absolute left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-md backdrop-blur-sm whitespace-nowrap pointer-events-none"
@@ -658,14 +460,8 @@ export const Board: React.FC<BoardProps> = ({
         {/* --- ANIMATIONS --- */}
         {stackingAnim && (
              <div 
-                key={stackingAnim.id}
-                className="absolute z-[60] pointer-events-none animate-coin-arc"
-                style={{ 
-                    '--start-x': `${stackingAnim.startX}px`,
-                    '--start-y': `${stackingAnim.startY}px`,
-                    '--end-x': `${stackingAnim.endX}px`,
-                    '--end-y': `${stackingAnim.endY}px`,
-                } as React.CSSProperties}
+                key={stackingAnim.id} className="absolute z-[60] pointer-events-none animate-coin-arc"
+                style={{ '--start-x': `${stackingAnim.startX}px`, '--start-y': `${stackingAnim.startY}px`, '--end-x': `${stackingAnim.endX}px`, '--end-y': `${stackingAnim.endY}px`, } as React.CSSProperties}
             >
                  <style dangerouslySetInnerHTML={{__html: `
                     @keyframes coinArc {
@@ -673,36 +469,21 @@ export const Board: React.FC<BoardProps> = ({
                         50% { transform: translate(calc(var(--start-x) + (var(--end-x) - var(--start-x))/2), calc(var(--start-y) + (var(--end-y) - var(--start-y))/2 - 60px)) scale(1.3); opacity: 1; }
                         100% { transform: translate(var(--end-x), var(--end-y)) scale(1); opacity: 1; }
                     }
-                    .animate-coin-arc {
-                        animation: coinArc 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                        transform-origin: center center;
-                        margin-left: -20px; 
-                        margin-top: -24px;
-                    }
+                    .animate-coin-arc { animation: coinArc 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; transform-origin: center center; margin-left: -20px; margin-top: -24px; }
                 `}} />
                 <AncientCoin color={stackingAnim.color} isSelected={true} avatar={stackingAnim.avatar} />
             </div>
         )}
 
         {finishingParticles.map((p, i) => (
-            <div 
-                key={p.id}
-                className="absolute z-50 pointer-events-none animate-finish-float"
-                style={{ 
-                    left: p.x, 
-                    top: p.y,
-                    animationDelay: `${i * 100}ms`
-                }}
-            >
+            <div key={p.id} className="absolute z-50 pointer-events-none animate-finish-float" style={{ left: p.x, top: p.y, animationDelay: `${i * 100}ms` }}>
                  <style dangerouslySetInnerHTML={{__html: `
                     @keyframes finishFloat {
                         0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
                         50% { transform: translate(-50%, -150px) scale(1.5) rotate(180deg); opacity: 0.8; filter: brightness(1.5); }
                         100% { transform: translate(-50%, -300px) scale(0.5) rotate(360deg); opacity: 0; }
                     }
-                    .animate-finish-float {
-                        animation: finishFloat 1.5s ease-out forwards;
-                    }
+                    .animate-finish-float { animation: finishFloat 1.5s ease-out forwards; }
                 `}} />
                 <div className="drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]">
                     <AncientCoin color={p.color} isSelected={true} avatar={p.avatar} />
@@ -711,35 +492,16 @@ export const Board: React.FC<BoardProps> = ({
         ))}
 
         {dragState.isDragging && dragState.sourceIndex !== null && (
-             <div 
-                id="dragged-ghost"
-                className="fixed z-[100] pointer-events-none"
-                style={{ 
-                    left: dragState.x, 
-                    top: dragState.y,
-                    transform: 'translate(-50%, -50%) scale(1.1)' 
-                }}
-             >
+             <div id="dragged-ghost" className="fixed z-[100] pointer-events-none" style={{ left: dragState.x, top: dragState.y, transform: 'translate(-50%, -50%) scale(1.1)' }}>
                 {(() => {
                     const shell = boardState.get(dragState.sourceIndex!);
                     if (!shell) return null;
-                    const stackSize = shell.stackSize;
-                    const owner = shell.owner!;
-                    const color = getPlayerColor(owner);
-                    const avatar = getPlayerAvatar(owner);
-                    
+                    const color = getPlayerColor(shell.owner);
+                    const avatar = getPlayerAvatar(shell.owner);
                     return (
                         <div className="relative">
-                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => (
-                                <div 
-                                    key={i}
-                                    className="absolute left-1/2 -translate-x-1/2"
-                                    style={{ 
-                                        top: `${-(i * 4)}px`, 
-                                        zIndex: i,
-                                        transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.index) * 20}deg)`
-                                    }}
-                                >
+                            {Array.from({ length: Math.min(shell.stackSize, 9) }).map((_, i) => (
+                                <div key={i} className="absolute left-1/2 -translate-x-1/2" style={{ top: `${-(i * 4)}px`, zIndex: i, transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.index) * 20}deg)` }}>
                                     <AncientCoin color={color} isSelected={true} avatar={avatar} />
                                 </div>
                             ))}
@@ -749,25 +511,16 @@ export const Board: React.FC<BoardProps> = ({
              </div>
         )}
         
-        {/* Finish Area Decoration (Positioned beside last shell) */}
+        {/* Finish Area Decoration */}
         {(() => {
             const finishMove = validMoves.find(m => m.type === MoveResultType.FINISH);
             const isTarget = !!finishMove;
-            
             return (
                 <div 
-                    className={`
-                        absolute transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2
-                        ${isTarget ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}
-                    `}
-                    style={{ left: endBtnPos.x, top: endBtnPos.y }}
-                    onClick={() => isTarget && onSelectMove(finishMove)}
-                    data-finish-zone="true"
+                    className={`absolute transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 ${isTarget ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}`}
+                    style={{ left: endBtnPos.x, top: endBtnPos.y }} onClick={() => isTarget && onSelectMove(finishMove)} data-finish-zone="true"
                 >
-                     <div className={`
-                        w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transform -rotate-12 transition-colors
-                        ${isTarget ? 'border-green-500 bg-green-900/20 animate-pulse' : 'border-stone-700/50'}
-                     `}>
+                     <div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transform -rotate-12 transition-colors ${isTarget ? 'border-green-500 bg-green-900/20 animate-pulse' : 'border-stone-700/50'}`}>
                          <span className={`font-cinzel font-bold ${isTarget ? 'text-green-500' : 'text-stone-600'}`}>
                              {isTarget ? 'FINISH' : 'END'}
                          </span>

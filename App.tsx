@@ -91,7 +91,6 @@ const SFX = {
       }
   },
 
-  // Enhanced Procedural Meditative Music
   startAmbient: (initialVolume: number) => {
     const ctx = SFX.getContext();
     if (SFX.musicNodes.length > 0) return;
@@ -103,38 +102,32 @@ const SFX = {
     SFX.masterMusicGain = masterGain;
     SFX.musicNodes.push(masterGain);
 
-    const baseFreqs = [110, 165, 220, 330]; // A2, E3, A3, E4
-    
-    // Drones
+    const baseFreqs = [110, 165, 220, 330];
     baseFreqs.forEach(f => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = f;
-      
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
       lfo.frequency.value = 0.05 + Math.random() * 0.1;
       lfoGain.gain.value = 0.03;
       lfo.connect(lfoGain);
       lfoGain.connect(gain.gain);
-      
       gain.gain.value = 0.04;
       osc.connect(gain);
       gain.connect(masterGain);
-      
       osc.start();
       lfo.start();
       SFX.musicNodes.push(osc, lfo);
     });
 
-    // Soft Rhythmic Pulse
     const playPulse = () => {
         const t = ctx.currentTime;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(55, t); // Very low A
+        osc.frequency.setValueAtTime(55, t);
         osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
         g.gain.setValueAtTime(0.05, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
@@ -144,8 +137,7 @@ const SFX = {
         osc.stop(t + 0.5);
     };
 
-    // Melodic Overtones
-    const pentatonic = [440, 493.88, 587.33, 659.25, 783.99]; // A4 Pentatonic
+    const pentatonic = [440, 493.88, 587.33, 659.25, 783.99];
     const playMelody = () => {
         const t = ctx.currentTime;
         const f = pentatonic[Math.floor(Math.random() * pentatonic.length)];
@@ -188,11 +180,9 @@ const SFX = {
       noiseFilter.type = 'bandpass';
       noiseFilter.frequency.value = 1000;
       const noiseGain = ctx.createGain();
-      
       noiseGain.gain.setValueAtTime(0, t);
       noiseGain.gain.linearRampToValueAtTime(0.3, t + 0.05);
       noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-
       noise.connect(noiseFilter);
       noiseFilter.connect(noiseGain);
       noiseGain.connect(ctx.destination);
@@ -366,95 +356,49 @@ const SFX = {
 const getRandomDicePos = () => {
     const r = Math.random() * 60;
     const theta = Math.random() * Math.PI * 2;
-    return {
-        x: r * Math.cos(theta),
-        y: r * Math.sin(theta),
-        r: Math.random() * 360
-    };
+    return { x: r * Math.cos(theta), y: r * Math.sin(theta), r: Math.random() * 360 };
 };
 
 const calculatePotentialMoves = (
-  sourceIdx: number, 
-  moveVals: number[], 
-  currentBoard: BoardState, 
-  player: Player, 
-  flexPool: number | null,
-  isNinerMode: boolean
+  sourceIdx: number, moveVals: number[], currentBoard: BoardState, player: Player, flexPool: number | null, isNinerMode: boolean
 ): MoveOption[] => {
   const options: MoveOption[] = [];
   const evaluateTarget = (dist: number, consumed: number[]): MoveOption | null => {
     const targetIdx = sourceIdx + dist;
-    if (targetIdx > TOTAL_SHELLS) {
-      return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.FINISH };
-    }
+    if (targetIdx > TOTAL_SHELLS) { return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.FINISH }; }
     const targetShell = currentBoard.get(targetIdx);
     if (!targetShell) return null;
-    let movingStackSize = 0;
-    if (sourceIdx === 0) {
-        movingStackSize = player.coinsInHand === COINS_PER_PLAYER ? 2 : 1;
-    } else {
-        movingStackSize = currentBoard.get(sourceIdx)?.stackSize || 0;
-    }
+    let movingStackSize = sourceIdx === 0 ? (player.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (currentBoard.get(sourceIdx)?.stackSize || 0);
     if (targetShell.owner === player.id) {
       const resultingSize = targetShell.stackSize + movingStackSize;
       if (!isNinerMode && resultingSize === 9) return null;
       return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.STACK };
     }
     if (targetShell.owner && targetShell.owner !== player.id) {
-      if (movingStackSize >= targetShell.stackSize) {
-         return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.KILL };
-      } else {
-        return null; 
-      }
+      if (movingStackSize >= targetShell.stackSize) { return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.KILL }; }
+      return null; 
     }
     return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.PLACE };
   };
   if (flexPool !== null) {
     const distToFinish = TOTAL_SHELLS + 1 - sourceIdx;
     for (let i = 1; i <= flexPool; i++) {
-      if (sourceIdx + i > TOTAL_SHELLS) {
-          if (i === distToFinish) {
-               const opt = evaluateTarget(i, [i]);
-               if (opt) options.push(opt);
-          }
-          continue;
-      }
-      const opt = evaluateTarget(i, [i]);
-      if (opt) options.push(opt);
+      if (sourceIdx + i > TOTAL_SHELLS) { if (i === distToFinish) { const opt = evaluateTarget(i, [i]); if (opt) options.push(opt); } continue; }
+      const opt = evaluateTarget(i, [i]); if (opt) options.push(opt);
     }
   } else {
     const uniqueSingleVals = Array.from(new Set(moveVals));
-    uniqueSingleVals.forEach(val => {
-       const opt = evaluateTarget(val, [val]);
-       if (opt) options.push(opt);
-    });
-    if (moveVals.length > 1) {
-       const total = moveVals.reduce((a, b) => a + b, 0);
-       const opt = evaluateTarget(total, moveVals);
-       if (opt && !options.some(o => o.targetIndex === opt.targetIndex)) options.push(opt);
-    }
+    uniqueSingleVals.forEach(val => { const opt = evaluateTarget(val, [val]); if (opt) options.push(opt); });
+    if (moveVals.length > 1) { const total = moveVals.reduce((a, b) => a + b, 0); const opt = evaluateTarget(total, moveVals); if (opt && !options.some(o => o.targetIndex === opt.targetIndex)) options.push(opt); }
   }
   return options;
 };
 
-const getAvailableMoves = (
-    pIndex: number, 
-    pBoard: BoardState, 
-    pPlayers: Player[], 
-    pVals: number[], 
-    pFlex: number | null,
-    isNinerMode: boolean
-) => {
+const getAvailableMoves = (pIndex: number, pBoard: BoardState, pPlayers: Player[], pVals: number[], pFlex: number | null, isNinerMode: boolean) => {
   let moves: MoveOption[] = [];
   const player = pPlayers[pIndex];
-  if (player.coinsInHand > 0) {
-    moves = [...moves, ...calculatePotentialMoves(0, pVals, pBoard, player, pFlex, isNinerMode)];
-  }
-  pBoard.forEach((shell) => {
-    if (shell.owner === player.id && shell.stackSize > 0) {
-      moves = [...moves, ...calculatePotentialMoves(shell.index, pVals, pBoard, player, pFlex, isNinerMode)];
-    }
-  });
+  if (player.coinsInHand > 0) { moves = [...moves, ...calculatePotentialMoves(0, pVals, pBoard, player, pFlex, isNinerMode)]; }
+  pBoard.forEach((shell) => { if (shell.owner === player.id && shell.stackSize > 0) { moves = [...moves, ...calculatePotentialMoves(shell.index, pVals, pBoard, player, pFlex, isNinerMode)]; } });
   return moves;
 };
 
@@ -487,11 +431,8 @@ const App: React.FC = () => {
   const [hasOpponentJoined, setHasOpponentJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  
-  // Music State
   const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const [musicVolume, setMusicVolume] = useState(50);
-  
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -500,228 +441,93 @@ const App: React.FC = () => {
   const [showRules, setShowRules] = useState(false);
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(0);
 
-  const gameStateRef = useRef({
-    board, players, turnIndex, phase, pendingMoveValues, flexiblePool, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, paRaStreak, paRaAccumulator, gameMode, tutorialStep
-  });
+  const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, flexiblePool, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, paRaStreak, paRaAccumulator, gameMode, tutorialStep });
 
-  useEffect(() => {
-    gameStateRef.current = {
-      board, players, turnIndex, phase, pendingMoveValues, flexiblePool, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, paRaStreak, paRaAccumulator, gameMode, tutorialStep
-    };
-  }, [board, players, turnIndex, phase, pendingMoveValues, flexiblePool, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, paRaStreak, paRaAccumulator, gameMode, tutorialStep]);
+  useEffect(() => { gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, flexiblePool, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, paRaStreak, paRaAccumulator, gameMode, tutorialStep }; }, [board, players, turnIndex, phase, pendingMoveValues, flexiblePool, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, paRaStreak, paRaAccumulator, gameMode, tutorialStep]);
 
   const currentPlayer = players[turnIndex] || { id: PlayerColor.Red, name: 'Red', coinsInHand: 0, coinsFinished: 0 };
 
-  const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => {
-    setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50));
-  }, []);
+  const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
-  const speak = (text: string) => {
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.1;
-      u.pitch = 0.9;
-      window.speechSynthesis.speak(u);
-  };
+  const speak = (text: string) => { const u = new SpeechSynthesisUtterance(text); u.rate = 1.1; u.pitch = 0.9; window.speechSynthesis.speak(u); };
 
-  useEffect(() => {
-    const baseCount = 18742; 
-    const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15));
-    const local = parseInt(localStorage.getItem('sho_plays_local') || '0', 10);
-    setGlobalPlayCount(baseCount + growth + local);
-  }, []);
+  useEffect(() => { const baseCount = 18742; const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15)); const local = parseInt(localStorage.getItem('sho_plays_local') || '0', 10); setGlobalPlayCount(baseCount + growth + local); }, []);
 
-  const trackGameStart = () => {
-    const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1;
-    localStorage.setItem('sho_plays_local', newLocal.toString());
-    setGlobalPlayCount(prev => prev + 1);
-  };
+  const trackGameStart = () => { const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1; localStorage.setItem('sho_plays_local', newLocal.toString()); setGlobalPlayCount(prev => prev + 1); };
 
-  const toggleMusic = () => {
-    const newState = !isMusicEnabled;
-    setIsMusicEnabled(newState);
-    if (newState) {
-        SFX.startAmbient(musicVolume / 100);
-    } else {
-        SFX.stopAmbient();
-    }
-  };
+  const toggleMusic = () => { const newState = !isMusicEnabled; setIsMusicEnabled(newState); if (newState) { SFX.startAmbient(musicVolume / 100); } else { SFX.stopAmbient(); } };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const vol = parseInt(e.target.value);
-      setMusicVolume(vol);
-      SFX.setMusicVolume(vol / 100);
-  };
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => { const vol = parseInt(e.target.value); setMusicVolume(vol); SFX.setMusicVolume(vol / 100); };
 
   const initializeGame = useCallback((p2Config?: { name: string, color: string, avatar?: string }, isTutorial = false) => {
     if (!isTutorial) trackGameStart();
     const newBoard = new Map<number, BoardShell>();
-    for (let i = 1; i <= TOTAL_SHELLS; i++) {
-      newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false });
-    }
+    for (let i = 1; i <= TOTAL_SHELLS; i++) { newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false }); }
     setBoard(newBoard);
     const mySettings = { name: playerName || 'Host', color: selectedColor, avatar: selectedAvatar };
     let opponentSettings = p2Config || { name: 'Player 2', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] };
-    if (p2Config && p2Config.color === mySettings.color) {
-         const alternativeColor = COLOR_PALETTE.find(c => c.hex !== mySettings.color)?.hex || '#3b82f6';
-         opponentSettings = { ...p2Config, color: alternativeColor };
-         addLog(`Color conflict resolved.`, 'info');
-    }
-    if ((gameMode === GameMode.AI || isTutorial) && !p2Config) {
-       opponentSettings = { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: '🤖' };
-    }
+    if (p2Config && p2Config.color === mySettings.color) { const alternativeColor = COLOR_PALETTE.find(c => c.hex !== mySettings.color)?.hex || '#3b82f6'; opponentSettings = { ...p2Config, color: alternativeColor }; addLog(`Color conflict resolved.`, 'info'); }
+    if ((gameMode === GameMode.AI || isTutorial) && !p2Config) { opponentSettings = { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: '🤖' }; }
     const initialPlayers = generatePlayers(mySettings, opponentSettings);
-    setPlayers(initialPlayers);
-    setTurnIndex(0); 
-    setPhase(GamePhase.ROLLING);
-    setLastRoll(null);
-    setIsRolling(false);
-    setPendingMoveValues([]);
-    setWaitingForPaRa(false);
-    setFlexiblePool(null);
-    setLastMove(null);
-    setTotalMoves(0);
-    setAiThinking(false);
-    setPaRaStreak(0);
-    setPaRaAccumulator(0);
-    setTutorialStep(isTutorial ? 1 : 0);
-    setSelectedSourceIndex(null);
-    addLog(isTutorial ? 'Tutorial Started.' : `Game Started.`, 'info');
+    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setWaitingForPaRa(false); setFlexiblePool(null); setLastMove(null); setTotalMoves(0); setAiThinking(false); setPaRaStreak(0); setPaRaAccumulator(0); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null); addLog(isTutorial ? 'Tutorial Started.' : `Game Started.`, 'info');
   }, [addLog, playerName, selectedColor, selectedAvatar, gameMode]);
 
   useEffect(() => {
-    const handleResize = () => {
-        if (boardContainerRef.current) {
-            const { width, height } = boardContainerRef.current.getBoundingClientRect();
-            const margin = 20;
-            const availableW = width - margin;
-            const availableH = height - margin;
-            const scale = Math.min(availableW / 800, availableH / 800, 1);
-            setBoardScale(scale > 0.3 ? scale : 0.3);
-        }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    const t = setTimeout(handleResize, 100);
-    return () => {
-        window.removeEventListener('resize', handleResize);
-        clearTimeout(t);
-    };
+    const handleResize = () => { if (boardContainerRef.current) { const { width, height } = boardContainerRef.current.getBoundingClientRect(); const margin = 20; const availableW = width - margin; const availableH = height - margin; const scale = Math.min(availableW / 800, availableH / 800, 1); setBoardScale(scale > 0.3 ? scale : 0.3); } };
+    window.addEventListener('resize', handleResize); handleResize(); const t = setTimeout(handleResize, 100); return () => { window.removeEventListener('resize', handleResize); clearTimeout(t); };
   }, [gameMode, phase]);
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => setSelectedAvatar(reader.result as string);
-          reader.readAsDataURL(file);
-      }
-  };
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSelectedAvatar(reader.result as string); reader.readAsDataURL(file); } };
 
   const performRoll = async () => {
-    const s = gameStateRef.current;
-    if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
-    setIsRolling(true);
-    SFX.playShake();
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
+    setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 800));
     const currentPlayerName = s.players[s.turnIndex].name;
-    let d1 = Math.floor(Math.random() * 6) + 1;
-    let d2 = Math.floor(Math.random() * 6) + 1;
-    let isStacked = Math.random() < 0.002;
-    if (s.gameMode === GameMode.TUTORIAL) {
-        if (s.tutorialStep === 2) { d1 = 2; d2 = 3; isStacked = false; }
-        else if (s.turnIndex === 1) { d1 = 3; d2 = 3; isStacked = false; }
-    }
+    let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1; let isStacked = Math.random() < 0.002;
+    if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 2) { d1 = 2; d2 = 3; isStacked = false; } else if (s.turnIndex === 1) { d1 = 3; d2 = 3; isStacked = false; } }
     const isPaRa = (d1 === 1 && d2 === 1);
-    const pos1 = getRandomDicePos();
-    let pos2 = getRandomDicePos();
-    if (!isStacked) {
-        const dist = (a: any, b: any) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-        while (dist(pos1, pos2) < 50) pos2 = getRandomDicePos();
-    } else {
-        pos2 = { ...pos1, r: pos1.r + (Math.random() * 20 - 10) };
-    }
+    const pos1 = getRandomDicePos(); let pos2 = getRandomDicePos();
+    if (!isStacked) { const dist = (a: any, b: any) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)); while (dist(pos1, pos2) < 50) pos2 = getRandomDicePos(); } else { pos2 = { ...pos1, r: pos1.r + (Math.random() * 20 - 10) }; }
     const visuals = { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r };
-    const total = d1 + d2;
-    const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals };
-    setLastRoll(newRoll);
-    setIsRolling(false);
-    SFX.playLand();
-    if (isStacked) {
-        addLog(`STACKED DICE! INSTANT WIN!`, 'alert');
-        SFX.playFinish();
-        const winningPlayers = [...s.players];
-        winningPlayers[s.turnIndex].coinsFinished = COINS_PER_PLAYER;
-        setPlayers(winningPlayers);
-        setPhase(GamePhase.GAME_OVER);
-        return;
-    }
-    if (isPaRa) {
-         SFX.playPaRa();
-         const newStreak = s.paRaStreak + 1;
-         setPaRaStreak(newStreak);
-         setPaRaAccumulator(prev => prev + 2);
-         if (newStreak >= 3) {
-             addLog(`TRIPLE PA RA! INSTANT WIN!`, 'alert');
-             SFX.playFinish();
-             const winningPlayers = [...s.players];
-             winningPlayers[s.turnIndex].coinsFinished = COINS_PER_PLAYER;
-             setPlayers(winningPlayers);
-             setPhase(GamePhase.GAME_OVER);
-             return;
-         }
-         setWaitingForPaRa(true);
-         addLog(`PA RA (1,1)! (${newStreak}/3) Roll again.`, 'alert');
-    } else {
-        if (s.waitingForPaRa) {
-            const combinedTotal = s.paRaAccumulator + d1 + d2;
-            setFlexiblePool(combinedTotal);
-            addLog(`Pa Ra Chain Finished. Total: ${combinedTotal}.`, 'alert');
-            setWaitingForPaRa(false);
-            setPaRaStreak(0);
-            setPaRaAccumulator(0);
-            setPhase(GamePhase.MOVING);
-        } else {
-            addLog(`${currentPlayerName} rolled ${total}.`, 'info');
-            setPendingMoveValues([total]);
-            setPhase(GamePhase.MOVING);
-        }
-    }
+    const total = d1 + d2; const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals };
+    setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
+    if (isStacked) { addLog(`STACKED DICE! INSTANT WIN!`, 'alert'); SFX.playFinish(); const winningPlayers = [...s.players]; winningPlayers[s.turnIndex].coinsFinished = COINS_PER_PLAYER; setPlayers(winningPlayers); setPhase(GamePhase.GAME_OVER); return; }
+    if (isPaRa) { SFX.playPaRa(); const newStreak = s.paRaStreak + 1; setPaRaStreak(newStreak); setPaRaAccumulator(prev => prev + 2); if (newStreak >= 3) { addLog(`TRIPLE PA RA! INSTANT WIN!`, 'alert'); SFX.playFinish(); const winningPlayers = [...s.players]; winningPlayers[s.turnIndex].coinsFinished = COINS_PER_PLAYER; setPlayers(winningPlayers); setPhase(GamePhase.GAME_OVER); return; } setWaitingForPaRa(true); addLog(`PA RA (1,1)! (${newStreak}/3) Roll again.`, 'alert'); } 
+    else { if (s.waitingForPaRa) { const combinedTotal = s.paRaAccumulator + d1 + d2; setFlexiblePool(combinedTotal); addLog(`Pa Ra Chain Finished. Total: ${combinedTotal}.`, 'alert'); setWaitingForPaRa(false); setPaRaStreak(0); setPaRaAccumulator(0); setPhase(GamePhase.MOVING); } else { addLog(`${currentPlayerName} rolled ${total}.`, 'info'); setPendingMoveValues([total]); setPhase(GamePhase.MOVING); } }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
 
-  const handleSkipTurn = useCallback(() => {
-    const s = gameStateRef.current;
-    addLog(`Turn skipped.`, 'alert');
-    SFX.playHandBlocked();
-    setPendingMoveValues([]);
-    setFlexiblePool(null);
-    setLastRoll(null);
-    setPaRaStreak(0);
-    setPaRaAccumulator(0);
-    setPhase(GamePhase.ROLLING);
-    setSelectedSourceIndex(null);
-    setTurnIndex((prev) => (prev + 1) % s.players.length);
-  }, [addLog]);
+  const handleSkipTurn = useCallback(() => { const s = gameStateRef.current; addLog(`Turn skipped.`, 'alert'); SFX.playHandBlocked(); setPendingMoveValues([]); setFlexiblePool(null); setLastRoll(null); setPaRaStreak(0); setPaRaAccumulator(0); setPhase(GamePhase.ROLLING); setSelectedSourceIndex(null); setTurnIndex((prev) => (prev + 1) % s.players.length); }, [addLog]);
 
   const handleInvalidMoveAttempt = (sourceIdx: number, targetIdx: number) => {
       const s = gameStateRef.current;
       if (s.phase !== GamePhase.MOVING) return;
       const dist = targetIdx - sourceIdx;
-      if (dist <= 0) return;
-      let isDistanceValid = false;
-      if (s.flexiblePool !== null) { if (dist <= s.flexiblePool) isDistanceValid = true; }
-      else { if (s.pendingMoveValues.includes(dist)) isDistanceValid = true; const sum = s.pendingMoveValues.reduce((a,b)=>a+b, 0); if (sum === dist) isDistanceValid = true; }
-      if (!isDistanceValid) return; 
       const targetShell = s.board.get(targetIdx);
-      if (!targetShell) return;
       const player = s.players[s.turnIndex];
-      let movingStackSize = 0;
-      if (sourceIdx === 0) movingStackSize = player.coinsInHand === COINS_PER_PLAYER ? 2 : 1;
-      else movingStackSize = s.board.get(sourceIdx)?.stackSize || 0;
-      if (targetShell.owner && targetShell.owner !== player.id) {
-          if (targetShell.stackSize > movingStackSize) { SFX.playBounce(); addLog(`Blocked! Enemy stack is too big.`, 'alert'); speak("Blocked."); }
-      } else if (targetShell.owner === player.id) {
-          if (!s.isNinerMode && targetShell.stackSize + movingStackSize === 9) { SFX.playBounce(); addLog("Forbidden! 9 stack limit.", 'alert'); speak("Forbidden."); }
+      let movingStackSize = sourceIdx === 0 ? (player.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (s.board.get(sourceIdx)?.stackSize || 0);
+
+      SFX.playBounce();
+      
+      if (targetShell?.owner && targetShell.owner !== player.id) {
+          if (targetShell.stackSize > movingStackSize) {
+              addLog(`Blocked! Enemy stack is too big.`, 'alert');
+              speak("Too large.");
+          } else {
+              addLog(`Invalid position.`, 'alert');
+              speak("Blocked.");
+          }
+      } else if (targetShell?.owner === player.id) {
+          if (!s.isNinerMode && targetShell.stackSize + movingStackSize === 9) {
+              addLog("Forbidden! 9 stack limit.", 'alert');
+              speak("Forbidden.");
+          } else {
+              addLog(`Invalid move.`, 'alert');
+              speak("Blocked.");
+          }
+      } else {
+          addLog(`Blocked.`, 'alert');
+          speak("Blocked.");
       }
   };
 
@@ -730,108 +536,38 @@ const App: React.FC = () => {
     const validMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.flexiblePool, s.isNinerMode);
     const move = validMoves.find(m => m.sourceIndex === sourceIdx && m.targetIndex === targetIdx);
     if (!move) return;
-    if (move.type === MoveResultType.KILL) SFX.playKill();
-    else if (move.type === MoveResultType.STACK) SFX.playStack();
-    else if (move.type === MoveResultType.FINISH) SFX.playFinish();
-    else SFX.playCoinClick();
-    const newBoard = new Map<number, BoardShell>(s.board);
-    const player = s.players[s.turnIndex];
-    let bonusTurn = false;
-    let turnContinues = false;
-    let movingStackSize = 0;
-    const newPlayers = [...s.players];
-    if (move.sourceIndex === 0) {
-      const isOpeningMove = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER;
-      if (isOpeningMove) { movingStackSize = 2; newPlayers[s.turnIndex].coinsInHand -= 2; addLog(`Opening Move!`, "action"); }
-      else { movingStackSize = 1; newPlayers[s.turnIndex].coinsInHand -= 1; }
-      setPlayers(newPlayers);
-    } else {
-      const sourceShell = newBoard.get(move.sourceIndex)!;
-      movingStackSize = sourceShell.stackSize;
-      newBoard.set(move.sourceIndex, { ...sourceShell, stackSize: 0, owner: null, isShoMo: false });
-    }
-    const targetShell = newBoard.get(move.targetIndex)!;
-    let isShoMoKill = false;
-    if (move.type === MoveResultType.FINISH) {
-      newPlayers[turnIndex].coinsFinished += movingStackSize;
-      setPlayers(newPlayers);
-      addLog(`Coin finished!`, 'action');
-    } else {
+    if (move.type === MoveResultType.KILL) SFX.playKill(); else if (move.type === MoveResultType.STACK) SFX.playStack(); else if (move.type === MoveResultType.FINISH) SFX.playFinish(); else SFX.playCoinClick();
+    const newBoard = new Map<number, BoardShell>(s.board); const player = s.players[s.turnIndex]; let bonusTurn = false; let turnContinues = false; let movingStackSize = 0; const newPlayers = [...s.players];
+    if (move.sourceIndex === 0) { const isOpeningMove = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER; if (isOpeningMove) { movingStackSize = 2; newPlayers[s.turnIndex].coinsInHand -= 2; addLog(`Opening Move!`, "action"); } else { movingStackSize = 1; newPlayers[s.turnIndex].coinsInHand -= 1; } setPlayers(newPlayers); } 
+    else { const sourceShell = newBoard.get(move.sourceIndex)!; movingStackSize = sourceShell.stackSize; newBoard.set(move.sourceIndex, { ...sourceShell, stackSize: 0, owner: null, isShoMo: false }); }
+    const targetShell = newBoard.get(move.targetIndex)!; let isShoMoKill = false;
+    if (move.type === MoveResultType.FINISH) { newPlayers[turnIndex].coinsFinished += movingStackSize; setPlayers(newPlayers); addLog(`Coin finished!`, 'action'); } 
+    else {
       if (move.type === MoveResultType.KILL) {
-        const enemyId = targetShell.owner;
-        const enemyStack = targetShell.stackSize;
-        const enemyIdx = players.findIndex(p => p.id === enemyId);
-        if (targetShell.isShoMo) {
-            isShoMoKill = true;
-            if (movingStackSize < 3) {
-                 const needed = 3 - movingStackSize;
-                 if (newPlayers[s.turnIndex].coinsInHand >= needed) {
-                     newPlayers[s.turnIndex].coinsInHand -= needed;
-                     movingStackSize = 3;
-                     addLog(`Killed Sho-mo bonus!`, 'action');
-                 }
-            }
-        }
-        if (enemyIdx !== -1) {
-          const playersToUpdate = [...newPlayers];
-          playersToUpdate[enemyIdx].coinsInHand += enemyStack;
-          setPlayers(playersToUpdate);
-          if (!isShoMoKill) addLog(`Killed ${enemyStack} coins!`, 'alert');
-        }
-        newBoard.set(move.targetIndex, { ...targetShell, stackSize: movingStackSize, owner: player.id, isShoMo: false });
-        bonusTurn = true;
-      } else if (move.type === MoveResultType.STACK) {
-        newBoard.set(move.targetIndex, { ...targetShell, stackSize: targetShell.stackSize + movingStackSize, owner: player.id, isShoMo: false });
-        addLog(`Stacked.`, 'action');
-        bonusTurn = true;
-      } else {
-        const isShoMoCreation = (move.sourceIndex === 0 && movingStackSize === 2 && !isShoMoKill);
-        newBoard.set(move.targetIndex, { ...targetShell, stackSize: movingStackSize, owner: player.id, isShoMo: isShoMoCreation });
-      }
+        const enemyId = targetShell.owner; const enemyStack = targetShell.stackSize; const enemyIdx = players.findIndex(p => p.id === enemyId);
+        if (targetShell.isShoMo) { isShoMoKill = true; if (movingStackSize < 3) { const needed = 3 - movingStackSize; if (newPlayers[s.turnIndex].coinsInHand >= needed) { newPlayers[s.turnIndex].coinsInHand -= needed; movingStackSize = 3; addLog(`Killed Sho-mo bonus!`, 'action'); } } }
+        if (enemyIdx !== -1) { const playersToUpdate = [...newPlayers]; playersToUpdate[enemyIdx].coinsInHand += enemyStack; setPlayers(playersToUpdate); if (!isShoMoKill) addLog(`Killed ${enemyStack} coins!`, 'alert'); }
+        newBoard.set(move.targetIndex, { ...targetShell, stackSize: movingStackSize, owner: player.id, isShoMo: false }); bonusTurn = true;
+      } else if (move.type === MoveResultType.STACK) { newBoard.set(move.targetIndex, { ...targetShell, stackSize: targetShell.stackSize + movingStackSize, owner: player.id, isShoMo: false }); addLog(`Stacked.`, 'action'); bonusTurn = true; } 
+      else { const isShoMoCreation = (move.sourceIndex === 0 && movingStackSize === 2 && !isShoMoKill); newBoard.set(move.targetIndex, { ...targetShell, stackSize: movingStackSize, owner: player.id, isShoMo: isShoMoCreation }); }
     }
-    setBoard(newBoard);
-    setSelectedSourceIndex(null);
-    setLastMove({ ...move, id: Date.now() });
-    setTotalMoves(prev => prev + 1);
-    let nextPendingMoves: number[] = [];
-    let nextFlexiblePool: number | null = null;
-    if (s.flexiblePool !== null) {
-        const dist = move.consumedValues[0];
-        const remainder = s.flexiblePool - dist;
-        if (remainder > 0) { nextPendingMoves = [remainder]; turnContinues = true; bonusTurn = false; }
-    } else {
-        const remainingValues = [...s.pendingMoveValues];
-        let refundAmount = 0;
-        if (move.type === MoveResultType.FINISH) {
-            const distToFinish = TOTAL_SHELLS + 1 - move.sourceIndex;
-            const valueUsed = move.consumedValues.reduce((a, b) => a + b, 0);
-            if (valueUsed > distToFinish) refundAmount = valueUsed - distToFinish;
-        }
+    setBoard(newBoard); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() }); setTotalMoves(prev => prev + 1);
+    let nextPendingMoves: number[] = []; let nextFlexiblePool: number | null = null;
+    if (s.flexiblePool !== null) { const dist = move.consumedValues[0]; const remainder = s.flexiblePool - dist; if (remainder > 0) { nextPendingMoves = [remainder]; turnContinues = true; bonusTurn = false; } } 
+    else {
+        const remainingValues = [...s.pendingMoveValues]; let refundAmount = 0;
+        if (move.type === MoveResultType.FINISH) { const distToFinish = TOTAL_SHELLS + 1 - move.sourceIndex; const valueUsed = move.consumedValues.reduce((a, b) => a + b, 0); if (valueUsed > distToFinish) refundAmount = valueUsed - distToFinish; }
         for (const val of move.consumedValues) { const idx = remainingValues.indexOf(val); if (idx > -1) remainingValues.splice(idx, 1); }
-        if (refundAmount > 0) remainingValues.push(refundAmount);
-        if (remainingValues.length > 0) { nextPendingMoves = remainingValues; turnContinues = true; }
+        if (refundAmount > 0) remainingValues.push(refundAmount); if (remainingValues.length > 0) { nextPendingMoves = remainingValues; turnContinues = true; }
     }
-    if (turnContinues) {
-        const movesForRemainder = getAvailableMoves(s.turnIndex, newBoard, newPlayers, nextPendingMoves, nextFlexiblePool, s.isNinerMode);
-        if (movesForRemainder.length > 0) {
-            setPendingMoveValues(nextPendingMoves);
-            setPhase(GamePhase.MOVING);
-        } else {
-            addLog(`Remainder lost.`, 'info');
-            turnContinues = false; 
-        }
-    }
+    if (turnContinues) { const movesForRemainder = getAvailableMoves(s.turnIndex, newBoard, newPlayers, nextPendingMoves, nextFlexiblePool, s.isNinerMode); if (movesForRemainder.length > 0) { setPendingMoveValues(nextPendingMoves); setPhase(GamePhase.MOVING); } else { addLog(`Remainder lost.`, 'info'); turnContinues = false; } }
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
-    if (!turnContinues) {
-        if (bonusTurn) { addLog("Bonus roll!", 'action'); setPhase(GamePhase.ROLLING); setPendingMoveValues([]); setFlexiblePool(null); setPaRaStreak(0); setPaRaAccumulator(0); }
-        else { setPendingMoveValues([]); setLastRoll(null); setWaitingForPaRa(false); setFlexiblePool(null); setPaRaStreak(0); setPaRaAccumulator(0); setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }
-    }
+    if (!turnContinues) { if (bonusTurn) { addLog("Bonus roll!", 'action'); setPhase(GamePhase.ROLLING); setPendingMoveValues([]); setFlexiblePool(null); setPaRaStreak(0); setPaRaAccumulator(0); } else { setPendingMoveValues([]); setLastRoll(null); setWaitingForPaRa(false); setFlexiblePool(null); setPaRaStreak(0); setPaRaAccumulator(0); setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); } }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
   };
 
   useEffect(() => {
-    const isAI = gameMode === GameMode.AI;
-    const isTutorial = gameMode === GameMode.TUTORIAL;
+    const isAI = gameMode === GameMode.AI; const isTutorial = gameMode === GameMode.TUTORIAL;
     if ((isAI || isTutorial) && turnIndex === 1 && !aiThinking) {
         const runAITurn = async () => {
             setAiThinking(true);
@@ -842,106 +578,20 @@ const App: React.FC = () => {
                     const validMoves = getAvailableMoves(1, board, players, pendingMoveValues, flexiblePool, gameStateRef.current.isNinerMode);
                     if (validMoves.length === 0) { setAiThinking(false); return; }
                     let chosenMove = validMoves[0];
-                    if (isTutorial) chosenMove = validMoves[0];
-                    else if (process.env.API_KEY) {
+                    if (isTutorial) chosenMove = validMoves[0]; else if (process.env.API_KEY) {
                         try {
-                            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                            const myId = players[1].id;
-                            const oppId = players[0].id;
-                            const myStacks = [];
-                            const oppStacks = [];
-                            for (const [pos, shell] of board.entries()) {
-                                if (shell.owner === myId) myStacks.push({ pos, size: shell.stackSize });
-                                if (shell.owner === oppId) oppStacks.push({ pos, size: shell.stackSize });
-                            }
-                            const prompt = `
-                                Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins.
-                                
-                                Rules Context:
-                                - KILL: Landing on enemy stack <= your size. 
-                                - CAPTURE BONUS: If enemy is a "Sho-mo" (opening 2-coin stack), KILLING it upgrades your stack to 3 immediately.
-                                - STACK: Joining your own coins to build a block. Stacks move together.
-                                - BLOCK: Enemy CANNOT land on you if your stack is larger than theirs.
-                                - NO-NINER: If active, stacks of 9 are forbidden.
-                                
-                                Board State:
-                                - My Stacks: ${JSON.stringify(myStacks)}
-                                - Enemy Stacks: ${JSON.stringify(oppStacks)}
-                                - Coins in Hand: ${players[1].coinsInHand}
-                                - No-Niner Mode: ${gameStateRef.current.isNinerMode ? "OFF" : "ON"}
-                                
-                                Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))}
-                                
-                                Strategy:
-                                1. Kill enemy stacks to send them back to hand.
-                                2. Prioritize finishing coins if near the end (>64).
-                                3. Build larger stacks to block enemy movement and prevent being killed.
-                                4. Avoid landing where a larger enemy stack can reach you.
-                                
-                                Return JSON {index: number, reason: string}
-                            `;
+                            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); const myId = players[1].id; const oppId = players[0].id; const myStacks = []; const oppStacks = [];
+                            for (const [pos, shell] of board.entries()) { if (shell.owner === myId) myStacks.push({ pos, size: shell.stackSize }); if (shell.owner === oppId) oppStacks.push({ pos, size: shell.stackSize }); }
+                            const prompt = `Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins. Rules Context: - KILL: Landing on enemy stack <= your size. - CAPTURE BONUS: If enemy is a "Sho-mo" (opening 2-coin stack), KILLING it upgrades your stack to 3 immediately. - STACK: Joining your own coins to build a block. Stacks move together. - BLOCK: Enemy CANNOT land on you if your stack is larger than theirs. - NO-NINER: If active, stacks of 9 are forbidden. Board State: - My Stacks: ${JSON.stringify(myStacks)} - Enemy Stacks: ${JSON.stringify(oppStacks)} - Coins in Hand: ${players[1].coinsInHand} - No-Niner Mode: ${gameStateRef.current.isNinerMode ? "OFF" : "ON"} Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))} Strategy: 1. Kill enemy stacks to send them back to hand. 2. Prioritize finishing coins if near the end (>64). 3. Build larger stacks to block enemy movement and prevent being killed. 4. Avoid landing where a larger enemy stack can reach you. Return JSON {index: number, reason: string}`;
                             const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] }, config: { responseMimeType: "application/json" } });
-                            const aiDecision = JSON.parse(response.text);
-                            if (validMoves[aiDecision.index]) {
-                                chosenMove = validMoves[aiDecision.index];
-                                console.log("AI Reason:", aiDecision.reason);
-                            }
+                            const aiDecision = JSON.parse(response.text); if (validMoves[aiDecision.index]) { chosenMove = validMoves[aiDecision.index]; console.log("AI Reason:", aiDecision.reason); }
                         } catch (err) { 
-                             // Local heuristic fallback logic
-                             let bestScore = -Infinity;
-                             validMoves.forEach(m => {
-                                 let score = 0;
-                                 if (m.type === MoveResultType.FINISH) score += 2000;
-                                 if (m.type === MoveResultType.KILL) {
-                                     const targetShell = board.get(m.targetIndex);
-                                     score += 500 + (targetShell?.stackSize || 0) * 50;
-                                     if (targetShell?.isShoMo) score += 300; // Extra reward for capturing sho-mo
-                                 }
-                                 if (m.type === MoveResultType.STACK) {
-                                     const targetShell = board.get(m.targetIndex);
-                                     score += 150 + (targetShell?.stackSize || 0) * 30; // Reward bigger stacks
-                                 }
-                                 score += m.targetIndex; // Favor moving forward
-                                 
-                                 // Risk assessment: Is target reachable by larger enemy?
-                                 const myStackSize = m.sourceIndex === 0 ? 1 : (board.get(m.sourceIndex)?.stackSize || 1);
-                                 board.forEach((shell, pos) => {
-                                     if (shell.owner === players[0].id && shell.stackSize > myStackSize) {
-                                         const dist = m.targetIndex - pos;
-                                         if (dist > 0 && dist <= 12) score -= 50; // Simple "danger zone" penalty
-                                     }
-                                 });
-
-                                 if (score > bestScore) {
-                                     bestScore = score;
-                                     chosenMove = m;
-                                 }
-                             });
+                             let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) { const targetShell = board.get(m.targetIndex); score += 500 + (targetShell?.stackSize || 0) * 50; if (targetShell?.isShoMo) score += 300; } if (m.type === MoveResultType.STACK) { const targetShell = board.get(m.targetIndex); score += 150 + (targetShell?.stackSize || 0) * 30; } score += m.targetIndex; const myStackSize = m.sourceIndex === 0 ? 1 : (board.get(m.sourceIndex)?.stackSize || 1); board.forEach((shell, pos) => { if (shell.owner === players[0].id && shell.stackSize > myStackSize) { const dist = m.targetIndex - pos; if (dist > 0 && dist <= 12) score -= 50; } }); if (score > bestScore) { bestScore = score; chosenMove = m; } });
                         }
                     } else {
-                        // Heuristic fallback (same as above for non-API users)
-                        let bestScore = -Infinity;
-                        validMoves.forEach(m => {
-                            let score = 0;
-                            if (m.type === MoveResultType.FINISH) score += 2000;
-                            if (m.type === MoveResultType.KILL) {
-                                const targetShell = board.get(m.targetIndex);
-                                score += 500 + (targetShell?.stackSize || 0) * 50;
-                                if (targetShell?.isShoMo) score += 300;
-                            }
-                            if (m.type === MoveResultType.STACK) {
-                                const targetShell = board.get(m.targetIndex);
-                                score += 150 + (targetShell?.stackSize || 0) * 30;
-                            }
-                            score += m.targetIndex;
-                            if (score > bestScore) {
-                                bestScore = score;
-                                chosenMove = m;
-                            }
-                        });
+                        let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) { const targetShell = board.get(m.targetIndex); score += 500 + (targetShell?.stackSize || 0) * 50; if (targetShell?.isShoMo) score += 300; } if (m.type === MoveResultType.STACK) { const targetShell = board.get(m.targetIndex); score += 150 + (targetShell?.stackSize || 0) * 30; } score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
                     }
-                    performMove(chosenMove.sourceIndex, chosenMove.targetIndex);
-                    if (isTutorial && tutorialStep === 5) setTimeout(() => setTutorialStep(6), 1000);
+                    performMove(chosenMove.sourceIndex, chosenMove.targetIndex); if (isTutorial && tutorialStep === 5) setTimeout(() => setTutorialStep(6), 1000);
                 }
             } catch (e) { } finally { setAiThinking(false); }
         };
@@ -949,94 +599,23 @@ const App: React.FC = () => {
     }
   }, [turnIndex, phase, gameMode, waitingForPaRa, pendingMoveValues, flexiblePool, players, board, aiThinking, performRoll, performMove, tutorialStep]);
 
-  useEffect(() => {
-    if (gameMode === GameMode.ONLINE_GUEST) return;
-    if (phase === GamePhase.MOVING && !isRolling && !waitingForPaRa) {
-        const moves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, flexiblePool, isNinerMode);
-        if (moves.length === 0) {
-            const isAIPlayer = gameMode === GameMode.AI && turnIndex === 1;
-            const isTutorialOpponent = gameMode === GameMode.TUTORIAL && turnIndex === 1;
-            if (isAIPlayer || isTutorialOpponent) { setTimeout(() => handleSkipTurn(), 2000); }
-        }
-    }
-  }, [phase, isRolling, waitingForPaRa, pendingMoveValues, flexiblePool, turnIndex, board, players, isNinerMode, gameMode, handleSkipTurn]);
+  useEffect(() => { if (gameMode === GameMode.ONLINE_GUEST) return; if (phase === GamePhase.MOVING && !isRolling && !waitingForPaRa) { const moves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, flexiblePool, isNinerMode); if (moves.length === 0) { const isAIPlayer = gameMode === GameMode.AI && turnIndex === 1; const isTutorialOpponent = gameMode === GameMode.TUTORIAL && turnIndex === 1; if (isAIPlayer || isTutorialOpponent) { setTimeout(() => handleSkipTurn(), 2000); } } } }, [phase, isRolling, waitingForPaRa, pendingMoveValues, flexiblePool, turnIndex, board, players, isNinerMode, gameMode, handleSkipTurn]);
 
-  const setupHost = async () => {
-      setJoinError(null); setHasOpponentJoined(false); setGameId(''); 
-      const peer = new Peer(undefined, PEER_CONFIG);
-      peer.on('open', (id) => setGameId(id));
-      peer.on('error', (err) => setJoinError(`Failed: ${err.type}`));
-      peer.on('connection', (conn) => {
-          connRef.current = conn;
-          conn.on('data', (data: any) => {
-              if (data.type === 'JOIN_REQ') { setPeerConnected(true); setHasOpponentJoined(true); initializeGame(data.payload); return; }
-              if (data.type === 'ROLL_REQ') performRoll();
-              if (data.type === 'MOVE_REQ') performMove(data.payload.source, data.payload.target);
-              if (data.type === 'SKIP_REQ') handleSkipTurn();
-          });
-          conn.on('close', () => setPeerConnected(false));
-      });
-      peerRef.current = peer; setMyPlayerIndex(0); setGameMode(GameMode.ONLINE_HOST);
-  };
+  const setupHost = async () => { setJoinError(null); setHasOpponentJoined(false); setGameId(''); const peer = new Peer(undefined, PEER_CONFIG); peer.on('open', (id) => setGameId(id)); peer.on('error', (err) => setJoinError(`Failed: ${err.type}`)); peer.on('connection', (conn) => { connRef.current = conn; conn.on('data', (data: any) => { if (data.type === 'JOIN_REQ') { setPeerConnected(true); setHasOpponentJoined(true); initializeGame(data.payload); return; } if (data.type === 'ROLL_REQ') performRoll(); if (data.type === 'MOVE_REQ') performMove(data.payload.source, data.payload.target); if (data.type === 'SKIP_REQ') handleSkipTurn(); }); conn.on('close', () => setPeerConnected(false)); }); peerRef.current = peer; setMyPlayerIndex(0); setGameMode(GameMode.ONLINE_HOST); };
 
-  const joinGame = async () => {
-      if (!joinId) return;
-      setIsJoining(true); setJoinError(null);
-      const peer = new Peer(undefined, PEER_CONFIG);
-      peer.on('error', (err) => { setJoinError(`Failed: ${err.type}`); setIsJoining(false); });
-      peer.on('open', (id) => {
-          const conn = peer.connect(joinId);
-          connRef.current = conn;
-          conn.on('open', () => {
-            conn.send({ type: 'JOIN_REQ', payload: { name: playerName, color: selectedColor, avatar: selectedAvatar } });
-            setPeerConnected(true); setGameMode(GameMode.ONLINE_GUEST); setMyPlayerIndex(1); setIsJoining(false);
-          });
-          conn.on('data', (data: any) => {
-              if (data.type === 'SYNC') {
-                  const p = data.payload;
-                  setBoard(deserializeBoard(p.board)); setPlayers(p.players); setTurnIndex(p.turnIndex); setPhase(p.phase);
-                  setLastRoll(p.lastRoll); setIsRolling(p.isRolling); setPendingMoveValues(p.pendingMoveValues);
-                  setWaitingForPaRa(p.waitingForPaRa); setFlexiblePool(p.flexiblePool); setLastMove(p.lastMove); setTotalMoves(p.totalMoves);
-                  if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode);
-              }
-          });
-          conn.on('close', () => setPeerConnected(false));
-      });
-      peerRef.current = peer;
-  };
+  const joinGame = async () => { if (!joinId) return; setIsJoining(true); setJoinError(null); const peer = new Peer(undefined, PEER_CONFIG); peer.on('error', (err) => { setJoinError(`Failed: ${err.type}`); setIsJoining(false); }); peer.on('open', (id) => { const conn = peer.connect(joinId); connRef.current = conn; conn.on('open', () => { conn.send({ type: 'JOIN_REQ', payload: { name: playerName, color: selectedColor, avatar: selectedAvatar } }); setPeerConnected(true); setGameMode(GameMode.ONLINE_GUEST); setMyPlayerIndex(1); setIsJoining(false); }); conn.on('data', (data: any) => { if (data.type === 'SYNC') { const p = data.payload; setBoard(deserializeBoard(p.board)); setPlayers(p.players); setTurnIndex(p.turnIndex); setPhase(p.phase); setLastRoll(p.lastRoll); setIsRolling(p.isRolling); setPendingMoveValues(p.pendingMoveValues); setWaitingForPaRa(p.waitingForPaRa); setFlexiblePool(p.flexiblePool); setLastMove(p.lastMove); setTotalMoves(p.totalMoves); if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode); } }); conn.on('close', () => setPeerConnected(false)); }); peerRef.current = peer; };
 
-  const broadcastState = useCallback(() => {
-    if (connRef.current?.open && gameMode === GameMode.ONLINE_HOST) {
-        connRef.current.send({
-            type: 'SYNC',
-            payload: {
-                board: serializeBoard(board), players: players, turnIndex: turnIndex, phase: phase,
-                lastRoll: lastRoll, isRolling: isRolling, pendingMoveValues: pendingMoveValues,
-                waitingForPaRa: waitingForPaRa, flexiblePool: flexiblePool, lastMove: lastMove, totalMoves: totalMoves,
-                isNinerMode: isNinerMode
-            }
-        });
-    }
-  }, [gameMode, board, players, turnIndex, phase, lastRoll, isRolling, pendingMoveValues, waitingForPaRa, flexiblePool, lastMove, totalMoves, isNinerMode]);
+  const broadcastState = useCallback(() => { if (connRef.current?.open && gameMode === GameMode.ONLINE_HOST) { connRef.current.send({ type: 'SYNC', payload: { board: serializeBoard(board), players: players, turnIndex: turnIndex, phase: phase, lastRoll: lastRoll, isRolling: isRolling, pendingMoveValues: pendingMoveValues, waitingForPaRa: waitingForPaRa, flexiblePool: flexiblePool, lastMove: lastMove, totalMoves: totalMoves, isNinerMode: isNinerMode } }); } }, [gameMode, board, players, turnIndex, phase, lastRoll, isRolling, pendingMoveValues, waitingForPaRa, flexiblePool, lastMove, totalMoves, isNinerMode]);
 
-  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST) broadcastState(); }, [broadcastState]);
-  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST && peerConnected) broadcastState(); }, [gameMode, peerConnected, broadcastState]);
+  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST) broadcastState(); }, [broadcastState]); useEffect(() => { if (gameMode === GameMode.ONLINE_HOST && peerConnected) broadcastState(); }, [gameMode, peerConnected, broadcastState]);
 
-  const cancelJoin = () => { setIsJoining(false); peerRef.current?.destroy(); };
   const requestRoll = () => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'ROLL_REQ' }); else performRoll(); };
   const requestMove = (s: number, t: number) => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'MOVE_REQ', payload: { source: s, target: t } }); else performMove(s, t); };
   const requestSkip = () => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'SKIP_REQ' }); else handleSkipTurn(); };
 
-  const canInteract = () => {
-      if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0 && !isRolling;
-      if (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) return turnIndex === myPlayerIndex && !isRolling && peerConnected;
-      return !isRolling;
-  };
+  const canInteract = () => { if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0 && !isRolling; if (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) return turnIndex === myPlayerIndex && !isRolling && peerConnected; return !isRolling; };
 
-  const currentValidMoves = useCallback(() => {
-      if (phase !== GamePhase.MOVING || players.length === 0) return [];
-      return getAvailableMoves(turnIndex, board, players, pendingMoveValues, flexiblePool, isNinerMode);
-  }, [phase, players, turnIndex, board, pendingMoveValues, flexiblePool, isNinerMode])();
+  const currentValidMoves = useCallback(() => { if (phase !== GamePhase.MOVING || players.length === 0) return []; return getAvailableMoves(turnIndex, board, players, pendingMoveValues, flexiblePool, isNinerMode); }, [phase, players, turnIndex, board, pendingMoveValues, flexiblePool, isNinerMode])();
 
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMoves.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const winner = players.find(p => p.coinsFinished >= COINS_PER_PLAYER);
@@ -1049,7 +628,6 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row overflow-hidden font-sans fixed inset-0">
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => setGameMode(null)} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
-        
         {showLobby && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto">
              <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-8">
@@ -1083,23 +661,12 @@ const App: React.FC = () => {
                   <div className="pt-2 border-t border-stone-800 flex flex-col gap-2">
                        <div className="flex items-center justify-between">
                             <label className="text-stone-400 text-xs uppercase block">Ambient Music</label>
-                            <button 
-                                onClick={toggleMusic} 
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${isMusicEnabled ? 'bg-amber-700 text-white' : 'bg-stone-800 text-stone-500'}`}
-                            >
-                                {isMusicEnabled ? 'ON' : 'OFF'}
-                            </button>
+                            <button onClick={toggleMusic} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${isMusicEnabled ? 'bg-amber-700 text-white' : 'bg-stone-800 text-stone-500'}`}>{isMusicEnabled ? 'ON' : 'OFF'}</button>
                        </div>
                        {isMusicEnabled && (
                            <div className="flex items-center gap-4">
                                <span className="text-[10px] text-stone-500 font-bold uppercase">Volume</span>
-                               <input 
-                                 type="range" 
-                                 min="0" max="100" 
-                                 value={musicVolume} 
-                                 onChange={handleVolumeChange} 
-                                 className="flex-grow accent-amber-600 h-1 bg-stone-800 rounded-lg appearance-none"
-                               />
+                               <input type="range" min="0" max="100" value={musicVolume} onChange={handleVolumeChange} className="flex-grow accent-amber-600 h-1 bg-stone-800 rounded-lg appearance-none" />
                            </div>
                        )}
                   </div>
@@ -1117,7 +684,6 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-
         {showWaitingForOpponent && (
             <div className="fixed inset-0 z-50 bg-stone-950 flex flex-col items-center justify-center text-amber-500 p-4 text-center">
                 <h2 className="text-2xl md:text-3xl mb-4">Game ID</h2>
@@ -1126,40 +692,23 @@ const App: React.FC = () => {
                 <button onClick={() => setGameMode(null)} className="mt-8 text-stone-500 underline">Cancel</button>
             </div>
         )}
-
         {showGame && (
             <>
-                {/* Control Sidebar */}
                 <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[55dvh] md:h-full order-1 overflow-hidden">
-                    {/* Top Static Section (Header + Players) */}
                     <div className="p-1.5 md:p-4 flex flex-col gap-1.5 md:gap-3 flex-shrink-0">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
                             <div onClick={() => setGameMode(null)} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
                             <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={toggleMusic} 
-                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`}
-                                    title="Toggle Music"
-                                >
-                                    {isMusicEnabled ? '🎵' : '🔇'}
-                                </button>
+                                <button onClick={toggleMusic} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`} title="Toggle Music">{isMusicEnabled ? '🎵' : '🔇'}</button>
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
                             </div>
                         </header>
-
                         {isMusicEnabled && (
                             <div className="px-1 md:px-0 py-0.5 flex items-center gap-3">
                                 <span className="text-[8px] md:text-[9px] text-stone-500 font-bold uppercase whitespace-nowrap">Music</span>
-                                <input 
-                                  type="range" 
-                                  min="0" max="100" 
-                                  value={musicVolume} 
-                                  onChange={handleVolumeChange} 
-                                  className="flex-grow accent-amber-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
+                                <input type="range" min="0" max="100" value={musicVolume} onChange={handleVolumeChange} className="flex-grow accent-amber-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer" />
                             </div>
                         )}
-
                         <div className="grid grid-cols-2 gap-1.5 md:gap-3">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`p-1 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg scale-102' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
@@ -1175,8 +724,6 @@ const App: React.FC = () => {
                             ))}
                         </div>
                     </div>
-
-                    {/* Action Center - Fixed position below players */}
                     <div className="flex-1 flex flex-col p-1.5 md:p-4 gap-1.5 md:gap-3 overflow-hidden">
                         {phase === GamePhase.GAME_OVER ? (
                             <div className="text-center p-3 md:p-8 bg-stone-800/50 rounded-xl border border-amber-500/50 flex-grow flex flex-col justify-center">
@@ -1189,18 +736,22 @@ const App: React.FC = () => {
                                 <div className={!canInteract() ? "opacity-50 pointer-events-none grayscale" : ""}>
                                     <DiceArea currentRoll={lastRoll} onRoll={requestRoll} canRoll={phase === GamePhase.ROLLING && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={flexiblePool} />
                                 </div>
-                                
                                 {showSkipButton ? (
                                     <button onClick={requestSkip} className="mt-1 md:mt-2 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 px-4 py-2 rounded-xl font-cinzel font-bold animate-pulse text-sm md:text-base flex-shrink-0">⏭️ SKIP TURN</button>
                                 ) : (
                                     <div className="mt-1.5 md:mt-2 space-y-1 md:space-y-2 flex-shrink-0">
-                                        {/* Place from Hand Action */}
                                         <div onClick={() => { 
-                                            if (canInteract() && phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0) {
-                                                SFX.playSelect();
-                                                setSelectedSourceIndex(0); 
+                                            if (canInteract() && phase === GamePhase.MOVING) {
+                                                if (currentPlayer.coinsInHand > 0) {
+                                                    SFX.playSelect();
+                                                    setSelectedSourceIndex(0); 
+                                                } else {
+                                                    // Visual feedback for no coins in hand
+                                                    SFX.playBounce();
+                                                    speak("No coins.");
+                                                }
                                             }
-                                        }} className={`p-1.5 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0 && canInteract() ? (selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-stone-700 hover:border-amber-700/50 bg-stone-900/50') : 'border-stone-800 opacity-50'}`}>
+                                        }} className={`p-1.5 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${phase === GamePhase.MOVING && canInteract() ? (selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : (currentPlayer.coinsInHand > 0 ? 'border-stone-700 hover:border-amber-700/50 bg-stone-900/50' : 'border-stone-800 opacity-50 cursor-not-allowed')) : 'border-stone-800 opacity-50'}`}>
                                             <div className="flex items-center gap-2 md:gap-3">
                                                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center font-bold text-stone-500 text-xs md:text-base">0</div>
                                                 <div className="flex flex-col">
@@ -1210,14 +761,9 @@ const App: React.FC = () => {
                                             </div>
                                             {selectedSourceIndex === 0 && <span className="text-amber-500 text-[8px] md:text-[10px] font-bold">SELECTED</span>}
                                         </div>
-
-                                        {selectedSourceIndex !== null && (
-                                            <button onClick={() => setSelectedSourceIndex(null)} className="w-full text-[9px] md:text-[10px] text-stone-500 hover:text-white transition-colors py-1 flex items-center justify-center gap-2">✕ DESELECT PIECE</button>
-                                        )}
+                                        {selectedSourceIndex !== null && <button onClick={() => setSelectedSourceIndex(null)} className="w-full text-[9px] md:text-[10px] text-stone-500 hover:text-white transition-colors py-1 flex items-center justify-center gap-2">✕ DESELECT PIECE</button>}
                                     </div>
                                 )}
-                                
-                                {/* Logs - Fills remaining space in the Sidebar section on mobile */}
                                 <div className="mt-2 flex-grow bg-black/40 rounded-lg border border-stone-800/50 p-1 md:p-3 overflow-y-auto font-mono text-[9px] md:text-[10px] no-scrollbar">
                                     {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400' : 'text-stone-500'}`}>{log.message}</div>)}
                                 </div>
@@ -1225,8 +771,6 @@ const App: React.FC = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Main Board View */}
                 <div className="flex-grow relative bg-[#1c1917] overflow-hidden flex items-center justify-center order-2 pt-2 md:pt-0" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, transformOrigin: 'center', width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
