@@ -436,7 +436,6 @@ const App: React.FC = () => {
 
   useEffect(() => { gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep }; }, [board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep]);
 
-  // FIX: Added colorHex to the fallback object to ensure it strictly implements the Player interface and resolves type error in calculatePotentialMoves
   const currentPlayer: Player = players[turnIndex] || { 
     id: PlayerColor.Red, 
     name: 'Red', 
@@ -449,9 +448,18 @@ const App: React.FC = () => {
 
   const speak = (text: string) => { const u = new SpeechSynthesisUtterance(text); u.rate = 1.1; u.pitch = 0.9; window.speechSynthesis.speak(u); };
 
-  useEffect(() => { const baseCount = 18742; const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15)); const local = parseInt(localStorage.getItem('sho_plays_local') || '0', 10); setGlobalPlayCount(baseCount + growth + local); }, []);
+  useEffect(() => { 
+    const baseCount = 18742; 
+    const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15)); 
+    const local = parseInt(localStorage.getItem('sho_plays_local') || '0', 10); 
+    setGlobalPlayCount(baseCount + growth + local); 
+  }, []);
 
-  const trackGameStart = () => { const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1; localStorage.setItem('sho_plays_local', newLocal.toString()); setGlobalPlayCount(prev => prev + 1); };
+  const trackGameStart = () => { 
+    const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1; 
+    localStorage.setItem('sho_plays_local', newLocal.toString()); 
+    setGlobalPlayCount(prev => prev + 1); 
+  };
 
   const toggleMusic = () => { const newState = !isMusicEnabled; setIsMusicEnabled(newState); if (newState) { SFX.startAmbient(musicVolume / 100); } else { SFX.stopAmbient(); } };
 
@@ -685,13 +693,12 @@ const App: React.FC = () => {
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const winner = players.find(p => p.coinsFinished >= COINS_PER_PLAYER);
   const showLobby = !gameMode;
-  const showWaitingForOpponent = gameMode === GameMode.ONLINE_HOST && !hasOpponentJoined;
   const showGame = gameMode === GameMode.LOCAL || gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL || gameMode === GameMode.ONLINE_GUEST || (gameMode === GameMode.ONLINE_HOST && hasOpponentJoined);
   const showSkipButton = canInteract() && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && currentValidMovesList.length === 0;
 
   return (
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row overflow-hidden font-sans fixed inset-0">
-        {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => setGameMode(null)} />}
+        {(gameMode === GameMode.TUTORIAL || tutorialStep > 0) && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
         {showLobby && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto">
@@ -702,12 +709,29 @@ const App: React.FC = () => {
                   <p className="text-stone-400 mt-2 tracking-widest uppercase text-center font-sans text-xs md:text-sm">Traditional Tibetan Dice Game</p>
                </div>
               <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
+                  <div className="mb-4 text-center">
+                    <button 
+                        onClick={() => setShowRules(true)} 
+                        className="text-stone-400 hover:text-amber-500 transition-colors uppercase text-xs tracking-widest font-bold mb-4 inline-flex items-center gap-2"
+                    >
+                        📜 HOW TO PLAY & RULES
+                    </button>
+                    <div className="flex items-center justify-center gap-4 p-3 bg-stone-800/40 rounded-lg border border-stone-700">
+                        <span className="text-[10px] text-stone-500 uppercase tracking-widest">Variant:</span>
+                        <button 
+                            onClick={() => setIsNinerMode(!isNinerMode)}
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${isNinerMode ? 'bg-amber-700 border-amber-500 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
+                        >
+                            {isNinerMode ? 'NINER MODE' : 'NO-NINER'}
+                        </button>
+                    </div>
+                  </div>
                   <div className="mb-4">
-                      <label className="text-stone-400 text-xs uppercase block mb-2">Your Name</label>
+                      <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest">Your Name</label>
                       <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200 focus:border-amber-500 outline-none" maxLength={15} />
                   </div>
                   <div className="mb-4">
-                      <label className="text-stone-400 text-xs uppercase block mb-2">Choose Color</label>
+                      <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest">Choose Color</label>
                       <div className="grid grid-cols-5 gap-2">
                           {COLOR_PALETTE.map((c) => (
                               <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 transition-all transform hover:scale-110 ${selectedColor === c.hex ? 'border-white scale-110 shadow-[0_0_10px_white]' : 'border-transparent opacity-70'}`} style={{ backgroundColor: c.hex }} title={c.name} />
@@ -715,7 +739,7 @@ const App: React.FC = () => {
                       </div>
                   </div>
                   <div className="mb-4">
-                       <label className="text-stone-400 text-xs uppercase block mb-2">Select Avatar</label>
+                       <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest">Select Avatar</label>
                        <div className="flex flex-wrap gap-2 mb-2">
                            {AVATAR_PRESETS.map((av) => (
                                <button key={av} onClick={() => setSelectedAvatar(av)} className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 text-xl hover:bg-stone-800 ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}>{av}</button>
@@ -724,10 +748,17 @@ const App: React.FC = () => {
                        </div>
                   </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-4">
-                  <div className="bg-stone-900 border border-stone-800 p-6 md:p-8 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all" onClick={() => { initializeGame(); setGameMode(GameMode.LOCAL); }}><div className="text-4xl mb-4 group-hover:scale-110 transition-transform">🏔️</div><h3 className="text-xl md:text-2xl font-bold text-stone-200">Local</h3></div>
-                  <div className="bg-stone-900 border border-stone-800 p-6 md:p-8 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all" onClick={() => { initializeGame(); setGameMode(GameMode.AI); }}><div className="text-4xl mb-4 group-hover:scale-110 transition-transform">🤖</div><h3 className="text-xl md:text-2xl font-bold text-stone-200">Vs AI</h3></div>
-                  <div className="bg-stone-900 border border-stone-800 p-6 md:p-8 rounded-xl hover:border-amber-600 text-center relative transition-all"><div className="text-4xl mb-4">🌍</div><h3 className="text-xl md:text-2xl font-bold mb-2 text-stone-200">Online</h3><button onClick={setupHost} className="w-full bg-amber-700 hover:bg-amber-600 text-white py-2 rounded mb-2 font-bold transition-colors text-sm">HOST</button><div className="flex gap-2"><input type="text" placeholder="Game ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-sm" value={joinId} onChange={e => setJoinId(e.target.value)} /><button onClick={joinGame} className="bg-stone-700 hover:bg-stone-600 text-white px-3 rounded font-bold text-sm">{isJoining ? '...' : 'JOIN'}</button></div></div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-5xl mb-4">
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🎓</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Tutorial</h3></div>
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🏔️</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Local</h3></div>
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🤖</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Vs AI</h3></div>
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 text-center relative transition-all flex flex-col items-center justify-center"><div className="text-3xl mb-3">🌍</div><h3 className="text-lg font-bold mb-2 text-stone-200 uppercase tracking-widest">Online</h3><button onClick={setupHost} className="w-full bg-amber-700 hover:bg-amber-600 text-white py-2 rounded mb-2 font-bold transition-colors text-xs uppercase">Host</button><div className="flex gap-2 w-full"><input type="text" placeholder="ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-xs" value={joinId} onChange={e => setJoinId(e.target.value)} /><button onClick={joinGame} className="bg-stone-700 hover:bg-stone-600 text-white px-3 rounded font-bold text-xs">{isJoining ? '...' : 'JOIN'}</button></div></div>
+              </div>
+
+              <div className="mt-8 text-stone-500 text-[10px] uppercase tracking-[0.3em] font-sans flex flex-col items-center gap-1 opacity-60">
+                  <span>Total Games Played Worldwide</span>
+                  <span className="text-amber-600 font-bold text-xl tabular-nums drop-shadow-[0_0_10px_rgba(180,83,9,0.3)]">{globalPlayCount.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -737,7 +768,7 @@ const App: React.FC = () => {
                 <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[55dvh] md:h-full order-1 overflow-hidden">
                     <div className="p-1.5 md:p-4 flex flex-col gap-1.5 md:gap-3 flex-shrink-0">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
-                            <div onClick={() => setGameMode(null)} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
+                            <div onClick={() => { setGameMode(null); setTutorialStep(0); }} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
                             <div className="flex items-center gap-2">
                                 <button onClick={toggleMusic} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
@@ -761,9 +792,9 @@ const App: React.FC = () => {
                     <div className="flex-1 flex flex-col p-1.5 md:p-4 gap-1.5 md:gap-3 overflow-hidden">
                         {phase === GamePhase.GAME_OVER ? (
                             <div className="text-center p-3 md:p-8 bg-stone-800/50 rounded-xl border border-amber-500/50 flex-grow flex flex-col justify-center">
-                                <h2 className="text-xl md:text-4xl text-amber-400 mb-1">Victory!</h2>
+                                <h2 className="text-xl md:text-4xl text-amber-400 mb-1 font-cinzel">Victory!</h2>
                                 <p className="text-white mb-2 md:mb-4 text-xs md:text-base">{winner?.name} won!</p>
-                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-4 py-1.5 md:px-6 md:py-2 rounded-full font-bold text-sm md:text-base">New Game</button>
+                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-4 py-1.5 md:px-6 md:py-2 rounded-full font-bold text-sm md:text-base uppercase tracking-widest font-cinzel">New Game</button>
                             </div>
                         ) : (
                             <div className="flex flex-col flex-grow">
@@ -778,7 +809,7 @@ const App: React.FC = () => {
                                             if (canInteract() && phase === GamePhase.MOVING) {
                                                 if (currentPlayer.coinsInHand > 0) {
                                                     const handMoves = calculatePotentialMoves(0, pendingMoveValues, board, currentPlayer, isNinerMode);
-                                                    if (handMoves.length > 0) { SFX.playSelect(); setSelectedSourceIndex(0); } 
+                                                    if (handMoves.length > 0) { SFX.playSelect(); setSelectedSourceIndex(0); if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4); } 
                                                     else { speak("No valid moves from hand."); SFX.playBounce(); }
                                                 }
                                             }
@@ -786,7 +817,7 @@ const App: React.FC = () => {
                                             <div className="flex items-center gap-2">
                                                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center font-bold text-stone-500 text-xs md:text-base">0</div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-stone-200 text-xs md:text-base">From Hand</span>
+                                                    <span className="font-bold text-stone-200 text-xs md:text-base uppercase tracking-widest font-cinzel">From Hand</span>
                                                     <span className="text-[8px] md:text-[10px] text-stone-500">{currentPlayer.coinsInHand} coins</span>
                                                 </div>
                                             </div>
