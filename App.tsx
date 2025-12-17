@@ -513,7 +513,6 @@ const App: React.FC = () => {
     } 
     else { 
         if (s.waitingForPaRa) { 
-            // Standard rule: 2 from Pa Ra + total of this roll added as separate values
             const newMoveValues = [2, total];
             setPendingMoveValues(newMoveValues);
             addLog(`Pa Ra Bonus complete: moves of 2 and ${total} granted.`, 'alert'); 
@@ -655,14 +654,14 @@ const App: React.FC = () => {
                         try {
                             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); const myId = players[1].id; const oppId = players[0].id; const myStacks = []; const oppStacks = [];
                             for (const [pos, shell] of board.entries()) { if (shell.owner === myId) myStacks.push({ pos, size: shell.stackSize }); if (shell.owner === oppId) oppStacks.push({ pos, size: shell.stackSize }); }
-                            const prompt = `Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins. Rules Context: - KILL: Landing on enemy stack <= your size. - CAPTURE BONUS: If enemy is a "Sho-mo" (opening 2-coin stack), KILLING it upgrades your stack to 3 immediately. - STACK: Joining your own coins to build a block. Stacks move together. - BLOCK: Enemy CANNOT land on you if your stack is larger than theirs. - NO-NINER: If active, stacks of 9 are forbidden. Board State: - My Stacks: ${JSON.stringify(myStacks)} - Enemy Stacks: ${JSON.stringify(oppStacks)} - Coins in Hand: ${players[1].coinsInHand} - No-Niner Mode: ${gameStateRef.current.isNinerMode ? "OFF" : "ON"} Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))} Strategy: 1. Kill enemy stacks. 2. Build larger stacks to block enemy. 3. Finish coins. Return JSON {index: number, reason: string}`;
+                            const prompt = `Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins. Board State: - My Stacks: ${JSON.stringify(myStacks)} - Enemy Stacks: ${JSON.stringify(oppStacks)} - Coins in Hand: ${players[1].coinsInHand} Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))} Return JSON {index: number, reason: string}`;
                             const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [{ text: prompt }] }, config: { responseMimeType: "application/json" } });
                             const aiDecision = JSON.parse(response.text); if (validMoves[aiDecision.index]) { chosenMove = validMoves[aiDecision.index]; }
                         } catch (err) { 
-                             let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) { const targetShell = board.get(m.targetIndex); score += 500 + (targetShell?.stackSize || 0) * 50; if (targetShell?.isShoMo) score += 300; } if (m.type === MoveResultType.STACK) { const targetShell = board.get(m.targetIndex); score += 150 + (targetShell?.stackSize || 0) * 30; } score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
+                             let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) score += 500; score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
                         }
                     } else {
-                        let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) { const targetShell = board.get(m.targetIndex); score += 500 + (targetShell?.stackSize || 0) * 50; if (targetShell?.isShoMo) score += 300; } if (m.type === MoveResultType.STACK) { const targetShell = board.get(m.targetIndex); score += 150 + (targetShell?.stackSize || 0) * 30; } score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
+                        let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) score += 500; score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
                     }
                     performMove(chosenMove.sourceIndex, chosenMove.targetIndex); if (isTutorial && tutorialStep === 5) setTimeout(() => setTutorialStep(6), 1000);
                 }
@@ -693,6 +692,7 @@ const App: React.FC = () => {
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const winner = players.find(p => p.coinsFinished >= COINS_PER_PLAYER);
   const showLobby = !gameMode;
+  const showWaitingForOpponent = gameMode === GameMode.ONLINE_HOST && !hasOpponentJoined;
   const showGame = gameMode === GameMode.LOCAL || gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL || gameMode === GameMode.ONLINE_GUEST || (gameMode === GameMode.ONLINE_HOST && hasOpponentJoined);
   const showSkipButton = canInteract() && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && currentValidMovesList.length === 0;
 
@@ -700,6 +700,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row overflow-hidden font-sans fixed inset-0">
         {(gameMode === GameMode.TUTORIAL || tutorialStep > 0) && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
+        
         {showLobby && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto">
              <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-8">
@@ -763,6 +764,33 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+
+        {showWaitingForOpponent && (
+            <div className="fixed inset-0 z-50 bg-stone-950 flex flex-col items-center justify-center p-6 text-center">
+                <div className="flex flex-col items-center max-w-md w-full bg-stone-900 p-8 rounded-2xl border border-stone-800 shadow-2xl">
+                    <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                    <h2 className="text-2xl font-cinzel text-amber-500 mb-2">Waiting for Opponent</h2>
+                    <p className="text-stone-400 mb-6 text-sm">Share this Game ID with your friend to start playing:</p>
+                    <div className="w-full bg-black p-4 rounded-xl border border-stone-700 mb-4 flex items-center justify-between">
+                        <span className="font-mono text-amber-400 text-lg font-bold">{gameId || 'Generating...'}</span>
+                        <button 
+                            onClick={() => { if (gameId) { navigator.clipboard.writeText(gameId); addLog('ID copied to clipboard'); } }}
+                            className="bg-stone-800 hover:bg-stone-700 p-2 rounded text-stone-300 transition-colors"
+                            title="Copy to Clipboard"
+                        >
+                            📋
+                        </button>
+                    </div>
+                    <button 
+                        onClick={() => { setGameMode(null); peerRef.current?.destroy(); }}
+                        className="text-stone-500 hover:text-stone-300 text-xs uppercase tracking-widest mt-4 font-bold"
+                    >
+                        Cancel Hosting
+                    </button>
+                </div>
+            </div>
+        )}
+
         {showGame && (
             <>
                 <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[55dvh] md:h-full order-1 overflow-hidden">
@@ -802,15 +830,18 @@ const App: React.FC = () => {
                                     <DiceArea currentRoll={lastRoll} onRoll={requestRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} />
                                 </div>
                                 {showSkipButton ? (
-                                    <button onClick={requestSkip} className="mt-1 md:mt-2 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 px-4 py-2 rounded-xl font-cinzel font-bold animate-pulse text-sm md:text-base flex-shrink-0">⏭️ SKIP TURN</button>
+                                    <button onClick={requestSkip} className="mt-1 md:mt-2 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 px-4 py-2 rounded-xl font-cinzel font-bold animate-pulse text-sm md:text-base flex-shrink-0 uppercase tracking-widest">⏭️ Skip Turn</button>
                                 ) : (
                                     <div className="mt-1.5 md:mt-2 space-y-1 md:space-y-2 flex-shrink-0">
                                         <div onClick={() => { 
                                             if (canInteract() && phase === GamePhase.MOVING) {
                                                 if (currentPlayer.coinsInHand > 0) {
                                                     const handMoves = calculatePotentialMoves(0, pendingMoveValues, board, currentPlayer, isNinerMode);
-                                                    if (handMoves.length > 0) { SFX.playSelect(); setSelectedSourceIndex(0); if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4); } 
-                                                    else { speak("No valid moves from hand."); SFX.playBounce(); }
+                                                    if (handMoves.length > 0) { 
+                                                        SFX.playSelect(); 
+                                                        setSelectedSourceIndex(0); 
+                                                        if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4); 
+                                                    } else { speak("No valid moves from hand."); SFX.playBounce(); }
                                                 }
                                             }
                                         }} className={`p-1.5 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${phase === GamePhase.MOVING && canInteract() ? (selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20' : 'border-stone-700 bg-stone-900/50') : 'border-stone-800 opacity-50'}`}>
@@ -825,7 +856,7 @@ const App: React.FC = () => {
                                     </div>
                                 )}
                                 <div className="mt-2 flex-grow bg-black/40 rounded-lg border border-stone-800/50 p-1 md:p-3 overflow-y-auto font-mono text-[9px] md:text-[10px] no-scrollbar">
-                                    {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400' : 'text-stone-500'}`}>{log.message}</div>)}
+                                    {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400 font-bold' : 'text-stone-500'}`}>{log.message}</div>)}
                                 </div>
                             </div>
                         )}
