@@ -78,7 +78,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
                     This initial stack is called the <strong>'Sho-mo'</strong>.
                 </li>
                 <li>
-                    <strong>Killer Bonus:</strong> If an opponent lands on and kills your 'Sho-mo', they can place <strong>three coins</strong> in its place immediately (taking the extra from their hand). This is a significant advantage!
+                    <strong>Killer Bonus:</strong> If an opponent lands on and kills your 'Sho-mo', they can place <strong>three coins</strong> in its place immediately (taking the extra from their hand).
                 </li>
             </ul>
           </section>
@@ -88,33 +88,11 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             <h3 className="text-lg md:text-xl font-cinzel text-amber-400 mb-2 flex items-center gap-2">
               <span className="text-xl md:text-2xl">🐍</span> The Pa Ra Rule (Snake Eyes)
             </h3>
-            <p className="mb-2">Rolling a <strong>1 and 1</strong> is called "Pa Ra". It is special:</p>
+            <p className="mb-2">Rolling a <strong>1 and 1</strong> is called "Pa Ra":</p>
             <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm">
                 <li>You get to <strong>roll again</strong> immediately.</li>
-                <li>The value of the Pa Ra (2) is added to your next roll.</li>
-                <li>The combined total forms a <strong>Flexible Pool</strong> which you can split between two moves however you like!</li>
+                <li>The move values of both rolls are added to your available moves. You can move one stack by the total or two stacks separately.</li>
             </ul>
-          </section>
-
-          {/* Instant Win */}
-          <section>
-             <h3 className="text-lg md:text-xl font-cinzel text-amber-200 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">⚡</span> Instant Win
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-amber-900/20 p-3 md:p-4 rounded-lg border border-amber-800/50">
-                <h4 className="font-bold text-amber-400 mb-1">Triple Pa Ra</h4>
-                <p className="text-xs md:text-sm">
-                  If a player rolls <strong>Pa Ra (1, 1)</strong> three times consecutively, they instantly win!
-                </p>
-              </div>
-              <div className="bg-amber-900/20 p-3 md:p-4 rounded-lg border border-amber-800/50">
-                <h4 className="font-bold text-amber-400 mb-1">Stacked Dice</h4>
-                <p className="text-xs md:text-sm">
-                   If the dice land <strong>stacked</strong> on top of each other, the player instantly wins.
-                </p>
-              </div>
-            </div>
           </section>
 
           {/* Stacking, Killing, Blocking */}
@@ -154,43 +132,6 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
                 <li>The first player to move all 9 coins off the board wins!</li>
             </ul>
           </section>
-
-          {/* External Links */}
-          <section className="border-t border-stone-800 pt-6 mt-8">
-            <h3 className="text-sm uppercase tracking-widest text-stone-500 mb-4 font-bold">External Resources</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <a 
-                 href="https://bo.wikipedia.org/wiki/%E0%BD%A4%E0%BD%BC%E0%BC%8D" 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 className="flex items-center gap-3 p-3 bg-black/40 rounded-lg hover:bg-stone-800 border border-stone-700 hover:border-amber-500/50 transition-all group"
-               >
-                 <div className="w-10 h-10 rounded-full bg-stone-700 flex items-center justify-center text-xl group-hover:bg-amber-700 transition-colors">
-                    📖
-                 </div>
-                 <div className="flex flex-col">
-                    <span className="font-bold text-stone-300 group-hover:text-amber-400 transition-colors font-cinzel">Tibetan Wikipedia</span>
-                    <span className="text-[10px] text-stone-500 font-mono">bo.wikipedia.org</span>
-                 </div>
-               </a>
-
-               <a 
-                 href="https://en.wikipedia.org/wiki/Sho_(board_game)" 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 className="flex items-center gap-3 p-3 bg-black/40 rounded-lg hover:bg-stone-800 border border-stone-700 hover:border-amber-500/50 transition-all group"
-               >
-                 <div className="w-10 h-10 rounded-full bg-stone-700 flex items-center justify-center text-xl group-hover:bg-amber-700 transition-colors">
-                    🌍
-                 </div>
-                 <div className="flex flex-col">
-                    <span className="font-bold text-stone-300 group-hover:text-amber-400 transition-colors font-cinzel">English Wikipedia</span>
-                    <span className="text-[10px] text-stone-500 font-mono">en.wikipedia.org</span>
-                 </div>
-               </a>
-            </div>
-          </section>
-
         </div>
 
         {/* Footer */}
