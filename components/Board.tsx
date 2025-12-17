@@ -381,6 +381,8 @@ export const Board: React.FC<BoardProps> = ({
       };
   }, [dragState, validMoves, onSelectMove]);
 
+  const hasFinishMove = validMoves.some(m => m.type === MoveResultType.FINISH);
+
   return (
     <div className="relative mx-auto select-none" style={{ width: 800, height: 800 }} ref={boardRef}>
         <style dangerouslySetInnerHTML={{__html: `
@@ -581,11 +583,17 @@ export const Board: React.FC<BoardProps> = ({
         )}
         
         <div 
-            className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${validMoves.some(m => m.type === MoveResultType.FINISH) ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}`}
+            className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${hasFinishMove ? 'opacity-100 cursor-pointer scale-110 z-50' : 'opacity-40 pointer-events-none z-10'}`}
             style={{ left: endBtnPos.x, top: endBtnPos.y }}
+            onClick={() => {
+                if (hasFinishMove) {
+                    const finishMove = validMoves.find(m => m.type === MoveResultType.FINISH);
+                    if (finishMove) onSelectMove(finishMove);
+                }
+            }}
         >
-             <div className="w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed border-stone-700">
-                <span className="font-cinzel font-bold text-stone-600 uppercase">END</span>
+             <div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transition-colors ${hasFinishMove ? 'border-amber-500 bg-amber-900/20 animate-pulse' : 'border-stone-700'}`}>
+                <span className={`font-cinzel font-bold uppercase ${hasFinishMove ? 'text-amber-500' : 'text-stone-600'}`}>END</span>
              </div>
         </div>
     </div>
