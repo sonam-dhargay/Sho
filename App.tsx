@@ -4,7 +4,7 @@ import {
   Player, PlayerColor, BoardState, GamePhase, 
   DiceRoll, MoveResultType, MoveOption, GameLog, BoardShell, GameMode, NetworkPacket
 } from './types';
-import { TOTAL_SHELLS, COINS_PER_PLAYER, PLAYERS_CONFIG, COLOR_PALETTE } from './constants';
+import { TOTAL_SHELLS, COINS_PER_PLAYER, PLAYERS_CONFIG, COLOR_PALETTE, AVATAR_PRESETS } from './constants';
 import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { ShoLogo } from './components/ShoLogo';
@@ -37,8 +37,8 @@ const deserializeBoard = (data: any[]): BoardState => {
 
 // --- Player Generation Helper ---
 const generatePlayers = (
-    p1Settings: { name: string, color: string },
-    p2Settings: { name: string, color: string }
+    p1Settings: { name: string, color: string, avatar?: string },
+    p2Settings: { name: string, color: string, avatar?: string }
 ): Player[] => {
     return [
         {
@@ -46,14 +46,16 @@ const generatePlayers = (
             name: p1Settings.name || 'Player 1',
             colorHex: p1Settings.color || COLOR_PALETTE[0].hex,
             coinsInHand: COINS_PER_PLAYER,
-            coinsFinished: 0
+            coinsFinished: 0,
+            avatar: p1Settings.avatar || AVATAR_PRESETS[0]
         },
         {
             id: PlayerColor.Blue, // Acts as "Guest" or "P2" ID
             name: p2Settings.name || 'Player 2',
             colorHex: p2Settings.color || COLOR_PALETTE[1].hex,
             coinsInHand: COINS_PER_PLAYER,
-            coinsFinished: 0
+            coinsFinished: 0,
+            avatar: p2Settings.avatar || AVATAR_PRESETS[1]
         }
     ];
 };
@@ -445,6 +447,7 @@ const App: React.FC = () => {
   // --- Customization ---
   const [playerName, setPlayerName] = useState('Player');
   const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0].hex);
+  const [selectedAvatar, setSelectedAvatar] = useState<string>(AVATAR_PRESETS[0]);
 
   const [gameId, setGameId] = useState<string>('');
   const [joinId, setJoinId] = useState<string>('');
@@ -509,7 +512,7 @@ const App: React.FC = () => {
     setGlobalPlayCount(prev => prev + 1);
   };
 
-  const initializeGame = useCallback((p2Config?: { name: string, color: string }, isTutorial = false) => {
+  const initializeGame = useCallback((p2Config?: { name: string, color: string, avatar?: string }, isTutorial = false) => {
     if (!isTutorial) trackGameStart();
 
     const newBoard = new Map<number, BoardShell>();
@@ -519,20 +522,19 @@ const App: React.FC = () => {
     setBoard(newBoard);
     
     // Determine Player 2 settings based on mode or provided config
-    const mySettings = { name: playerName || 'Host', color: selectedColor };
-    let opponentSettings = p2Config || { name: 'Player 2', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6' };
+    const mySettings = { name: playerName || 'Host', color: selectedColor, avatar: selectedAvatar };
+    let opponentSettings = p2Config || { name: 'Player 2', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] };
     
-    // START CHANGE: Handle Online Color Collision
+    // Handle Online Color Collision
     if (p2Config && p2Config.color === mySettings.color) {
          const alternativeColor = COLOR_PALETTE.find(c => c.hex !== mySettings.color)?.hex || '#3b82f6';
          opponentSettings = { ...p2Config, color: alternativeColor };
          addLog(`Color conflict resolved. Opponent set to ${COLOR_PALETTE.find(c => c.hex === alternativeColor)?.name || 'Blue'}.`, 'info');
     }
-    // END CHANGE
 
     // For AI Mode override
     if ((gameMode === GameMode.AI || isTutorial) && !p2Config) {
-       opponentSettings = { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6' };
+       opponentSettings = { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: '🤖' };
     }
 
     const initialPlayers = generatePlayers(mySettings, opponentSettings);
@@ -553,7 +555,7 @@ const App: React.FC = () => {
     setTutorialStep(isTutorial ? 1 : 0);
     
     addLog(isTutorial ? 'Tutorial Started.' : `Game Started. ${initialPlayers[0].name} vs ${initialPlayers[1].name}.`, 'info');
-  }, [addLog, playerName, selectedColor, gameMode]);
+  }, [addLog, playerName, selectedColor, selectedAvatar, gameMode]);
 
   // --- SCALING EFFECT ---
   useEffect(() => {
@@ -579,6 +581,17 @@ const App: React.FC = () => {
         clearTimeout(t);
     };
   }, [gameMode, phase]); // Re-calculate when view changes
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              setSelectedAvatar(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+      }
+  };
 
 
   // --- ACTION HANDLERS ---
@@ -1168,7 +1181,7 @@ const App: React.FC = () => {
                 setHasOpponentJoined(true);
                 addLog(`${opponent.name} joined!`, 'alert'); 
                 // Initialize game with Host's choice and Guest's choice
-                initializeGame({ name: opponent.name, color: opponent.color }); 
+                initializeGame({ name: opponent.name, color: opponent.color, avatar: opponent.avatar }); 
                 return; 
               }
               if (data.type === 'ROLL_REQ') performRoll();
@@ -1215,7 +1228,7 @@ const App: React.FC = () => {
           conn.on('open', () => {
             conn.send({ 
                 type: 'JOIN_REQ', 
-                payload: { name: playerName || 'Guest', color: selectedColor } 
+                payload: { name: playerName || 'Guest', color: selectedColor, avatar: selectedAvatar } 
             });
             setPeerConnected(true); 
             setGameMode(GameMode.ONLINE_GUEST); 
@@ -1323,15 +1336,15 @@ const App: React.FC = () => {
                         placeholder="Enter name"
                       />
                   </div>
-                  <div>
+                  <div className="mb-4">
                       <label className="text-stone-400 text-xs uppercase tracking-widest block mb-2">Choose Color</label>
-                      <div className="grid grid-cols-5 gap-3">
+                      <div className="grid grid-cols-5 gap-2">
                           {COLOR_PALETTE.map((c) => (
                               <button 
                                 key={c.hex} 
                                 onClick={() => setSelectedColor(c.hex)}
                                 className={`
-                                    w-10 h-10 rounded-full border-2 transition-all transform hover:scale-110
+                                    w-8 h-8 rounded-full border-2 transition-all transform hover:scale-110
                                     ${selectedColor === c.hex ? 'border-white scale-110 shadow-[0_0_10px_white]' : 'border-transparent opacity-70 hover:opacity-100'}
                                 `}
                                 style={{ backgroundColor: c.hex }}
@@ -1339,6 +1352,32 @@ const App: React.FC = () => {
                               />
                           ))}
                       </div>
+                  </div>
+                  
+                  {/* Avatar Selection */}
+                  <div>
+                       <label className="text-stone-400 text-xs uppercase tracking-widest block mb-2">Select Avatar</label>
+                       <div className="flex flex-wrap gap-2 mb-2">
+                           {AVATAR_PRESETS.map((av) => (
+                               <button 
+                                   key={av} 
+                                   onClick={() => setSelectedAvatar(av)}
+                                   className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 text-xl hover:bg-stone-800 transition-colors ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}
+                                >
+                                   {av}
+                               </button>
+                           ))}
+                           <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400 hover:text-white transition-colors">
+                                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                                📷
+                           </label>
+                       </div>
+                       {selectedAvatar.startsWith('data:') && (
+                           <div className="mt-2 text-center">
+                               <p className="text-xs text-stone-500 mb-1">Custom Avatar Selected:</p>
+                               <img src={selectedAvatar} alt="Custom Avatar" className="w-16 h-16 rounded-full mx-auto object-cover border-2 border-amber-500" />
+                           </div>
+                       )}
                   </div>
               </div>
 
@@ -1433,7 +1472,7 @@ const App: React.FC = () => {
                 <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[60dvh] md:h-full md:max-h-full order-1 overflow-hidden">
                     
                     {/* Controls Wrapper - Use flex-1 to take available space, allow scroll */}
-                    <div className="flex-1 p-2 md:p-6 flex flex-col gap-2 md:gap-4 overflow-y-auto no-scrollbar">
+                    <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-3 overflow-y-auto no-scrollbar">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4 flex-shrink-0">
                             <div onClick={() => setGameMode(null)} className="cursor-pointer flex items-center gap-2 group">
                                 <ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1>
@@ -1448,12 +1487,21 @@ const App: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2 md:gap-3 flex-shrink-0">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`p-1.5 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
-                                    <h3 className="font-bold font-serif truncate text-xs md:text-base" style={{ color: p.colorHex }}>
-                                        {p.name}
-                                        {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && i === myPlayerIndex && (
-                                            <span className="text-stone-500 text-xs ml-2">(You)</span>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        {p.avatar && (
+                                            p.avatar.startsWith('data:') ? (
+                                                <img src={p.avatar} alt="avatar" className="w-6 h-6 rounded-full object-cover border border-white/20" />
+                                            ) : (
+                                                <span className="text-lg">{p.avatar}</span>
+                                            )
                                         )}
-                                    </h3>
+                                        <h3 className="font-bold font-serif truncate text-xs md:text-base" style={{ color: p.colorHex }}>
+                                            {p.name}
+                                            {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && i === myPlayerIndex && (
+                                                <span className="text-stone-500 text-xs ml-2">(You)</span>
+                                            )}
+                                        </h3>
+                                    </div>
                                     <div className="flex justify-between text-[10px] md:text-xs text-stone-400 mt-0.5 md:mt-2"><span>In: {p.coinsInHand}</span><span>Out: {p.coinsFinished}</span></div>
                                 </div>
                             ))}
@@ -1480,7 +1528,7 @@ const App: React.FC = () => {
                                                 setSelectedSourceIndex(0); 
                                                 if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4);
                                             }
-                                        }} className={`mt-1 md:mt-2 p-2 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer flex-shrink-0 ${phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0 && canInteract() ? (selectedSourceIndex === 0 ? 'border-green-500 bg-stone-800' : 'border-stone-700 hover:border-stone-500') : 'border-stone-800 opacity-50'}`}>
+                                        }} className={`mt-1 md:mt-2 mb-2 p-2 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer flex-shrink-0 ${phase === GamePhase.MOVING && currentPlayer.coinsInHand > 0 && canInteract() ? (selectedSourceIndex === 0 ? 'border-green-500 bg-stone-800' : 'border-stone-700 hover:border-stone-500') : 'border-stone-800 opacity-50'}`}>
                                             <div className="flex items-center gap-3"><div className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-stone-600 flex items-center justify-center font-bold text-stone-500 text-sm md:text-base">0</div><div className="flex flex-col"><span className="font-bold text-stone-200 text-sm md:text-base">Hand</span><span className="text-[10px] md:text-xs text-stone-500">{currentPlayer.coinsInHand} coins</span></div></div>
                                             {selectedSourceIndex === 0 && <span className="text-green-500 text-xs md:text-sm font-bold">SELECTED</span>}
                                         </div>
@@ -1491,7 +1539,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Logs - Fixed small height on mobile */}
-                    <div className="flex-none h-12 md:h-auto md:flex-grow md:min-h-0 px-2 pb-2 md:px-6 md:pb-6 flex flex-col overflow-hidden bg-stone-950 border-t border-stone-800 md:border-t-0">
+                    <div className="flex-none h-12 md:h-48 md:flex-none px-2 pb-2 md:px-6 md:pb-6 flex flex-col overflow-hidden bg-stone-950 border-t border-stone-800 md:border-t-0">
                          <div className="flex-grow bg-black/40 rounded-lg border border-stone-800/50 p-1.5 md:p-3 overflow-y-auto font-mono text-[10px] md:text-xs">
                              {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400' : 'text-stone-500'}`}>{log.message}</div>)}
                          </div>

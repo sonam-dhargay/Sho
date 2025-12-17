@@ -67,7 +67,7 @@ const CowrieShell: React.FC<{ angle: number; isTarget: boolean }> = ({ angle, is
   );
 };
 
-const AncientCoin: React.FC<{ color: string; isSelected: boolean }> = ({ color, isSelected }) => {
+const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: string }> = ({ color, isSelected, avatar }) => {
   return (
     <div 
       className={`
@@ -81,9 +81,23 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean }> = ({ color, 
         background: `radial-gradient(circle at 35% 35%, ${color}, #000000)`
       }}
     >
-      <div className="w-10 h-10 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
-      <div className="absolute w-5 h-5 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
-      <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-20 rounded-full blur-[1px]"></div>
+      {avatar ? (
+        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
+             {avatar.startsWith('data:') || avatar.startsWith('http') ? (
+                 <img src={avatar} alt="avatar" className="w-full h-full object-cover opacity-90" />
+             ) : (
+                 <span className="text-2xl drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
+             )}
+        </div>
+      ) : (
+        <>
+            <div className="w-10 h-10 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
+            <div className="absolute w-5 h-5 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
+        </>
+      )}
+      
+      {/* Specular Highlight */}
+      <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-20 rounded-full blur-[1px] pointer-events-none"></div>
     </div>
   );
 };
@@ -188,14 +202,15 @@ export const Board: React.FC<BoardProps> = ({
     y: number;
   }>({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
 
-  const [finishingParticles, setFinishingParticles] = useState<{id: number, x: number, y: number, color: string}[]>([]);
+  const [finishingParticles, setFinishingParticles] = useState<{id: number, x: number, y: number, color: string, avatar?: string}[]>([]);
   const [stackingAnim, setStackingAnim] = useState<{
     id: number, 
     startX: number, 
     startY: number, 
     endX: number, 
     endY: number, 
-    color: string
+    color: string,
+    avatar?: string
   } | null>(null);
 
   const [shakeShellId, setShakeShellId] = useState<number | null>(null);
@@ -207,6 +222,12 @@ export const Board: React.FC<BoardProps> = ({
       if (!id) return '#666';
       const p = players.find(p => p.id === id);
       return p ? p.colorHex : '#666';
+  };
+  
+  const getPlayerAvatar = (id: PlayerColor | null): string | undefined => {
+      if (!id) return undefined;
+      const p = players.find(p => p.id === id);
+      return p ? p.avatar : undefined;
   };
 
   // --- Organic Layout Calculation ---
@@ -294,11 +315,13 @@ export const Board: React.FC<BoardProps> = ({
              const movedShell = boardState.get(lastMove.targetIndex);
              const moverId = movedShell?.owner || currentPlayer; 
              const moverColor = getPlayerColor(moverId);
+             const moverAvatar = getPlayerAvatar(moverId);
 
              setStackingAnim({
                  id: Date.now(),
                  startX, startY, endX, endY,
-                 color: moverColor
+                 color: moverColor,
+                 avatar: moverAvatar
              });
 
              const timer = setTimeout(() => {
@@ -321,11 +344,13 @@ export const Board: React.FC<BoardProps> = ({
         const sourceShell = shells.find(s => s.id === lastMove.sourceIndex);
         if (sourceShell) {
             const pColor = getPlayerColor(currentPlayer);
+            const pAvatar = getPlayerAvatar(currentPlayer);
             const particles = Array.from({ length: 5 }).map((_, i) => ({
                 id: Date.now() + i,
                 x: sourceShell.x,
                 y: sourceShell.y,
-                color: pColor
+                color: pColor,
+                avatar: pAvatar
             }));
             
             setFinishingParticles(particles);
@@ -540,6 +565,7 @@ export const Board: React.FC<BoardProps> = ({
             const stackSize = shell.data?.stackSize || 0;
             const owner = shell.data?.owner;
             const shellColor = owner ? getPlayerColor(owner) : '#666';
+            const shellAvatar = owner ? getPlayerAvatar(owner) : undefined;
 
             const isBeingDragged = dragState.isDragging && dragState.sourceIndex === shell.id;
             const isSource = selectedSource === shell.id;
@@ -611,7 +637,7 @@ export const Board: React.FC<BoardProps> = ({
                                     transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.id) * 20}deg)`
                                 }}
                                >
-                                   <AncientCoin color={shellColor} isSelected={false} />
+                                   <AncientCoin color={shellColor} isSelected={false} avatar={shellAvatar} />
                                </div>
                            ))}
                            
@@ -654,7 +680,7 @@ export const Board: React.FC<BoardProps> = ({
                         margin-top: -24px;
                     }
                 `}} />
-                <AncientCoin color={stackingAnim.color} isSelected={true} />
+                <AncientCoin color={stackingAnim.color} isSelected={true} avatar={stackingAnim.avatar} />
             </div>
         )}
 
@@ -679,7 +705,7 @@ export const Board: React.FC<BoardProps> = ({
                     }
                 `}} />
                 <div className="drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]">
-                    <AncientCoin color={p.color} isSelected={true} />
+                    <AncientCoin color={p.color} isSelected={true} avatar={p.avatar} />
                 </div>
             </div>
         ))}
@@ -700,6 +726,7 @@ export const Board: React.FC<BoardProps> = ({
                     const stackSize = shell.stackSize;
                     const owner = shell.owner!;
                     const color = getPlayerColor(owner);
+                    const avatar = getPlayerAvatar(owner);
                     
                     return (
                         <div className="relative">
@@ -713,7 +740,7 @@ export const Board: React.FC<BoardProps> = ({
                                         transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.index) * 20}deg)`
                                     }}
                                 >
-                                    <AncientCoin color={color} isSelected={true} />
+                                    <AncientCoin color={color} isSelected={true} avatar={avatar} />
                                 </div>
                             ))}
                         </div>
