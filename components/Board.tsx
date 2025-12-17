@@ -176,25 +176,54 @@ export const Board: React.FC<BoardProps> = ({
       return p ? p.avatar : undefined;
   };
 
+  // --- Dynamic Elastic Spiral Layout ---
   const shells = useMemo(() => {
-    return Array.from({ length: TOTAL_SHELLS }, (_, i) => i + 1).map(idx => {
-      const t = idx / TOTAL_SHELLS;
+    // 1. Assign weights: Occupied shells need more physical space on the spiral
+    const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
+        const shell = boardState.get(i + 1);
+        // If shell has coins, we increase the weight (space) it occupies along the arc
+        return (shell && shell.stackSize > 0) ? 2.5 : 1.0;
+    });
+
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let cumulativeWeight = 0;
+
+    return Array.from({ length: TOTAL_SHELLS }, (_, i) => {
+      const idx = i + 1;
+      const weight = weights[i];
+      // Progression 't' based on cumulative weights rather than linear index
+      const t = (cumulativeWeight + weight / 2) / totalWeight;
+      cumulativeWeight += weight;
+
       const baseAngle = t * Math.PI * 4.5 + 2.5; 
       const baseRadius = 120 + (t * 260); 
-      const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.3; 
-      const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 30; 
+      
+      const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.15; 
+      const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 20; 
+      
       const angle = baseAngle + jitterAngle;
       const radius = baseRadius + jitterRadius;
+      
       const x = CENTER_X + radius * Math.cos(angle);
       const y = CENTER_Y + radius * Math.sin(angle);
-      const nextT = (idx + 1) / TOTAL_SHELLS;
+
+      // Tangent calculation for shell orientation
+      const nextT = Math.min(1, t + 0.01);
       const nextAngle = nextT * Math.PI * 4.5 + 2.5;
       const nextRadius = 120 + (nextT * 260);
       const nextX = CENTER_X + nextRadius * Math.cos(nextAngle);
       const nextY = CENTER_Y + nextRadius * Math.sin(nextAngle);
+      
       const tangentAngle = Math.atan2(nextY - y, nextX - x);
-      const rotationJitter = (pseudoRandom(idx * 33.3) - 0.5) * 0.5;
-      return { id: idx, x, y, angle: tangentAngle + rotationJitter, data: boardState.get(idx) };
+      const rotationJitter = (pseudoRandom(idx * 33.3) - 0.5) * 0.4;
+
+      return { 
+          id: idx, 
+          x, 
+          y, 
+          angle: tangentAngle + rotationJitter, 
+          data: boardState.get(idx) 
+      };
     });
   }, [boardState]);
 
@@ -392,10 +421,24 @@ export const Board: React.FC<BoardProps> = ({
             </div>
         </div>
 
-        {/* Guides */}
+        {/* Dynamic Guides (Path that stretches with shells) */}
         <svg width="100%" height="100%" className="absolute inset-0 z-0 pointer-events-none">
-             <path d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} fill="none" stroke="#44403c" strokeWidth="12" strokeLinecap="round" className="opacity-20 blur-sm" />
-             <path d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} fill="none" stroke="#d6d3d1" strokeWidth="1" strokeDasharray="2 6" className="opacity-20" />
+             <path 
+                d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
+                fill="none" 
+                stroke="#44403c" 
+                strokeWidth="12" 
+                strokeLinecap="round" 
+                className="opacity-20 blur-sm transition-all duration-500" 
+             />
+             <path 
+                d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
+                fill="none" 
+                stroke="#d6d3d1" 
+                strokeWidth="1" 
+                strokeDasharray="2 6" 
+                className="opacity-20 transition-all duration-500" 
+             />
         </svg>
 
         {shells.map((shell) => {
@@ -414,7 +457,7 @@ export const Board: React.FC<BoardProps> = ({
             return (
                 <div 
                     key={shell.id} data-shell-id={shell.id}
-                    className={`absolute -ml-5 -mt-6 flex items-center justify-center z-20 ${isTarget ? 'z-40' : ''}`}
+                    className={`absolute -ml-5 -mt-6 flex items-center justify-center z-20 transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : ''}`}
                     style={{ left: shell.x, top: shell.y }}
                     onClick={(e) => {
                         e.stopPropagation();
@@ -536,7 +579,7 @@ export const Board: React.FC<BoardProps> = ({
             const isTarget = !!finishMove;
             return (
                 <div 
-                    className={`absolute transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 ${isTarget ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}`}
+                    className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${isTarget ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}`}
                     style={{ left: endBtnPos.x, top: endBtnPos.y }} onClick={() => isTarget && onSelectMove(finishMove)} data-finish-zone="true"
                 >
                      <div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transform -rotate-12 transition-colors ${isTarget ? 'border-green-500 bg-green-900/20 animate-pulse' : 'border-stone-700/50'}`}>
