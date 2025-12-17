@@ -63,7 +63,8 @@ const generatePlayers = (
 const SFX = {
   ctx: null as AudioContext | null,
   musicNodes: [] as AudioNode[],
-  musicInterval: null as number | null,
+  musicIntervals: [] as number[],
+  masterMusicGain: null as GainNode | null,
   
   getContext: () => {
     if (!SFX.ctx) {
@@ -83,19 +84,29 @@ const SFX = {
     return buffer;
   },
 
-  // Procedural Meditative Drone Music
-  startAmbient: () => {
+  setMusicVolume: (volume: number) => {
+      if (SFX.masterMusicGain) {
+          const ctx = SFX.getContext();
+          SFX.masterMusicGain.gain.linearRampToValueAtTime(volume * 0.2, ctx.currentTime + 0.1);
+      }
+  },
+
+  // Enhanced Procedural Meditative Music
+  startAmbient: (initialVolume: number) => {
     const ctx = SFX.getContext();
     if (SFX.musicNodes.length > 0) return;
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0, ctx.currentTime);
-    masterGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2);
+    masterGain.gain.linearRampToValueAtTime(initialVolume * 0.2, ctx.currentTime + 2);
     masterGain.connect(ctx.destination);
+    SFX.masterMusicGain = masterGain;
     SFX.musicNodes.push(masterGain);
 
-    const freqs = [110, 165, 220, 330]; // Meditative drones (A2, E3, A3, E4)
-    freqs.forEach(f => {
+    const baseFreqs = [110, 165, 220, 330]; // A2, E3, A3, E4
+    
+    // Drones
+    baseFreqs.forEach(f => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -103,12 +114,12 @@ const SFX = {
       
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
-      lfo.frequency.value = 0.1 + Math.random() * 0.2;
-      lfoGain.gain.value = 0.05;
+      lfo.frequency.value = 0.05 + Math.random() * 0.1;
+      lfoGain.gain.value = 0.03;
       lfo.connect(lfoGain);
       lfoGain.connect(gain.gain);
       
-      gain.gain.value = 0.05;
+      gain.gain.value = 0.04;
       osc.connect(gain);
       gain.connect(masterGain);
       
@@ -117,41 +128,55 @@ const SFX = {
       SFX.musicNodes.push(osc, lfo);
     });
 
-    // Random Singing Bowl tones
-    const playBowl = () => {
-      const bCtx = SFX.getContext();
-      const t = bCtx.currentTime;
-      const f = freqs[Math.floor(Math.random() * freqs.length)] * 2;
-      const osc = bCtx.createOscillator();
-      const gain = bCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(f, t);
-      
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.08, t + 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 8);
-      
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.start(t);
-      osc.stop(t + 8.1);
+    // Soft Rhythmic Pulse
+    const playPulse = () => {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, t); // Very low A
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+        g.gain.setValueAtTime(0.05, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        osc.connect(g);
+        g.connect(masterGain);
+        osc.start(t);
+        osc.stop(t + 0.5);
     };
 
-    SFX.musicInterval = window.setInterval(() => {
-        if (Math.random() > 0.6) playBowl();
-    }, 4000);
+    // Melodic Overtones
+    const pentatonic = [440, 493.88, 587.33, 659.25, 783.99]; // A4 Pentatonic
+    const playMelody = () => {
+        const t = ctx.currentTime;
+        const f = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, t);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.03, t + 1);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 4);
+        osc.connect(g);
+        g.connect(masterGain);
+        osc.start(t);
+        osc.stop(t + 4);
+    };
+
+    SFX.musicIntervals.push(window.setInterval(playPulse, 4000));
+    SFX.musicIntervals.push(window.setInterval(() => {
+        if (Math.random() > 0.4) playMelody();
+    }, 6000));
   },
 
   stopAmbient: () => {
-    if (SFX.musicInterval) {
-        clearInterval(SFX.musicInterval);
-        SFX.musicInterval = null;
-    }
+    SFX.musicIntervals.forEach(clearInterval);
+    SFX.musicIntervals = [];
     SFX.musicNodes.forEach(node => {
         try { (node as any).stop(); } catch(e) {}
         try { (node as any).disconnect(); } catch(e) {}
     });
     SFX.musicNodes = [];
+    SFX.masterMusicGain = null;
   },
 
   playShake: () => {
@@ -462,7 +487,10 @@ const App: React.FC = () => {
   const [hasOpponentJoined, setHasOpponentJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  
+  // Music State
   const [isMusicEnabled, setIsMusicEnabled] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(50);
   
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
@@ -512,10 +540,16 @@ const App: React.FC = () => {
     const newState = !isMusicEnabled;
     setIsMusicEnabled(newState);
     if (newState) {
-        SFX.startAmbient();
+        SFX.startAmbient(musicVolume / 100);
     } else {
         SFX.stopAmbient();
     }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const vol = parseInt(e.target.value);
+      setMusicVolume(vol);
+      SFX.setMusicVolume(vol / 100);
   };
 
   const initializeGame = useCallback((p2Config?: { name: string, color: string, avatar?: string }, isTutorial = false) => {
@@ -1046,14 +1080,28 @@ const App: React.FC = () => {
                            <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400"><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />📷</label>
                        </div>
                   </div>
-                  <div className="pt-2 border-t border-stone-800 flex items-center justify-between">
-                       <label className="text-stone-400 text-xs uppercase block">Ambient Music</label>
-                       <button 
-                         onClick={toggleMusic} 
-                         className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${isMusicEnabled ? 'bg-amber-700 text-white' : 'bg-stone-800 text-stone-500'}`}
-                       >
-                         {isMusicEnabled ? 'ON' : 'OFF'}
-                       </button>
+                  <div className="pt-2 border-t border-stone-800 flex flex-col gap-2">
+                       <div className="flex items-center justify-between">
+                            <label className="text-stone-400 text-xs uppercase block">Ambient Music</label>
+                            <button 
+                                onClick={toggleMusic} 
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${isMusicEnabled ? 'bg-amber-700 text-white' : 'bg-stone-800 text-stone-500'}`}
+                            >
+                                {isMusicEnabled ? 'ON' : 'OFF'}
+                            </button>
+                       </div>
+                       {isMusicEnabled && (
+                           <div className="flex items-center gap-4">
+                               <span className="text-[10px] text-stone-500 font-bold uppercase">Volume</span>
+                               <input 
+                                 type="range" 
+                                 min="0" max="100" 
+                                 value={musicVolume} 
+                                 onChange={handleVolumeChange} 
+                                 className="flex-grow accent-amber-600 h-1 bg-stone-800 rounded-lg appearance-none"
+                               />
+                           </div>
+                       )}
                   </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-4">
@@ -1096,6 +1144,19 @@ const App: React.FC = () => {
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
                             </div>
                         </header>
+
+                        {isMusicEnabled && (
+                            <div className="px-2 md:px-0 py-1 flex items-center gap-3">
+                                <span className="text-[9px] text-stone-500 font-bold uppercase whitespace-nowrap">Music Volume</span>
+                                <input 
+                                  type="range" 
+                                  min="0" max="100" 
+                                  value={musicVolume} 
+                                  onChange={handleVolumeChange} 
+                                  className="flex-grow accent-amber-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-2 md:gap-3 flex-shrink-0">
                             {players.map((p, i) => (
