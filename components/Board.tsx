@@ -22,36 +22,43 @@ interface BoardProps {
 
 // --- Visual Sub-Components ---
 
-const CowrieShell: React.FC<{ angle: number; isTarget: boolean }> = ({ angle, isTarget }) => {
+const CowrieShell: React.FC<{ angle: number; isTarget: boolean; hasCoin: boolean }> = ({ angle, isTarget, hasCoin }) => {
   const rotation = (angle * 180 / Math.PI) + 90;
 
   return (
     <div 
-      className="w-10 h-12 flex items-center justify-center transition-transform duration-300 pointer-events-none"
+      className={`transition-transform duration-300 pointer-events-none flex items-center justify-center ${hasCoin ? 'w-16 h-20' : 'w-14 h-18'}`}
       style={{ transform: `rotate(${rotation}deg)` }}
     >
-      <svg viewBox="0 0 100 130" className={`w-full h-full drop-shadow-md transition-all ${isTarget ? 'filter brightness-125 sepia' : ''}`}>
+      <svg viewBox="0 0 100 130" className={`w-full h-full drop-shadow-xl transition-all ${isTarget ? 'filter brightness-125 sepia scale-110' : ''}`}>
         <defs>
           <radialGradient id="shellBody" cx="40%" cy="40%" r="80%">
             <stop offset="0%" stopColor="#fdfbf7" />
-            <stop offset="60%" stopColor="#e7e5e4" />
-            <stop offset="100%" stopColor="#a8a29e" />
+            <stop offset="60%" stopColor="#efedea" />
+            <stop offset="100%" stopColor="#d6d3d1" />
           </radialGradient>
         </defs>
         
-        <ellipse cx="50" cy="65" rx="45" ry="60" fill="url(#shellBody)" stroke="#78716c" strokeWidth="1" />
-        <path d="M50 20 C 40 40, 40 90, 50 110 C 60 90, 60 40, 50 20" fill="#44403c" stroke="#292524" strokeWidth="1"/>
-        <g stroke="#e7e5e4" strokeWidth="2" strokeLinecap="round">
-           <line x1="48" y1="30" x2="42" y2="30" />
-           <line x1="47" y1="45" x2="40" y2="45" />
-           <line x1="47" y1="60" x2="38" y2="60" />
-           <line x1="47" y1="75" x2="40" y2="75" />
-           <line x1="48" y1="90" x2="42" y2="90" />
-           <line x1="52" y1="30" x2="58" y2="30" />
-           <line x1="53" y1="45" x2="60" y2="45" />
-           <line x1="53" y1="60" x2="62" y2="60" />
-           <line x1="53" y1="75" x2="60" y2="75" />
-           <line x1="52" y1="90" x2="58" y2="90" />
+        {/* Slightly larger hit-box/visual footprint for the shell */}
+        <ellipse cx="50" cy="65" rx="48" ry="63" fill="rgba(0,0,0,0.2)" />
+        <ellipse cx="50" cy="65" rx="45" ry="60" fill="url(#shellBody)" stroke="#a8a29e" strokeWidth="2" />
+        
+        {/* The identifying "mouth" of the cowrie */}
+        <path d="M50 15 C 38 40, 38 90, 50 115 C 62 90, 62 40, 50 15" fill="#44403c" stroke="#292524" strokeWidth="1"/>
+        
+        {/* Stylized teeth/ridges */}
+        <g stroke="#e7e5e4" strokeWidth="2.5" strokeLinecap="round" opacity="0.9">
+           <line x1="47" y1="35" x2="38" y2="35" />
+           <line x1="46" y1="50" x2="35" y2="50" />
+           <line x1="46" y1="65" x2="33" y2="65" />
+           <line x1="46" y1="80" x2="35" y2="80" />
+           <line x1="47" y1="95" x2="38" y2="95" />
+           
+           <line x1="53" y1="35" x2="62" y2="35" />
+           <line x1="54" y1="50" x2="65" y2="50" />
+           <line x1="54" y1="65" x2="67" y2="65" />
+           <line x1="54" y1="80" x2="65" y2="80" />
+           <line x1="53" y1="95" x2="62" y2="95" />
         </g>
       </svg>
     </div>
@@ -63,8 +70,8 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
     <div 
       className={`
         relative w-14 h-14 rounded-full 
-        shadow-[3px_5px_8px_rgba(0,0,0,0.7),inset_0px_2px_4px_rgba(255,255,255,0.15)]
-        border border-white/20
+        shadow-[4px_8px_12px_rgba(0,0,0,0.8),inset_0px_2px_4px_rgba(255,255,255,0.25)]
+        border-2 border-white/20
         flex items-center justify-center
         ${isSelected ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-stone-900 z-50' : ''}
       `}
@@ -73,7 +80,7 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
       }}
     >
       {avatar ? (
-        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
+        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-black/30 shadow-inner">
              {avatar.startsWith('data:') || avatar.startsWith('http') ? (
                  <img src={avatar} alt="avatar" className="w-full h-full object-cover opacity-90" />
              ) : (
@@ -86,7 +93,7 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
             <div className="absolute w-5 h-5 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
         </>
       )}
-      <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-20 rounded-full blur-[1px] pointer-events-none"></div>
+      <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-25 rounded-full blur-[1px] pointer-events-none"></div>
     </div>
   );
 };
@@ -176,13 +183,25 @@ export const Board: React.FC<BoardProps> = ({
       return p ? p.avatar : undefined;
   };
 
-  // --- Dynamic Elastic Spiral Layout ---
+  // --- Dynamic Hyper-Elastic Spiral Layout ---
+  // To prevent overlap, we give occupied shells massive weight to "stretch" the path
   const shells = useMemo(() => {
-    // 1. Assign weights: Occupied shells need more physical space on the spiral
     const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
-        const shell = boardState.get(i + 1);
-        // If shell has coins, we increase the weight (space) it occupies along the arc
-        return (shell && shell.stackSize > 0) ? 2.5 : 1.0;
+        const idx = i + 1;
+        const shell = boardState.get(idx);
+        const prevShell = i > 0 ? boardState.get(i) : null;
+        const nextShell = i < TOTAL_SHELLS - 1 ? boardState.get(i + 2) : null;
+        
+        let w = 1.0;
+        // Occupied shells get extreme weight to push others away
+        if (shell && shell.stackSize > 0) {
+            w += 15.0; 
+        }
+        // Neighbors also expand to ensure clear dividing space
+        if ((prevShell && prevShell.stackSize > 0) || (nextShell && nextShell.stackSize > 0)) {
+            w += 5.0;
+        }
+        return w;
     });
 
     const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -191,15 +210,15 @@ export const Board: React.FC<BoardProps> = ({
     return Array.from({ length: TOTAL_SHELLS }, (_, i) => {
       const idx = i + 1;
       const weight = weights[i];
-      // Progression 't' based on cumulative weights rather than linear index
       const t = (cumulativeWeight + weight / 2) / totalWeight;
       cumulativeWeight += weight;
 
-      const baseAngle = t * Math.PI * 4.5 + 2.5; 
-      const baseRadius = 120 + (t * 260); 
+      // Expanded spiral dimensions for clarity
+      const baseAngle = t * Math.PI * 5.2 + 2.8; 
+      const baseRadius = 135 + (t * 265); 
       
-      const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.15; 
-      const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 20; 
+      const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.05; 
+      const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 8; 
       
       const angle = baseAngle + jitterAngle;
       const radius = baseRadius + jitterRadius;
@@ -207,21 +226,20 @@ export const Board: React.FC<BoardProps> = ({
       const x = CENTER_X + radius * Math.cos(angle);
       const y = CENTER_Y + radius * Math.sin(angle);
 
-      // Tangent calculation for shell orientation
-      const nextT = Math.min(1, t + 0.01);
-      const nextAngle = nextT * Math.PI * 4.5 + 2.5;
-      const nextRadius = 120 + (nextT * 260);
+      // Stable tangent orientation
+      const nextT = Math.min(1, t + 0.005);
+      const nextAngle = nextT * Math.PI * 5.2 + 2.8;
+      const nextRadius = 135 + (nextT * 265);
       const nextX = CENTER_X + nextRadius * Math.cos(nextAngle);
       const nextY = CENTER_Y + nextRadius * Math.sin(nextAngle);
       
       const tangentAngle = Math.atan2(nextY - y, nextX - x);
-      const rotationJitter = (pseudoRandom(idx * 33.3) - 0.5) * 0.4;
 
       return { 
           id: idx, 
           x, 
           y, 
-          angle: tangentAngle + rotationJitter, 
+          angle: tangentAngle, 
           data: boardState.get(idx) 
       };
     });
@@ -230,7 +248,7 @@ export const Board: React.FC<BoardProps> = ({
   const endBtnPos = useMemo(() => {
      if (shells.length === 0) return { x: 700, y: 700 };
      const last = shells[shells.length - 1];
-     const dist = 90;
+     const dist = 110;
      const x = last.x + Math.cos(last.angle) * dist;
      const y = last.y + Math.sin(last.angle) * dist;
      return { x, y };
@@ -281,7 +299,7 @@ export const Board: React.FC<BoardProps> = ({
 
   const triggerBlockedFeedback = (targetId: number, sourceIdx: number) => {
     const targetShell = boardState.get(targetId);
-    if (!targetShell?.owner) return; // Only show blocking on occupied shells
+    if (!targetShell?.owner) return; 
 
     let msg = "";
     const currentPlayerObj = players.find(p => p.id === currentPlayer);
@@ -290,15 +308,9 @@ export const Board: React.FC<BoardProps> = ({
         : (boardState.get(sourceIdx)?.stackSize || 1);
 
     if (targetShell.owner !== currentPlayer) {
-        // Blocking by opponent stack size
-        if (targetShell.stackSize > moverSize) {
-            msg = "TOO BIG";
-        }
+        if (targetShell.stackSize > moverSize) msg = "TOO BIG";
     } else {
-        // Blocking by stacking rules (Forbidden 9 stack)
-        if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
-            msg = "FORBIDDEN";
-        }
+        if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "FORBIDDEN";
     }
 
     if (msg) {
@@ -350,7 +362,7 @@ export const Board: React.FC<BoardProps> = ({
           if (shellDiv) {
               const targetId = parseInt(shellDiv.getAttribute('data-shell-id') || '0');
               const move = validMoves.find(m => m.sourceIndex === dragState.sourceIndex && m.targetIndex === targetId);
-              if (move) { onSelectMove(move); } 
+              if (move) onSelectMove(move);
               else if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) {
                   triggerBlockedFeedback(targetId, dragState.sourceIndex);
               }
@@ -365,7 +377,7 @@ export const Board: React.FC<BoardProps> = ({
           window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp);
           window.removeEventListener('touchmove', handleMouseMove); window.removeEventListener('touchend', handleMouseUp);
       };
-  }, [dragState, validMoves, onSelectMove, onInvalidMoveAttempt]);
+  }, [dragState, validMoves, onSelectMove]);
 
   return (
     <div className="relative mx-auto select-none" style={{ width: 800, height: 800 }} ref={boardRef}>
@@ -387,24 +399,23 @@ export const Board: React.FC<BoardProps> = ({
             .animate-blocked-label { animation: blockedFadeUp 1.2s ease-out forwards; }
         `}} />
 
-        {/* Center "Dice Pad" */}
+        {/* Center Pad */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-            <div className="w-[16rem] h-[16rem] bg-[#3f2e26] rounded-full blur-md opacity-80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="relative w-56 h-56 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)] border-4 border-[#271c19] overflow-hidden flex items-center justify-center bg-[#291d1a]">
+            <div className="w-[18rem] h-[18rem] bg-[#3f2e26] rounded-full blur-xl opacity-60 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+            <div className="relative w-64 h-64 rounded-full shadow-[0_15px_50px_rgba(0,0,0,0.9)] border-4 border-[#271c19] overflow-hidden flex items-center justify-center bg-[#291d1a]">
                 <div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] mix-blend-overlay"></div>
-                <div className="absolute inset-2 rounded-full border-2 border-dashed border-[#8b5e3c] opacity-60"></div>
                 <div className="flex flex-col items-center opacity-40 mix-blend-screen">
-                    <span className="font-serif text-[#8b5e3c] text-5xl mb-1">ཤོ</span>
-                    <span className="font-cinzel text-[#8b5e3c] text-6xl font-bold tracking-widest drop-shadow-lg">SHO</span>
+                    <span className="font-serif text-[#8b5e3c] text-6xl mb-1">ཤོ</span>
+                    <span className="font-cinzel text-[#8b5e3c] text-7xl font-bold tracking-widest drop-shadow-lg">SHO</span>
                 </div>
                 {(isRolling || currentRoll) && (
                     <div className="absolute inset-0">
                          {isRolling ? (
                              <>
-                                <div className="absolute left-1/2 top-1/2" style={{ marginLeft: '-15px', marginTop: '-15px' }}>
+                                <div className="absolute left-1/2 top-1/2 -ml-[15px] -mt-[15px]">
                                     <BoardDie value={1} x={0} y={0} rotation={0} isRolling={true} />
                                 </div>
-                                <div className="absolute left-1/2 top-1/2" style={{ marginLeft: '15px', marginTop: '15px' }}>
+                                <div className="absolute left-1/2 top-1/2 ml-[15px] mt-[15px]">
                                     <BoardDie value={6} x={0} y={0} rotation={0} isRolling={true} />
                                 </div>
                              </>
@@ -421,23 +432,15 @@ export const Board: React.FC<BoardProps> = ({
             </div>
         </div>
 
-        {/* Dynamic Guides (Path that stretches with shells) */}
+        {/* Spiral Path */}
         <svg width="100%" height="100%" className="absolute inset-0 z-0 pointer-events-none">
              <path 
                 d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
                 fill="none" 
                 stroke="#44403c" 
-                strokeWidth="12" 
+                strokeWidth="14" 
                 strokeLinecap="round" 
-                className="opacity-20 blur-sm transition-all duration-500" 
-             />
-             <path 
-                d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
-                fill="none" 
-                stroke="#d6d3d1" 
-                strokeWidth="1" 
-                strokeDasharray="2 6" 
-                className="opacity-20 transition-all duration-500" 
+                className="opacity-25 blur-sm transition-all duration-500" 
              />
         </svg>
 
@@ -457,58 +460,59 @@ export const Board: React.FC<BoardProps> = ({
             return (
                 <div 
                     key={shell.id} data-shell-id={shell.id}
-                    className={`absolute -ml-5 -mt-6 flex items-center justify-center z-20 transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : ''}`}
-                    style={{ left: shell.x, top: shell.y }}
+                    className={`absolute -ml-8 -mt-10 flex items-center justify-center z-20 transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : ''}`}
+                    style={{ left: shell.x, top: shell.y, width: '64px', height: '80px' }}
                     onClick={(e) => {
                         e.stopPropagation();
                         if (!dragState.isDragging) {
-                            if (isTarget && moveTarget) { 
-                                onSelectMove(moveTarget); 
-                            } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) {
-                                // If it's your own stack, clicking it should switch selection to it, NOT be blocked
-                                if (isOwner) {
-                                    if (onShellClick) onShellClick(shell.id);
-                                } else {
-                                    // Feedback only for enemy pieces or forbidden stacking
-                                    triggerBlockedFeedback(shell.id, selectedSource);
-                                }
-                            } else if (onShellClick) {
-                                onShellClick(shell.id);
-                            }
+                            if (isTarget && moveTarget) onSelectMove(moveTarget);
+                            else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) {
+                                if (isOwner) onShellClick?.(shell.id);
+                                else triggerBlockedFeedback(shell.id, selectedSource);
+                            } else onShellClick?.(shell.id);
                         }
                     }}
                 >
-                    <div className={`transition-transform duration-300 ${isTarget ? 'scale-125' : ''}`}>
-                        <CowrieShell angle={shell.angle} isTarget={isTarget} />
-                    </div>
+                    <CowrieShell angle={shell.angle} isTarget={isTarget} hasCoin={stackSize > 0} />
 
-                    {isTarget && <div className={`absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none ${dragState.isDragging ? 'bg-green-500/30' : ''}`}></div>}
-                    {isSource && !dragState.isDragging && <div className="absolute w-16 h-16 rounded-full border-2 border-amber-400 opacity-50 pointer-events-none"></div>}
+                    {isTarget && <div className="absolute w-16 h-16 rounded-full border-4 border-green-500 animate-ping opacity-60 pointer-events-none"></div>}
+                    {isSource && !dragState.isDragging && <div className="absolute w-20 h-20 rounded-full border-2 border-amber-400 opacity-40 pointer-events-none"></div>}
+                    {isShaking && <div className="absolute left-1/2 top-1/2 w-20 h-20 rounded-full border-4 border-red-500/60 opacity-80 animate-shake-target pointer-events-none"></div>}
                     
-                    {isShaking && <div className="absolute left-1/2 top-1/2 w-16 h-16 rounded-full border-4 border-red-500/60 opacity-80 pointer-events-none animate-shake-target"></div>}
-
                     {hasBlockedMsg && (
-                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
-                            <span className="bg-red-600 text-white font-cinzel font-bold px-3 py-1 rounded-full text-xs shadow-xl border border-white/20 animate-blocked-label">
+                        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
+                            <span className="bg-red-600 text-white font-cinzel font-bold px-3 py-1 rounded-full text-xs shadow-2xl animate-blocked-label">
                                 {blockedFeedback?.message}
                             </span>
                         </div>
                     )}
 
                     {stackSize > 0 && owner && !isBeingDragged && (
-                        <div className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} style={{ top: '-10px' }} onMouseDown={(e) => handleMouseDown(e, shell.id)} onTouchStart={(e) => handleMouseDown(e, shell.id)}>
+                        <div 
+                          className={`absolute z-30 transition-all duration-500 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} 
+                          style={{ top: '0px' }} 
+                          onMouseDown={(e) => handleMouseDown(e, shell.id)} 
+                          onTouchStart={(e) => handleMouseDown(e, shell.id)}
+                        >
                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => (
                                <div 
-                                key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500"
-                                style={{ top: `${-(i * 4)}px`, zIndex: i, transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.id) * 20}deg)` }}
+                                 key={i} 
+                                 className="absolute left-1/2 -translate-x-1/2 transition-transform duration-500" 
+                                 style={{ 
+                                   // Vertical staggered lean + horizontal offset to keep shell visible
+                                   top: `${-(i * 6) + 5}px`, 
+                                   left: `${Math.sin(i * 0.7) * 5}px`,
+                                   zIndex: i, 
+                                   transform: `translate(-50%, 0) rotate(${Math.sin(i * 1.8 + shell.id) * 15}deg)` 
+                                 }}
                                >
                                    <AncientCoin color={shellColor} isSelected={false} avatar={shellAvatar} />
                                </div>
                            ))}
                            {stackSize > 1 && (
                                <div 
-                                className="absolute left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-md backdrop-blur-sm whitespace-nowrap pointer-events-none"
-                                style={{ top: `${-25 - (Math.min(stackSize, 9) * 4)}px`, zIndex: 100 }}
+                                className="absolute left-1/2 -translate-x-1/2 bg-black/85 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-xl backdrop-blur-sm whitespace-nowrap pointer-events-none"
+                                style={{ top: `${-35 - (Math.min(stackSize, 9) * 6)}px`, zIndex: 100 }}
                                >
                                    {stackSize}
                                </div>
@@ -519,7 +523,7 @@ export const Board: React.FC<BoardProps> = ({
             );
         })}
 
-        {/* --- ANIMATIONS --- */}
+        {/* Animations and Overlays */}
         {stackingAnim && (
              <div 
                 key={stackingAnim.id} className="absolute z-[60] pointer-events-none animate-coin-arc"
@@ -528,68 +532,23 @@ export const Board: React.FC<BoardProps> = ({
                  <style dangerouslySetInnerHTML={{__html: `
                     @keyframes coinArc {
                         0% { transform: translate(var(--start-x), var(--start-y)) scale(1); opacity: 0.8; }
-                        50% { transform: translate(calc(var(--start-x) + (var(--end-x) - var(--start-x))/2), calc(var(--start-y) + (var(--end-y) - var(--start-y))/2 - 60px)) scale(1.3); opacity: 1; }
+                        50% { transform: translate(calc(var(--start-x) + (var(--end-x) - var(--start-x))/2), calc(var(--start-y) + (var(--end-y) - var(--start-y))/2 - 80px)) scale(1.4); opacity: 1; }
                         100% { transform: translate(var(--end-x), var(--end-y)) scale(1); opacity: 1; }
                     }
-                    .animate-coin-arc { animation: coinArc 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; transform-origin: center center; margin-left: -20px; margin-top: -24px; }
+                    .animate-coin-arc { animation: coinArc 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; transform-origin: center center; margin-left: -20px; margin-top: -24px; }
                 `}} />
                 <AncientCoin color={stackingAnim.color} isSelected={true} avatar={stackingAnim.avatar} />
             </div>
         )}
 
-        {finishingParticles.map((p, i) => (
-            <div key={p.id} className="absolute z-50 pointer-events-none animate-finish-float" style={{ left: p.x, top: p.y, animationDelay: `${i * 100}ms` }}>
-                 <style dangerouslySetInnerHTML={{__html: `
-                    @keyframes finishFloat {
-                        0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
-                        50% { transform: translate(-50%, -150px) scale(1.5) rotate(180deg); opacity: 0.8; filter: brightness(1.5); }
-                        100% { transform: translate(-50%, -300px) scale(0.5) rotate(360deg); opacity: 0; }
-                    }
-                    .animate-finish-float { animation: finishFloat 1.5s ease-out forwards; }
-                `}} />
-                <div className="drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]">
-                    <AncientCoin color={p.color} isSelected={true} avatar={p.avatar} />
-                </div>
-            </div>
-        ))}
-
-        {dragState.isDragging && dragState.sourceIndex !== null && (
-             <div id="dragged-ghost" className="fixed z-[100] pointer-events-none" style={{ left: dragState.x, top: dragState.y, transform: 'translate(-50%, -50%) scale(1.1)' }}>
-                {(() => {
-                    const shell = boardState.get(dragState.sourceIndex!);
-                    if (!shell) return null;
-                    const color = getPlayerColor(shell.owner);
-                    const avatar = getPlayerAvatar(shell.owner);
-                    return (
-                        <div className="relative">
-                            {Array.from({ length: Math.min(shell.stackSize, 9) }).map((_, i) => (
-                                <div key={i} className="absolute left-1/2 -translate-x-1/2" style={{ top: `${-(i * 4)}px`, zIndex: i, transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.index) * 20}deg)` }}>
-                                    <AncientCoin color={color} isSelected={true} avatar={avatar} />
-                                </div>
-                            ))}
-                        </div>
-                    );
-                })()}
+        <div 
+            className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${validMoves.some(m => m.type === MoveResultType.FINISH) ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}`}
+            style={{ left: endBtnPos.x, top: endBtnPos.y }}
+        >
+             <div className="w-28 h-28 border-4 rounded-full flex items-center justify-center border-dashed border-stone-700 bg-stone-900/40">
+                <span className="font-cinzel font-bold text-stone-500 uppercase tracking-widest">FINISH</span>
              </div>
-        )}
-        
-        {/* Finish Area Decoration */}
-        {(() => {
-            const finishMove = validMoves.find(m => m.type === MoveResultType.FINISH);
-            const isTarget = !!finishMove;
-            return (
-                <div 
-                    className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${isTarget ? 'opacity-100 cursor-pointer scale-110' : 'opacity-60 pointer-events-none'}`}
-                    style={{ left: endBtnPos.x, top: endBtnPos.y }} onClick={() => isTarget && onSelectMove(finishMove)} data-finish-zone="true"
-                >
-                     <div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transform -rotate-12 transition-colors ${isTarget ? 'border-green-500 bg-green-900/20 animate-pulse' : 'border-stone-700/50'}`}>
-                         <span className={`font-cinzel font-bold ${isTarget ? 'text-green-500' : 'text-stone-600'}`}>
-                             {isTarget ? 'FINISH' : 'END'}
-                         </span>
-                     </div>
-                </div>
-            );
-        })()}
+        </div>
     </div>
   );
 };
