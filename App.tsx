@@ -735,10 +735,31 @@ const App: React.FC = () => {
                                         <div onClick={() => { 
                                             if (canInteract() && phase === GamePhase.MOVING) {
                                                 if (currentPlayer.coinsInHand > 0) {
-                                                    SFX.playSelect();
-                                                    setSelectedSourceIndex(0); 
+                                                    const handMoves = calculatePotentialMoves(0, pendingMoveValues, board, currentPlayer, flexiblePool, isNinerMode);
+                                                    if (handMoves.length > 0) {
+                                                        SFX.playSelect();
+                                                        setSelectedSourceIndex(0); 
+                                                    } else {
+                                                        // Check if it's blocked by stacks specifically
+                                                        const theoreticalTargets = flexiblePool !== null 
+                                                            ? Array.from({length: flexiblePool}, (_, i) => i + 1)
+                                                            : [...pendingMoveValues, pendingMoveValues.reduce((a, b) => a + b, 0)];
+                                                        
+                                                        const isBlockedByStacks = theoreticalTargets.some(dist => {
+                                                            const target = board.get(dist);
+                                                            const moverSize = currentPlayer.coinsInHand === COINS_PER_PLAYER ? 2 : 1;
+                                                            return target && target.owner && target.owner !== currentPlayer.id && target.stackSize > moverSize;
+                                                        });
+
+                                                        SFX.playBounce();
+                                                        if (isBlockedByStacks) {
+                                                            addLog("Blocked! Your landing spots are occupied by larger opponent stacks.", "alert");
+                                                            speak("Blocked by stack.");
+                                                        } else {
+                                                            speak("No valid moves.");
+                                                        }
+                                                    }
                                                 } else {
-                                                    // Visual feedback for no coins in hand
                                                     SFX.playBounce();
                                                     speak("No coins.");
                                                 }
