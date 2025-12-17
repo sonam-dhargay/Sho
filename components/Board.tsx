@@ -113,7 +113,11 @@ const BoardDie: React.FC<{ value: number; x: number; y: number; rotation: number
     
     let style: React.CSSProperties = {};
     if (isRolling) {
-        style = {}; 
+        style = {
+            left: '50%',
+            top: '50%',
+            transform: `translate(-50%, -50%)`,
+        }; 
     } else {
         const isSettled = animState === 'settled';
         const currentX = isSettled ? x : 0;
@@ -176,20 +180,43 @@ export const Board: React.FC<BoardProps> = ({
       return p ? p.avatar : undefined;
   };
 
-  // --- Static Linear Spiral Layout ---
-  // Reverted to uniform spacing regardless of coin occupancy
+  // --- Organic Spiral Layout ---
+  // Using weights and jitter to create a hand-placed, uneven feel
   const shells = useMemo(() => {
+    const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
+        const idx = i + 1;
+        const shell = boardState.get(idx);
+        const prevShell = i > 0 ? boardState.get(i) : null;
+        const nextShell = i < TOTAL_SHELLS - 1 ? boardState.get(i + 2) : null;
+        
+        let w = 1.0;
+        // Occupied shells push neighbors for a loose feel
+        if (shell && shell.stackSize > 0) {
+            w += 3.5; 
+        }
+        // Neighbors expansion
+        if ((prevShell && prevShell.stackSize > 0) || (nextShell && nextShell.stackSize > 0)) {
+            w += 1.2;
+        }
+        return w;
+    });
+
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let cumulativeWeight = 0;
+
     return Array.from({ length: TOTAL_SHELLS }, (_, i) => {
       const idx = i + 1;
-      const t = i / (TOTAL_SHELLS - 1); // Simple linear progression from center to end
+      const weight = weights[i];
+      const t = (cumulativeWeight + weight / 2) / totalWeight;
+      cumulativeWeight += weight;
 
-      // Base spiral parameters (tight center, wide outer)
-      const baseAngle = t * Math.PI * 4.5 + 2.5; 
+      // Spiral geometry
+      const baseAngle = t * Math.PI * 4.6 + 2.5; 
       const baseRadius = 110 + (t * 270); 
       
-      // Fixed jitter based on index
-      const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.08; 
-      const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 12; 
+      // Intentional jitter for the "loose and uneven" natural look
+      const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.12; 
+      const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 16; 
       
       const angle = baseAngle + jitterAngle;
       const radius = baseRadius + jitterRadius;
@@ -197,9 +224,9 @@ export const Board: React.FC<BoardProps> = ({
       const x = CENTER_X + radius * Math.cos(angle);
       const y = CENTER_Y + radius * Math.sin(angle);
 
-      // Tangent calculation for shell orientation
+      // Tangent calculation
       const nextT = Math.min(1, t + 0.01);
-      const nextAngle = nextT * Math.PI * 4.5 + 2.5;
+      const nextAngle = nextT * Math.PI * 4.6 + 2.5;
       const nextRadius = 110 + (nextT * 270);
       const nextX = CENTER_X + nextRadius * Math.cos(nextAngle);
       const nextY = CENTER_Y + nextRadius * Math.sin(nextAngle);
@@ -219,7 +246,7 @@ export const Board: React.FC<BoardProps> = ({
   const endBtnPos = useMemo(() => {
      if (shells.length === 0) return { x: 700, y: 700 };
      const last = shells[shells.length - 1];
-     const dist = 90;
+     const dist = 95;
      const x = last.x + Math.cos(last.angle) * dist;
      const y = last.y + Math.sin(last.angle) * dist;
      return { x, y };
@@ -379,18 +406,18 @@ export const Board: React.FC<BoardProps> = ({
             <div className="w-[16rem] h-[16rem] bg-[#3f2e26] rounded-full blur-md opacity-80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
             <div className="relative w-56 h-56 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)] border-4 border-[#271c19] overflow-hidden flex items-center justify-center bg-[#291d1a]">
                 <div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] mix-blend-overlay"></div>
-                <div className="flex flex-col items-center opacity-40 mix-blend-screen">
+                <div className="flex flex-col items-center opacity-40 mix-blend-screen pointer-events-none">
                     <span className="font-serif text-[#8b5e3c] text-5xl mb-1">ཤོ</span>
                     <span className="font-cinzel text-[#8b5e3c] text-6xl font-bold tracking-widest drop-shadow-lg">SHO</span>
                 </div>
                 {(isRolling || currentRoll) && (
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0 z-20">
                          {isRolling ? (
                              <>
-                                <div className="absolute left-1/2 top-1/2 -ml-[15px] -mt-[15px]">
+                                <div className="absolute left-1/2 top-1/2 -ml-[25px] -mt-[25px]">
                                     <BoardDie value={1} x={0} y={0} rotation={0} isRolling={true} />
                                 </div>
-                                <div className="absolute left-1/2 top-1/2 ml-[15px] mt-[15px]">
+                                <div className="absolute left-1/2 top-1/2 ml-[25px] mt-[25px]">
                                     <BoardDie value={6} x={0} y={0} rotation={0} isRolling={true} />
                                 </div>
                              </>
@@ -410,7 +437,7 @@ export const Board: React.FC<BoardProps> = ({
         {/* Spiral Path */}
         <svg width="100%" height="100%" className="absolute inset-0 z-0 pointer-events-none">
              <path 
-                d={d3.line().curve(d3.curveCatmullRom.alpha(0.5))(shells.map(s => [s.x, s.y])) || ""} 
+                d={d3.line().curve(d3.curveCatmullRom.alpha(0.6))(shells.map(s => [s.x, s.y])) || ""} 
                 fill="none" 
                 stroke="#44403c" 
                 strokeWidth="12" 
@@ -474,10 +501,10 @@ export const Board: React.FC<BoardProps> = ({
                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => (
                                <div 
                                 key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500"
-                                // Staggered offset logic to make coins clearly visible and distinct
+                                // Staggered offset logic
                                 style={{ 
                                     top: `${-(i * 5)}px`, 
-                                    left: `${Math.sin(i * 0.8) * 4}px`, // Slight horizontal staggered lean
+                                    left: `${Math.sin(i * 0.8) * 4}px`, 
                                     zIndex: i, 
                                     transform: `translate(-50%, 0) rotate(${Math.sin(i * 1.5 + shell.id) * 12}deg)` 
                                 }}

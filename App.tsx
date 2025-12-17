@@ -484,7 +484,16 @@ const App: React.FC = () => {
     let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1;
     if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 2) { d1 = 2; d2 = 3; } else if (s.turnIndex === 1) { d1 = 3; d2 = 3; } }
     const isPaRa = (d1 === 1 && d2 === 1);
-    const pos1 = getRandomDicePos(); let pos2 = getRandomDicePos();
+    
+    // Improved visual dice placement to avoid overlap
+    const pos1 = getRandomDicePos(); 
+    let pos2 = getRandomDicePos();
+    let attempts = 0;
+    while (attempts < 10 && Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)) < 55) {
+        pos2 = getRandomDicePos();
+        attempts++;
+    }
+    
     const visuals = { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r };
     const total = d1 + d2; const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals };
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
@@ -655,7 +664,7 @@ const App: React.FC = () => {
     }
   }, [turnIndex, phase, gameMode, waitingForPaRa, pendingMoveValues, players, board, aiThinking, performRoll, performMove, tutorialStep]);
 
-  useEffect(() => { const isHost = gameMode === GameMode.ONLINE_HOST; if (phase === GamePhase.MOVING && !isRolling && !waitingForPaRa) { const moves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); if (moves.length === 0) { const isAIPlayer = gameMode === GameMode.AI && turnIndex === 1; const isTutorialOpponent = gameMode === GameMode.TUTORIAL && turnIndex === 1; if (isAIPlayer || isTutorialOpponent) { setTimeout(() => handleSkipTurn(), 2000); } } } }, [phase, isRolling, waitingForPaRa, pendingMoveValues, turnIndex, board, players, isNinerMode, gameMode, handleSkipTurn]);
+  useEffect(() => { const s = gameStateRef.current; if (phase === GamePhase.MOVING && !isRolling && !waitingForPaRa) { const moves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); if (moves.length === 0) { const isAIPlayer = gameMode === GameMode.AI && turnIndex === 1; const isTutorialOpponent = gameMode === GameMode.TUTORIAL && turnIndex === 1; if (isAIPlayer || isTutorialOpponent) { setTimeout(() => handleSkipTurn(), 2000); } } } }, [phase, isRolling, waitingForPaRa, pendingMoveValues, turnIndex, board, players, isNinerMode, gameMode, handleSkipTurn]);
 
   const setupHost = async () => { setJoinError(null); setHasOpponentJoined(false); setGameId(''); const peer = new Peer(undefined, PEER_CONFIG); peer.on('open', (id) => setGameId(id)); peer.on('error', (err) => setJoinError(`Failed: ${err.type}`)); peer.on('connection', (conn) => { connRef.current = conn; conn.on('data', (data: any) => { if (data.type === 'JOIN_REQ') { setPeerConnected(true); setHasOpponentJoined(true); initializeGame(data.payload); return; } if (data.type === 'ROLL_REQ') performRoll(); if (data.type === 'MOVE_REQ') performMove(data.payload.source, data.payload.target); if (data.type === 'SKIP_REQ') handleSkipTurn(); }); conn.on('close', () => setPeerConnected(false)); }); peerRef.current = peer; setMyPlayerIndex(0); setGameMode(GameMode.ONLINE_HOST); };
 
