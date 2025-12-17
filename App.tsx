@@ -1257,20 +1257,22 @@ const App: React.FC = () => {
 
   const broadcastState = useCallback(() => {
     if (connRef.current?.open && gameMode === GameMode.ONLINE_HOST) {
-        const s = gameStateRef.current;
         connRef.current.send({
             type: 'SYNC',
             payload: {
-                board: serializeBoard(s.board), players: s.players, turnIndex: s.turnIndex, phase: s.phase,
-                lastRoll: lastRoll, isRolling: s.isRolling, pendingMoveValues: s.pendingMoveValues,
-                waitingForPaRa: s.waitingForPaRa, flexiblePool: s.flexiblePool, lastMove: s.lastMove, totalMoves: s.totalMoves,
+                board: serializeBoard(board), players: players, turnIndex: turnIndex, phase: phase,
+                lastRoll: lastRoll, isRolling: isRolling, pendingMoveValues: pendingMoveValues,
+                waitingForPaRa: waitingForPaRa, flexiblePool: flexiblePool, lastMove: lastMove, totalMoves: totalMoves,
                 isNinerMode: isNinerMode
             }
         });
     }
-  }, [gameMode, lastRoll, isNinerMode]);
+  }, [gameMode, board, players, turnIndex, phase, lastRoll, isRolling, pendingMoveValues, waitingForPaRa, flexiblePool, lastMove, totalMoves, isNinerMode]);
 
-  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST) broadcastState(); }, [board, players, turnIndex, phase, lastRoll, isRolling, pendingMoveValues, broadcastState]);
+  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST) broadcastState(); }, [broadcastState]);
+
+  // Initial Sync when guest connects
+  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST && peerConnected) broadcastState(); }, [gameMode, peerConnected, broadcastState]);
 
   const cancelJoin = () => { setIsJoining(false); setJoinError(null); peerRef.current?.destroy(); };
   const requestRoll = () => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'ROLL_REQ' }); else performRoll(); };
