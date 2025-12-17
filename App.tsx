@@ -59,9 +59,11 @@ const generatePlayers = (
     ];
 };
 
-// --- Procedural Sound Effects Manager ---
+// --- Procedural Sound Effects & Ambient Music Manager ---
 const SFX = {
   ctx: null as AudioContext | null,
+  musicNodes: [] as AudioNode[],
+  musicInterval: null as number | null,
   
   getContext: () => {
     if (!SFX.ctx) {
@@ -79,6 +81,77 @@ const SFX = {
       data[i] = Math.random() * 2 - 1;
     }
     return buffer;
+  },
+
+  // Procedural Meditative Drone Music
+  startAmbient: () => {
+    const ctx = SFX.getContext();
+    if (SFX.musicNodes.length > 0) return;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2);
+    masterGain.connect(ctx.destination);
+    SFX.musicNodes.push(masterGain);
+
+    const freqs = [110, 165, 220, 330]; // Meditative drones (A2, E3, A3, E4)
+    freqs.forEach(f => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.value = 0.1 + Math.random() * 0.2;
+      lfoGain.gain.value = 0.05;
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+      
+      gain.gain.value = 0.05;
+      osc.connect(gain);
+      gain.connect(masterGain);
+      
+      osc.start();
+      lfo.start();
+      SFX.musicNodes.push(osc, lfo);
+    });
+
+    // Random Singing Bowl tones
+    const playBowl = () => {
+      const bCtx = SFX.getContext();
+      const t = bCtx.currentTime;
+      const f = freqs[Math.floor(Math.random() * freqs.length)] * 2;
+      const osc = bCtx.createOscillator();
+      const gain = bCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t);
+      
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.08, t + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 8);
+      
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(t);
+      osc.stop(t + 8.1);
+    };
+
+    SFX.musicInterval = window.setInterval(() => {
+        if (Math.random() > 0.6) playBowl();
+    }, 4000);
+  },
+
+  stopAmbient: () => {
+    if (SFX.musicInterval) {
+        clearInterval(SFX.musicInterval);
+        SFX.musicInterval = null;
+    }
+    SFX.musicNodes.forEach(node => {
+        try { (node as any).stop(); } catch(e) {}
+        try { (node as any).disconnect(); } catch(e) {}
+    });
+    SFX.musicNodes = [];
   },
 
   playShake: () => {
@@ -389,6 +462,8 @@ const App: React.FC = () => {
   const [hasOpponentJoined, setHasOpponentJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
+  
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -431,6 +506,16 @@ const App: React.FC = () => {
     const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1;
     localStorage.setItem('sho_plays_local', newLocal.toString());
     setGlobalPlayCount(prev => prev + 1);
+  };
+
+  const toggleMusic = () => {
+    const newState = !isMusicEnabled;
+    setIsMusicEnabled(newState);
+    if (newState) {
+        SFX.startAmbient();
+    } else {
+        SFX.stopAmbient();
+    }
   };
 
   const initializeGame = useCallback((p2Config?: { name: string, color: string, avatar?: string }, isTutorial = false) => {
@@ -735,11 +820,91 @@ const App: React.FC = () => {
                                 if (shell.owner === myId) myStacks.push({ pos, size: shell.stackSize });
                                 if (shell.owner === oppId) oppStacks.push({ pos, size: shell.stackSize });
                             }
-                            const prompt = `Play Sho. State: ${JSON.stringify({myId, myStacks, oppStacks})}. Moves: ${JSON.stringify(validMoves)}. Pick index. Return JSON {index: number}`;
+                            const prompt = `
+                                Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins.
+                                
+                                Rules Context:
+                                - KILL: Landing on enemy stack <= your size. 
+                                - CAPTURE BONUS: If enemy is a "Sho-mo" (opening 2-coin stack), KILLING it upgrades your stack to 3 immediately.
+                                - STACK: Joining your own coins to build a block. Stacks move together.
+                                - BLOCK: Enemy CANNOT land on you if your stack is larger than theirs.
+                                - NO-NINER: If active, stacks of 9 are forbidden.
+                                
+                                Board State:
+                                - My Stacks: ${JSON.stringify(myStacks)}
+                                - Enemy Stacks: ${JSON.stringify(oppStacks)}
+                                - Coins in Hand: ${players[1].coinsInHand}
+                                - No-Niner Mode: ${gameStateRef.current.isNinerMode ? "OFF" : "ON"}
+                                
+                                Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))}
+                                
+                                Strategy:
+                                1. Kill enemy stacks to send them back to hand.
+                                2. Prioritize finishing coins if near the end (>64).
+                                3. Build larger stacks to block enemy movement and prevent being killed.
+                                4. Avoid landing where a larger enemy stack can reach you.
+                                
+                                Return JSON {index: number, reason: string}
+                            `;
                             const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] }, config: { responseMimeType: "application/json" } });
                             const aiDecision = JSON.parse(response.text);
-                            if (validMoves[aiDecision.index]) chosenMove = validMoves[aiDecision.index];
-                        } catch (err) { chosenMove = validMoves.find(m => m.type === MoveResultType.KILL) || validMoves[0]; }
+                            if (validMoves[aiDecision.index]) {
+                                chosenMove = validMoves[aiDecision.index];
+                                console.log("AI Reason:", aiDecision.reason);
+                            }
+                        } catch (err) { 
+                             // Local heuristic fallback logic
+                             let bestScore = -Infinity;
+                             validMoves.forEach(m => {
+                                 let score = 0;
+                                 if (m.type === MoveResultType.FINISH) score += 2000;
+                                 if (m.type === MoveResultType.KILL) {
+                                     const targetShell = board.get(m.targetIndex);
+                                     score += 500 + (targetShell?.stackSize || 0) * 50;
+                                     if (targetShell?.isShoMo) score += 300; // Extra reward for capturing sho-mo
+                                 }
+                                 if (m.type === MoveResultType.STACK) {
+                                     const targetShell = board.get(m.targetIndex);
+                                     score += 150 + (targetShell?.stackSize || 0) * 30; // Reward bigger stacks
+                                 }
+                                 score += m.targetIndex; // Favor moving forward
+                                 
+                                 // Risk assessment: Is target reachable by larger enemy?
+                                 const myStackSize = m.sourceIndex === 0 ? 1 : (board.get(m.sourceIndex)?.stackSize || 1);
+                                 board.forEach((shell, pos) => {
+                                     if (shell.owner === players[0].id && shell.stackSize > myStackSize) {
+                                         const dist = m.targetIndex - pos;
+                                         if (dist > 0 && dist <= 12) score -= 50; // Simple "danger zone" penalty
+                                     }
+                                 });
+
+                                 if (score > bestScore) {
+                                     bestScore = score;
+                                     chosenMove = m;
+                                 }
+                             });
+                        }
+                    } else {
+                        // Heuristic fallback (same as above for non-API users)
+                        let bestScore = -Infinity;
+                        validMoves.forEach(m => {
+                            let score = 0;
+                            if (m.type === MoveResultType.FINISH) score += 2000;
+                            if (m.type === MoveResultType.KILL) {
+                                const targetShell = board.get(m.targetIndex);
+                                score += 500 + (targetShell?.stackSize || 0) * 50;
+                                if (targetShell?.isShoMo) score += 300;
+                            }
+                            if (m.type === MoveResultType.STACK) {
+                                const targetShell = board.get(m.targetIndex);
+                                score += 150 + (targetShell?.stackSize || 0) * 30;
+                            }
+                            score += m.targetIndex;
+                            if (score > bestScore) {
+                                bestScore = score;
+                                chosenMove = m;
+                            }
+                        });
                     }
                     performMove(chosenMove.sourceIndex, chosenMove.targetIndex);
                     if (isTutorial && tutorialStep === 5) setTimeout(() => setTutorialStep(6), 1000);
@@ -872,7 +1037,7 @@ const App: React.FC = () => {
                           ))}
                       </div>
                   </div>
-                  <div>
+                  <div className="mb-4">
                        <label className="text-stone-400 text-xs uppercase block mb-2">Select Avatar</label>
                        <div className="flex flex-wrap gap-2 mb-2">
                            {AVATAR_PRESETS.map((av) => (
@@ -880,6 +1045,15 @@ const App: React.FC = () => {
                            ))}
                            <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400"><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />📷</label>
                        </div>
+                  </div>
+                  <div className="pt-2 border-t border-stone-800 flex items-center justify-between">
+                       <label className="text-stone-400 text-xs uppercase block">Ambient Music</label>
+                       <button 
+                         onClick={toggleMusic} 
+                         className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${isMusicEnabled ? 'bg-amber-700 text-white' : 'bg-stone-800 text-stone-500'}`}
+                       >
+                         {isMusicEnabled ? 'ON' : 'OFF'}
+                       </button>
                   </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-4">
@@ -911,7 +1085,16 @@ const App: React.FC = () => {
                     <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-3 overflow-y-auto no-scrollbar">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4 flex-shrink-0">
                             <div onClick={() => setGameMode(null)} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
-                            <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={toggleMusic} 
+                                    className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`}
+                                    title="Toggle Music"
+                                >
+                                    {isMusicEnabled ? '🎵' : '🔇'}
+                                </button>
+                                <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
+                            </div>
                         </header>
 
                         <div className="grid grid-cols-2 gap-2 md:gap-3 flex-shrink-0">
