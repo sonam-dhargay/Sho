@@ -176,43 +176,18 @@ export const Board: React.FC<BoardProps> = ({
       return p ? p.avatar : undefined;
   };
 
-  // --- Dynamic Elastic Spiral Layout ---
-  // We use weights to dynamically push shells apart based on their occupancy
+  // --- Static Linear Spiral Layout ---
+  // Reverted to uniform spacing regardless of coin occupancy
   const shells = useMemo(() => {
-    // 1. Assign weights: Occupied shells and their neighbors need significantly more physical space
-    const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
-        const idx = i + 1;
-        const shell = boardState.get(idx);
-        const prevShell = i > 0 ? boardState.get(i) : null;
-        const nextShell = i < TOTAL_SHELLS - 1 ? boardState.get(i + 2) : null;
-        
-        let w = 1.0;
-        // Occupied shells get a heavy weight
-        if (shell && shell.stackSize > 0) {
-            w += 4.5; 
-        }
-        // Neighbors of occupied shells also get extra weight to ensure the gaps aren't swallowed
-        if ((prevShell && prevShell.stackSize > 0) || (nextShell && nextShell.stackSize > 0)) {
-            w += 1.5;
-        }
-        return w;
-    });
-
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    let cumulativeWeight = 0;
-
     return Array.from({ length: TOTAL_SHELLS }, (_, i) => {
       const idx = i + 1;
-      const weight = weights[i];
-      // Progression 't' based on cumulative weights rather than linear index
-      const t = (cumulativeWeight + weight / 2) / totalWeight;
-      cumulativeWeight += weight;
+      const t = i / (TOTAL_SHELLS - 1); // Simple linear progression from center to end
 
       // Base spiral parameters (tight center, wide outer)
       const baseAngle = t * Math.PI * 4.5 + 2.5; 
       const baseRadius = 110 + (t * 270); 
       
-      // Jitter reduction to maintain alignment during path stretching
+      // Fixed jitter based on index
       const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.08; 
       const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 12; 
       
