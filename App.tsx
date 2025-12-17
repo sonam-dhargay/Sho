@@ -502,32 +502,24 @@ const App: React.FC = () => {
   const handleInvalidMoveAttempt = (sourceIdx: number, targetIdx: number) => {
       const s = gameStateRef.current;
       if (s.phase !== GamePhase.MOVING) return;
-      const dist = targetIdx - sourceIdx;
       const targetShell = s.board.get(targetIdx);
       const player = s.players[s.turnIndex];
       let movingStackSize = sourceIdx === 0 ? (player.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (s.board.get(sourceIdx)?.stackSize || 0);
 
-      SFX.playBounce();
-      
+      // Sho Rule: Only enemy stacks larger than yours can block you.
       if (targetShell?.owner && targetShell.owner !== player.id) {
           if (targetShell.stackSize > movingStackSize) {
+              SFX.playBounce();
               addLog(`Blocked! Enemy stack is too big.`, 'alert');
               speak("Too large.");
-          } else {
-              addLog(`Invalid position.`, 'alert');
-              speak("Blocked.");
           }
       } else if (targetShell?.owner === player.id) {
+          // Rule: You cannot stack past 9 in No-Niner mode
           if (!s.isNinerMode && targetShell.stackSize + movingStackSize === 9) {
+              SFX.playBounce();
               addLog("Forbidden! 9 stack limit.", 'alert');
               speak("Forbidden.");
-          } else {
-              addLog(`Invalid move.`, 'alert');
-              speak("Blocked.");
           }
-      } else {
-          addLog(`Blocked.`, 'alert');
-          speak("Blocked.");
       }
   };
 
@@ -583,7 +575,7 @@ const App: React.FC = () => {
                             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); const myId = players[1].id; const oppId = players[0].id; const myStacks = []; const oppStacks = [];
                             for (const [pos, shell] of board.entries()) { if (shell.owner === myId) myStacks.push({ pos, size: shell.stackSize }); if (shell.owner === oppId) oppStacks.push({ pos, size: shell.stackSize }); }
                             const prompt = `Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins. Rules Context: - KILL: Landing on enemy stack <= your size. - CAPTURE BONUS: If enemy is a "Sho-mo" (opening 2-coin stack), KILLING it upgrades your stack to 3 immediately. - STACK: Joining your own coins to build a block. Stacks move together. - BLOCK: Enemy CANNOT land on you if your stack is larger than theirs. - NO-NINER: If active, stacks of 9 are forbidden. Board State: - My Stacks: ${JSON.stringify(myStacks)} - Enemy Stacks: ${JSON.stringify(oppStacks)} - Coins in Hand: ${players[1].coinsInHand} - No-Niner Mode: ${gameStateRef.current.isNinerMode ? "OFF" : "ON"} Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))} Strategy: 1. Kill enemy stacks to send them back to hand. 2. Prioritize finishing coins if near the end (>64). 3. Build larger stacks to block enemy movement and prevent being killed. 4. Avoid landing where a larger enemy stack can reach you. Return JSON {index: number, reason: string}`;
-                            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] }, config: { responseMimeType: "application/json" } });
+                            const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [{ text: prompt }] }, config: { responseMimeType: "application/json" } });
                             const aiDecision = JSON.parse(response.text); if (validMoves[aiDecision.index]) { chosenMove = validMoves[aiDecision.index]; console.log("AI Reason:", aiDecision.reason); }
                         } catch (err) { 
                              let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) { const targetShell = board.get(m.targetIndex); score += 500 + (targetShell?.stackSize || 0) * 50; if (targetShell?.isShoMo) score += 300; } if (m.type === MoveResultType.STACK) { const targetShell = board.get(m.targetIndex); score += 150 + (targetShell?.stackSize || 0) * 30; } score += m.targetIndex; const myStackSize = m.sourceIndex === 0 ? 1 : (board.get(m.sourceIndex)?.stackSize || 1); board.forEach((shell, pos) => { if (shell.owner === players[0].id && shell.stackSize > myStackSize) { const dist = m.targetIndex - pos; if (dist > 0 && dist <= 12) score -= 50; } }); if (score > bestScore) { bestScore = score; chosenMove = m; } });
@@ -774,7 +766,7 @@ const App: React.FC = () => {
                 <div className="flex-grow relative bg-[#1c1917] overflow-hidden flex items-center justify-center order-2 pt-2 md:pt-0" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, transformOrigin: 'center', width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
-                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(move) => requestMove(move.sourceIndex, move.targetIndex)} currentPlayer={currentPlayer.id} turnPhase={phase} onShellClick={(idx) => { if (canInteract() && phase === GamePhase.MOVING && board.get(idx)?.owner === currentPlayer.id) { SFX.playSelect(); setSelectedSourceIndex(idx); } else setSelectedSourceIndex(null); }} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} onInvalidMoveAttempt={handleInvalidMoveAttempt}
+                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(move) => requestMove(move.sourceIndex, move.targetIndex)} currentPlayer={currentPlayer.id} turnPhase={phase} onShellClick={(idx) => { if (canInteract() && phase === GamePhase.MOVING && board.get(idx)?.owner === currentPlayer.id) { SFX.playSelect(); setSelectedSourceIndex(idx); } else setSelectedSourceIndex(null); }} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} onInvalidMoveAttempt={handleInvalidMoveAttempt} isNinerMode={isNinerMode}
                         />
                     </div>
                 </div>

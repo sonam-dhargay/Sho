@@ -1,7 +1,6 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll } from '../types';
-// Add COINS_PER_PLAYER to imports
 import { CENTER_X, CENTER_Y, TOTAL_SHELLS, COINS_PER_PLAYER } from '../constants';
 import * as d3 from 'd3';
 
@@ -18,6 +17,7 @@ interface BoardProps {
   currentRoll?: DiceRoll | null;
   isRolling?: boolean;
   onInvalidMoveAttempt?: (sourceIdx: number, targetIdx: number) => void;
+  isNinerMode?: boolean; 
 }
 
 // --- Visual Sub-Components ---
@@ -153,7 +153,7 @@ const pseudoRandom = (seed: number) => {
 };
 
 export const Board: React.FC<BoardProps> = ({ 
-  boardState, players, validMoves, onSelectMove, currentPlayer, turnPhase, onShellClick, selectedSource, lastMove, currentRoll, isRolling, onInvalidMoveAttempt
+  boardState, players, validMoves, onSelectMove, currentPlayer, turnPhase, onShellClick, selectedSource, lastMove, currentRoll, isRolling, onInvalidMoveAttempt, isNinerMode
 }) => {
   const [dragState, setDragState] = useState<{ isDragging: boolean; sourceIndex: number | null; x: number; y: number; }>({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
   const [finishingParticles, setFinishingParticles] = useState<{id: number, x: number, y: number, color: string, avatar?: string}[]>([]);
@@ -251,22 +251,34 @@ export const Board: React.FC<BoardProps> = ({
   }, [lastMove, shells, currentPlayer, players]);
 
   const triggerBlockedFeedback = (targetId: number, sourceIdx: number) => {
-    setShakeShellId(targetId);
-    
-    // Determine the reason for blocking
     const targetShell = boardState.get(targetId);
-    let msg = "BLOCKED";
-    if (targetShell?.owner && targetShell.owner !== currentPlayer) {
-        const sourceShell = sourceIdx === 0 ? null : boardState.get(sourceIdx);
-        // Uses COINS_PER_PLAYER imported from constants.ts
-        let moverSize = sourceIdx === 0 ? (players.find(p => p.id === currentPlayer)?.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (sourceShell?.stackSize || 1);
-        if (targetShell.stackSize > moverSize) msg = "TOO BIG";
+    if (!targetShell?.owner) return; // Only show blocking on occupied shells
+
+    let msg = "";
+    const currentPlayerObj = players.find(p => p.id === currentPlayer);
+    let moverSize = sourceIdx === 0 
+        ? (currentPlayerObj?.coinsInHand === COINS_PER_PLAYER ? 2 : 1) 
+        : (boardState.get(sourceIdx)?.stackSize || 1);
+
+    if (targetShell.owner !== currentPlayer) {
+        // Blocking by opponent stack size
+        if (targetShell.stackSize > moverSize) {
+            msg = "TOO BIG";
+        }
+    } else {
+        // Blocking by stacking rules (Forbidden 9 stack)
+        if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
+            msg = "FORBIDDEN";
+        }
     }
 
-    setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
-    setTimeout(() => setShakeShellId(null), 400);
-    setTimeout(() => setBlockedFeedback(null), 1200);
-    onInvalidMoveAttempt?.(sourceIdx, targetId);
+    if (msg) {
+        setShakeShellId(targetId);
+        setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
+        setTimeout(() => setShakeShellId(null), 400);
+        setTimeout(() => setBlockedFeedback(null), 1200);
+        onInvalidMoveAttempt?.(sourceIdx, targetId);
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, index: number) => {
@@ -407,12 +419,19 @@ export const Board: React.FC<BoardProps> = ({
                     onClick={(e) => {
                         e.stopPropagation();
                         if (!dragState.isDragging) {
-                            if (isTarget && moveTarget) { onSelectMove(moveTarget); } 
-                            else if (selectedSource && selectedSource !== shell.id) {
-                                const isMyOwn = shell.data?.owner === currentPlayer;
-                                if (!isMyOwn) { triggerBlockedFeedback(shell.id, selectedSource); } 
-                                else if (onShellClick) { onShellClick(shell.id); }
-                            } else if (onShellClick) { onShellClick(shell.id); }
+                            if (isTarget && moveTarget) { 
+                                onSelectMove(moveTarget); 
+                            } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) {
+                                // If it's your own stack, clicking it should switch selection to it, NOT be blocked
+                                if (isOwner) {
+                                    if (onShellClick) onShellClick(shell.id);
+                                } else {
+                                    // Feedback only for enemy pieces or forbidden stacking
+                                    triggerBlockedFeedback(shell.id, selectedSource);
+                                }
+                            } else if (onShellClick) {
+                                onShellClick(shell.id);
+                            }
                         }
                     }}
                 >
