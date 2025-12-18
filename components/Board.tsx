@@ -62,7 +62,7 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
   return (
     <div 
       className={`
-        relative w-14 h-14 rounded-full 
+        relative w-12 h-12 rounded-full 
         shadow-[4px_6px_10px_rgba(0,0,0,0.8),inset_0px_2px_4px_rgba(255,255,255,0.2)]
         border border-white/20
         flex items-center justify-center
@@ -73,17 +73,17 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
       }}
     >
       {avatar ? (
-        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
+        <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
              {avatar.startsWith('data:') || avatar.startsWith('http') ? (
                  <img src={avatar} alt="avatar" className="w-full h-full object-cover opacity-90" />
              ) : (
-                 <span className="text-2xl drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
+                 <span className="text-xl drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
              )}
         </div>
       ) : (
         <>
-            <div className="w-10 h-10 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
-            <div className="absolute w-5 h-5 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
+            <div className="w-9 h-9 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
+            <div className="absolute w-4 h-4 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
         </>
       )}
       <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-20 rounded-full blur-[1px] pointer-events-none"></div>
@@ -186,18 +186,27 @@ export const Board: React.FC<BoardProps> = ({
     const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
         const idx = i + 1;
         const shell = boardState.get(idx);
-        const prevShell = i > 0 ? boardState.get(i) : null;
-        const nextShell = i < TOTAL_SHELLS - 1 ? boardState.get(i + 2) : null;
+        
+        // Multi-level neighbor influence to create smooth pockets of space
+        const hasDirectNeighbor = 
+            (i > 0 && (boardState.get(i)?.stackSize || 0) > 0) || 
+            (i < TOTAL_SHELLS - 1 && (boardState.get(i + 2)?.stackSize || 0) > 0);
+        
+        const hasExtendedNeighbor = 
+            (i > 1 && (boardState.get(i - 1)?.stackSize || 0) > 0) || 
+            (i < TOTAL_SHELLS - 2 && (boardState.get(i + 3)?.stackSize || 0) > 0);
         
         let w = 1.0;
-        // Occupied shells push neighbors for a loose feel
+        
+        // Occupied shells push neighbors significantly for a loose feel
         if (shell && shell.stackSize > 0) {
-            w += 3.5; 
+            w += 6.5; // Primary repulsion
+        } else if (hasDirectNeighbor) {
+            w += 3.2; // Immediate neighbor expansion
+        } else if (hasExtendedNeighbor) {
+            w += 1.4; // Secondary neighbor buffer
         }
-        // Neighbors expansion
-        if ((prevShell && prevShell.stackSize > 0) || (nextShell && nextShell.stackSize > 0)) {
-            w += 1.2;
-        }
+        
         return w;
     });
 
