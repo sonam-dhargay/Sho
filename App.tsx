@@ -756,7 +756,8 @@ const App: React.FC = () => {
                     <span className="font-serif opacity-70 text-5xl md:text-7xl leading-none">ཤོ</span> 
                     <span className="text-3xl md:text-5xl leading-none font-serif">Sho</span>
                   </h1>
-                  <p className="text-stone-400 mt-2 tracking-widest uppercase text-center font-sans text-xs md:text-sm">Traditional Tibetan Dice Game</p>
+                  <p className="text-amber-400/80 mt-3 text-lg md:text-xl font-serif text-center leading-relaxed">པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།</p>
+                  <p className="text-stone-400 mt-1 tracking-widest uppercase text-center font-sans text-xs md:text-sm">Traditional Tibetan Dice Game</p>
                </div>
               <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
                   <div className="mb-4">
