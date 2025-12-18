@@ -957,17 +957,6 @@ const App: React.FC = () => {
                            </label>
                        </div>
                   </div>
-                  <div className="pt-2 border-t border-stone-800 mt-2">
-                    <div className="flex items-center justify-between gap-4 p-2 bg-stone-800/40 rounded-lg border border-stone-700">
-                        <span className="text-[10px] text-stone-500 uppercase tracking-widest">Variant:</span>
-                        <button 
-                            onClick={() => setIsNinerMode(!isNinerMode)}
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${isNinerMode ? 'bg-amber-700 border-amber-500 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
-                        >
-                            {isNinerMode ? 'NINER MODE' : 'NO-NINER'}
-                        </button>
-                    </div>
-                  </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mb-6">
