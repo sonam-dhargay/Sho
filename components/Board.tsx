@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll } from '../types';
 import { CENTER_X, CENTER_Y, TOTAL_SHELLS, COINS_PER_PLAYER } from '../constants';
@@ -466,8 +465,8 @@ export const Board: React.FC<BoardProps> = ({
             const shellOffX = tx * -12 + nx * -10;
             const shellOffY = ty * -12 + ny * -10;
 
-            const stackOffX = tx * 28 + nx * 14;
-            const stackOffY = ty * 28 + ny * 14;
+            const stackOffX = tx * 28 + nx * -10;
+            const stackOffY = ty * 28 + ny * -10;
 
             return (
                 <div 
