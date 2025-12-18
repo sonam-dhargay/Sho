@@ -21,15 +21,15 @@ interface BoardProps {
 
 // --- Visual Sub-Components ---
 
-const CowrieShell: React.FC<{ angle: number; isTarget: boolean }> = ({ angle, isTarget }) => {
+const CowrieShell: React.FC<{ angle: number; isTarget: boolean; isBlocked?: boolean }> = ({ angle, isTarget, isBlocked }) => {
   const rotation = (angle * 180 / Math.PI) + 90;
 
   return (
     <div 
-      className="w-10 h-12 flex items-center justify-center transition-transform duration-300 pointer-events-none"
+      className={`w-10 h-12 flex items-center justify-center transition-transform duration-300 pointer-events-none ${isBlocked ? 'scale-110' : ''}`}
       style={{ transform: `rotate(${rotation}deg)` }}
     >
-      <svg viewBox="0 0 100 130" className={`w-full h-full drop-shadow-xl transition-all ${isTarget ? 'filter brightness-125 sepia scale-110' : ''}`}>
+      <svg viewBox="0 0 100 130" className={`w-full h-full drop-shadow-xl transition-all ${isTarget ? 'filter brightness-125 sepia scale-110' : ''} ${isBlocked ? 'filter saturate-150 brightness-75 drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]' : ''}`}>
         <defs>
           <radialGradient id="shellBody" cx="40%" cy="40%" r="80%">
             <stop offset="0%" stopColor="#fdfbf7" />
@@ -38,9 +38,9 @@ const CowrieShell: React.FC<{ angle: number; isTarget: boolean }> = ({ angle, is
           </radialGradient>
         </defs>
         
-        <ellipse cx="50" cy="65" rx="45" ry="60" fill="url(#shellBody)" stroke="#78716c" strokeWidth="1.5" />
-        <path d="M50 20 C 40 40, 40 90, 50 110 C 60 90, 60 40, 50 20" fill="#44403c" stroke="#292524" strokeWidth="1"/>
-        <g stroke="#e7e5e4" strokeWidth="2" strokeLinecap="round" opacity="0.8">
+        <ellipse cx="50" cy="65" rx="45" ry="60" fill="url(#shellBody)" stroke={isBlocked ? "#dc2626" : "#78716c"} strokeWidth={isBlocked ? "3" : "1.5"} />
+        <path d="M50 20 C 40 40, 40 90, 50 110 C 60 90, 60 40, 50 20" fill={isBlocked ? "#450a0a" : "#44403c"} stroke={isBlocked ? "#dc2626" : "#292524"} strokeWidth="1"/>
+        <g stroke={isBlocked ? "#f87171" : "#e7e5e4"} strokeWidth="2" strokeLinecap="round" opacity="0.8">
            <line x1="48" y1="30" x2="42" y2="30" />
            <line x1="47" y1="45" x2="40" y2="45" />
            <line x1="47" y1="60" x2="38" y2="60" />
@@ -317,8 +317,8 @@ export const Board: React.FC<BoardProps> = ({
     if (msg) {
         setShakeShellId(targetId);
         setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
-        setTimeout(() => setShakeShellId(null), 400);
-        setTimeout(() => setBlockedFeedback(null), 1500);
+        setTimeout(() => setShakeShellId(null), 500);
+        setTimeout(() => setBlockedFeedback(null), 1800);
         onInvalidMoveAttempt?.(sourceIdx, targetId);
     }
   };
@@ -385,24 +385,32 @@ export const Board: React.FC<BoardProps> = ({
         <style dangerouslySetInnerHTML={{__html: `
             @keyframes shake {
                 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
-                20% { transform: translate(-54%, -50%) rotate(-5deg); }
-                40% { transform: translate(-46%, -50%) rotate(5deg); }
-                60% { transform: translate(-54%, -50%) rotate(-5deg); }
-                80% { transform: translate(-46%, -50%) rotate(5deg); }
+                15% { transform: translate(-58%, -50%) rotate(-8deg); }
+                30% { transform: translate(-42%, -50%) rotate(8deg); }
+                45% { transform: translate(-58%, -50%) rotate(-8deg); }
+                60% { transform: translate(-42%, -50%) rotate(8deg); }
+                75% { transform: translate(-55%, -50%) rotate(-4deg); }
             }
             @keyframes blockedFadeUp {
-                0% { opacity: 0; transform: translateY(0); }
-                10% { opacity: 1; transform: translateY(-15px); }
-                90% { opacity: 1; transform: translateY(-25px); }
-                100% { opacity: 0; transform: translateY(-40px); }
+                0% { opacity: 0; transform: translate(-50%, 0); }
+                15% { opacity: 1; transform: translate(-50%, -25px); }
+                85% { opacity: 1; transform: translate(-50%, -35px); }
+                100% { opacity: 0; transform: translate(-50%, -50px); }
             }
             @keyframes xMarkFlash {
                 0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-                50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+                30% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+                70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
             }
-            .animate-shake-target { animation: shake 0.4s ease-in-out; }
-            .animate-blocked-label { animation: blockedFadeUp 1.5s ease-out forwards; }
-            .animate-x-mark { animation: xMarkFlash 0.4s ease-out forwards; }
+            @keyframes blockedOutlinePulse {
+                0% { box-shadow: 0 0 0 0px rgba(220, 38, 38, 0.8); }
+                50% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+                100% { box-shadow: 0 0 0 0px rgba(220, 38, 38, 0); }
+            }
+            .animate-shake-target { animation: shake 0.5s ease-in-out; }
+            .animate-blocked-label { animation: blockedFadeUp 1.8s ease-out forwards; }
+            .animate-x-mark { animation: xMarkFlash 0.5s ease-out forwards; }
+            .animate-blocked-outline { animation: blockedOutlinePulse 0.5s ease-out; }
         `}} />
 
         {/* Center Pad */}
@@ -476,7 +484,7 @@ export const Board: React.FC<BoardProps> = ({
             return (
                 <div 
                     key={shell.id} data-shell-id={shell.id}
-                    className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'}`}
+                    className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'} ${isShaking ? 'animate-blocked-outline rounded-full' : ''}`}
                     style={{ left: shell.x, top: shell.y, width: 40, height: 40, transform: 'translate(-50%, -50%)' }}
                     onClick={(e) => {
                         e.stopPropagation();
@@ -496,7 +504,7 @@ export const Board: React.FC<BoardProps> = ({
                     }}
                 >
                     <div style={{ transform: `translate(${shellOffX}px, ${shellOffY}px)` }}>
-                         <CowrieShell angle={shell.angle} isTarget={isTarget} />
+                         <CowrieShell angle={shell.angle} isTarget={isTarget} isBlocked={isShaking} />
                     </div>
 
                     {isTarget && <div className="absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none"></div>}
@@ -504,8 +512,8 @@ export const Board: React.FC<BoardProps> = ({
                     
                     {isShaking && (
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] pointer-events-none">
-                            <div className="w-20 h-20 rounded-full border-4 border-red-600/80 animate-shake-target flex items-center justify-center">
-                                <svg viewBox="0 0 24 24" className="w-16 h-16 text-red-600 animate-x-mark" fill="none" stroke="currentColor" strokeWidth="3">
+                            <div className="w-20 h-20 rounded-full border-4 border-red-600/60 animate-shake-target flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" className="w-16 h-16 text-red-600 animate-x-mark" fill="none" stroke="currentColor" strokeWidth="4">
                                     <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </div>
@@ -513,8 +521,8 @@ export const Board: React.FC<BoardProps> = ({
                     )}
 
                     {hasBlockedMsg && (
-                        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
-                            <span className="bg-red-600 text-white font-cinzel font-bold px-4 py-2 rounded-lg text-xs md:text-sm shadow-2xl border-2 border-white/20 animate-blocked-label block text-center">
+                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
+                            <span className="bg-red-700 text-white font-cinzel font-bold px-4 py-2 rounded-lg text-xs md:text-sm shadow-2xl border-2 border-red-500/50 animate-blocked-label block text-center">
                                 {blockedFeedback?.message}
                             </span>
                         </div>
