@@ -62,7 +62,7 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
   return (
     <div 
       className={`
-        relative w-12 h-12 rounded-full 
+        relative w-11 h-11 rounded-full 
         shadow-[4px_6px_10px_rgba(0,0,0,0.8),inset_0px_2px_4px_rgba(255,255,255,0.2)]
         border border-white/20
         flex items-center justify-center
@@ -73,16 +73,16 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
       }}
     >
       {avatar ? (
-        <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
+        <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
              {avatar.startsWith('data:') || avatar.startsWith('http') ? (
                  <img src={avatar} alt="avatar" className="w-full h-full object-cover opacity-90" />
              ) : (
-                 <span className="text-xl drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
+                 <span className="text-lg drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
              )}
         </div>
       ) : (
         <>
-            <div className="w-9 h-9 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
+            <div className="w-8 h-8 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
             <div className="absolute w-4 h-4 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
         </>
       )}
@@ -181,13 +181,10 @@ export const Board: React.FC<BoardProps> = ({
   };
 
   // --- Organic Spiral Layout ---
-  // Using weights and jitter to create a hand-placed, uneven feel
   const shells = useMemo(() => {
     const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
         const idx = i + 1;
         const shell = boardState.get(idx);
-        
-        // Multi-level neighbor influence to create smooth pockets of space
         const hasDirectNeighbor = 
             (i > 0 && (boardState.get(i)?.stackSize || 0) > 0) || 
             (i < TOTAL_SHELLS - 1 && (boardState.get(i + 2)?.stackSize || 0) > 0);
@@ -197,16 +194,13 @@ export const Board: React.FC<BoardProps> = ({
             (i < TOTAL_SHELLS - 2 && (boardState.get(i + 3)?.stackSize || 0) > 0);
         
         let w = 1.0;
-        
-        // Occupied shells push neighbors significantly for a loose feel
         if (shell && shell.stackSize > 0) {
-            w += 6.5; // Primary repulsion
+            w += 6.5; 
         } else if (hasDirectNeighbor) {
-            w += 3.2; // Immediate neighbor expansion
+            w += 3.2; 
         } else if (hasExtendedNeighbor) {
-            w += 1.4; // Secondary neighbor buffer
+            w += 1.4; 
         }
-        
         return w;
     });
 
@@ -219,11 +213,9 @@ export const Board: React.FC<BoardProps> = ({
       const t = (cumulativeWeight + weight / 2) / totalWeight;
       cumulativeWeight += weight;
 
-      // Spiral geometry
       const baseAngle = t * Math.PI * 4.6 + 2.5; 
       const baseRadius = 110 + (t * 270); 
       
-      // Intentional jitter for the "loose and uneven" natural look
       const jitterAngle = (pseudoRandom(idx * 13.5) - 0.5) * 0.12; 
       const jitterRadius = (pseudoRandom(idx * 7.2) - 0.5) * 16; 
       
@@ -233,7 +225,6 @@ export const Board: React.FC<BoardProps> = ({
       const x = CENTER_X + radius * Math.cos(angle);
       const y = CENTER_Y + radius * Math.sin(angle);
 
-      // Tangent calculation
       const nextT = Math.min(1, t + 0.01);
       const nextAngle = nextT * Math.PI * 4.6 + 2.5;
       const nextRadius = 110 + (nextT * 270);
@@ -315,13 +306,9 @@ export const Board: React.FC<BoardProps> = ({
         : (boardState.get(sourceIdx)?.stackSize || 1);
 
     if (targetShell.owner !== currentPlayer) {
-        if (targetShell.stackSize > moverSize) {
-            msg = "TOO BIG";
-        }
+        if (targetShell.stackSize > moverSize) msg = "TOO BIG";
     } else {
-        if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
-            msg = "FORBIDDEN";
-        }
+        if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "FORBIDDEN";
     }
 
     if (msg) {
@@ -373,10 +360,8 @@ export const Board: React.FC<BoardProps> = ({
           if (shellDiv) {
               const targetId = parseInt(shellDiv.getAttribute('data-shell-id') || '0');
               const move = validMoves.find(m => m.sourceIndex === dragState.sourceIndex && m.targetIndex === targetId);
-              if (move) { onSelectMove(move); } 
-              else if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) {
-                  triggerBlockedFeedback(targetId, dragState.sourceIndex);
-              }
+              if (move) onSelectMove(move);
+              else if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) triggerBlockedFeedback(targetId, dragState.sourceIndex);
           }
           setDragState({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
       };
@@ -470,11 +455,23 @@ export const Board: React.FC<BoardProps> = ({
             const isShaking = shakeShellId === shell.id;
             const hasBlockedMsg = blockedFeedback?.shellId === shell.id;
 
+            // --- Radial Offset Logic to prevent overlap ---
+            // Calculate vector from center to shell
+            const vx = shell.x - CENTER_X;
+            const vy = shell.y - CENTER_Y;
+            const mag = Math.sqrt(vx * vx + vy * vy);
+            const nx = vx / mag;
+            const ny = vy / mag;
+            
+            // Push shell slightly inward (-8px) and coin stack slightly outward (+26px)
+            const shellOffset = -8;
+            const stackOffset = 26;
+
             return (
                 <div 
                     key={shell.id} data-shell-id={shell.id}
-                    className={`absolute -ml-5 -mt-6 flex items-center justify-center z-20 transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : ''}`}
-                    style={{ left: shell.x, top: shell.y }}
+                    className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'}`}
+                    style={{ left: shell.x, top: shell.y, width: 40, height: 40, transform: 'translate(-50%, -50%)' }}
                     onClick={(e) => {
                         e.stopPropagation();
                         if (!dragState.isDragging) {
@@ -492,7 +489,9 @@ export const Board: React.FC<BoardProps> = ({
                         }
                     }}
                 >
-                    <CowrieShell angle={shell.angle} isTarget={isTarget} />
+                    <div style={{ transform: `translate(${nx * shellOffset}px, ${ny * shellOffset}px)` }}>
+                         <CowrieShell angle={shell.angle} isTarget={isTarget} />
+                    </div>
 
                     {isTarget && <div className="absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none"></div>}
                     {isSource && !dragState.isDragging && <div className="absolute w-16 h-16 rounded-full border-2 border-amber-400 opacity-50 pointer-events-none"></div>}
@@ -508,16 +507,20 @@ export const Board: React.FC<BoardProps> = ({
                     )}
 
                     {stackSize > 0 && owner && !isBeingDragged && (
-                        <div className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} style={{ top: '-10px' }} onMouseDown={(e) => handleMouseDown(e, shell.id)} onTouchStart={(e) => handleMouseDown(e, shell.id)}>
+                        <div 
+                            className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} 
+                            style={{ transform: `translate(${nx * stackOffset}px, ${ny * stackOffset}px)` }} 
+                            onMouseDown={(e) => handleMouseDown(e, shell.id)} 
+                            onTouchStart={(e) => handleMouseDown(e, shell.id)}
+                        >
                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => (
                                <div 
                                 key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500"
-                                // Staggered offset logic
                                 style={{ 
-                                    top: `${-(i * 5)}px`, 
-                                    left: `${Math.sin(i * 0.8) * 4}px`, 
+                                    top: `${-(i * 4.5)}px`, 
+                                    left: `${Math.sin(i * 0.8) * 3}px`, 
                                     zIndex: i, 
-                                    transform: `translate(-50%, 0) rotate(${Math.sin(i * 1.5 + shell.id) * 12}deg)` 
+                                    transform: `translate(-50%, -50%) rotate(${Math.sin(i * 1.5 + shell.id) * 12}deg)` 
                                 }}
                                >
                                    <AncientCoin color={shellColor} isSelected={false} avatar={shellAvatar} />
@@ -525,8 +528,8 @@ export const Board: React.FC<BoardProps> = ({
                            ))}
                            {stackSize > 1 && (
                                <div 
-                                className="absolute left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-md backdrop-blur-sm whitespace-nowrap pointer-events-none"
-                                style={{ top: `${-30 - (Math.min(stackSize, 9) * 5)}px`, zIndex: 100 }}
+                                className="absolute left-1/2 -translate-x-1/2 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-stone-600 shadow-md backdrop-blur-sm whitespace-nowrap pointer-events-none"
+                                style={{ top: `${-25 - (Math.min(stackSize, 9) * 4.5)}px`, zIndex: 100 }}
                                >
                                    {stackSize}
                                </div>
