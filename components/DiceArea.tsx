@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { DiceRoll } from '../types';
 
@@ -30,14 +29,17 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
                 <div className="w-full bg-amber-900/40 border border-amber-600/50 rounded-lg p-1.5 md:p-3 text-center mb-1 md:mb-2 animate-pulse">
                     <div className="text-amber-400 text-[9px] md:text-xs uppercase tracking-widest font-bold mb-0.5 md:mb-1">Flexible Pa Ra Pool</div>
                     <div className="text-2xl md:text-4xl font-cinzel text-white drop-shadow-md">{flexiblePool}</div>
-                    <div className="text-stone-400 text-[9px] mt-0.5 md:mt-1">Split this amount between two moves</div>
+                    <div className="text-stone-400 text-[9px] mt-0.5 md:mt-1 font-serif">པ་ར་བཞུགས།</div>
                 </div>
             )}
 
             {/* Standard Pending Values */}
-            {flexiblePool === null && pendingValues.length > 0 && (
+            {pendingValues.length > 0 && flexiblePool === null && (
                 <div className="w-full">
-                    <div className="text-[9px] md:text-xs text-stone-400 uppercase tracking-widest text-center mb-1 md:mb-2">Available Moves</div>
+                    <div className="text-[9px] md:text-xs text-stone-400 uppercase tracking-widest text-center mb-1 md:mb-2 flex flex-col items-center gap-0.5">
+                      <span>Available Moves</span>
+                      <span className="opacity-50 font-serif">ག་རེ་གནང་ག</span>
+                    </div>
                     <div className="flex gap-1.5 md:gap-2 flex-wrap justify-center">
                         {pendingValues.map((val, idx) => (
                             <span key={idx} className="bg-indigo-600 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-lg font-bold text-base md:text-xl shadow-lg border border-indigo-400/30">
@@ -55,8 +57,9 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
 
             {/* Empty State / Prompt - Hidden on Mobile */}
             {!waitingForPaRa && flexiblePool === null && pendingValues.length === 0 && (
-                 <div className="hidden md:block text-stone-500 text-[10px] md:text-sm italic py-0.5 md:py-2">
-                     {canRoll ? "Ready to roll..." : "Waiting..."}
+                 <div className="hidden md:flex flex-col items-center text-stone-500 text-[10px] md:text-sm italic py-0.5 md:py-2 gap-1">
+                     <span>{canRoll ? "Ready to roll..." : "Waiting..." }</span>
+                     <span className="font-serif opacity-40">{canRoll ? "ཤོ་རྒྱག་རན་སོང་།" : "སྒུག་བཞུགས།"}</span>
                  </div>
             )}
 
@@ -65,7 +68,7 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
                 onClick={onRoll}
                 disabled={!canRoll && !waitingForPaRa}
                 className={`
-                    w-full px-4 py-2 md:px-6 md:py-4 rounded-lg font-cinzel font-bold text-base md:text-xl transition-all transform tracking-wider
+                    w-full px-4 py-2 md:px-6 md:py-4 rounded-lg font-cinzel font-bold text-base md:text-xl transition-all transform tracking-wider flex flex-col items-center leading-tight
                     ${(canRoll || waitingForPaRa)
                         ? 'bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white shadow-lg hover:scale-[1.02] active:scale-95 border border-amber-500/20' 
                         : 'bg-stone-700 text-stone-500 cursor-not-allowed border border-stone-600'}
@@ -73,10 +76,25 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
                 `}
             >
                 {waitingForPaRa 
-                    ? "ROLL BONUS!" 
+                    ? (
+                      <>
+                        <span>ROLL BONUS!</span>
+                        <span className="text-xs font-serif tracking-normal">པ་ར།</span>
+                      </>
+                    ) 
                     : canRoll 
-                        ? "ROLL DICE" 
-                        : "SELECT MOVE"
+                        ? (
+                          <>
+                            <span>ROLL DICE</span>
+                            <span className="text-xs font-serif tracking-normal">ཤོ་རྒྱོབ།</span>
+                          </>
+                        ) 
+                        : (
+                          <>
+                            <span>SELECT MOVE</span>
+                            <span className="text-xs font-serif tracking-normal">ག་རེ་སྤོ་ག་དོམ།</span>
+                          </>
+                        )
                 }
             </button>
         </div>

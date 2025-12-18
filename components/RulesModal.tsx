@@ -18,7 +18,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
       >
         {/* Header */}
         <div className="sticky top-0 bg-stone-900/95 border-b border-amber-900/50 p-4 md:p-6 flex justify-between items-center z-10">
-          <h2 className="text-xl md:text-3xl font-cinzel text-amber-500 font-bold tracking-wide">Rules of Sho</h2>
+          <div className="flex flex-col">
+            <h2 className="text-xl md:text-3xl font-cinzel text-amber-500 font-bold tracking-wide leading-none">Rules of Sho</h2>
+            <span className="text-xs md:text-sm font-serif text-amber-700 mt-1">ཤོ་ཡི་སྒྲིག་གཞི།</span>
+          </div>
           <button 
             onClick={onClose}
             className="text-stone-400 hover:text-white text-2xl font-bold transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-800"
@@ -34,7 +37,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           <section className="bg-stone-800/50 p-4 rounded-lg border border-stone-700 flex flex-col gap-4">
               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                   <div>
-                      <h4 className="font-bold text-amber-400 mb-2">Game Variant: {isNinerMode ? "Niner Mode" : "No-Niner Mode"}</h4>
+                      <h4 className="font-bold text-amber-400 mb-2">Game Variant: {isNinerMode ? "Niner Mode དགུ་མ།" : "No-Niner Mode"}</h4>
                       <p className="text-xs md:text-sm text-stone-400 leading-relaxed italic">
                           {isNinerMode 
                               ? "In Niner mode, players are allowed to build a stack of nine coins and charge forward." 
@@ -44,13 +47,14 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
                   <button 
                       onClick={onToggleNinerMode}
                       className={`
-                          px-4 md:px-6 py-2 rounded-full font-bold transition-all border whitespace-nowrap self-start md:self-center text-xs md:text-sm
+                          px-4 md:px-6 py-2 rounded-full font-bold transition-all border whitespace-nowrap self-start md:self-center text-xs md:text-sm flex flex-col items-center leading-tight
                           ${isNinerMode 
                               ? 'bg-amber-700 border-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
                               : 'bg-stone-800 border-stone-600 text-stone-500 hover:border-stone-500'}
                       `}
                   >
-                      {isNinerMode ? 'NINER' : 'NO-NINER'}
+                      <span>{isNinerMode ? 'NINER' : 'NO-NINER'}</span>
+                      <span className="text-[10px] font-serif normal-case tracking-normal">{isNinerMode ? 'དགུ་མ།' : 'དགུ་མ་མིན་པ།'}</span>
                   </button>
               </div>
           </section>
@@ -58,7 +62,11 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           {/* Objective */}
           <section>
             <h3 className="text-lg md:text-xl font-cinzel text-amber-200 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">🏁</span> Objective
+              <span className="text-xl md:text-2xl">🏁</span> 
+              <div className="flex flex-col">
+                <span className="leading-none">Objective</span>
+                <span className="text-xs md:text-sm font-serif text-stone-500 tracking-normal">དམིགས་ཡུལ།</span>
+              </div>
             </h3>
             <p>
               Sho is a race game played on a spiral of 64 shells. Each player has <strong>9 coins</strong>. 
@@ -69,7 +77,11 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           {/* Special Rules: Sho-mo */}
           <section className="bg-amber-950/20 p-4 rounded-lg border border-amber-900/30">
             <h3 className="text-lg md:text-xl font-cinzel text-amber-400 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">🐢</span> The 'Sho-mo' (Opening Move)
+              <span className="text-xl md:text-2xl">🐢</span>
+              <div className="flex flex-col">
+                <span className="leading-none">The 'Sho-mo'</span>
+                <span className="text-xs md:text-sm font-serif text-amber-700 tracking-normal">ཤོ་མོ།</span>
+              </div>
             </h3>
             <ul className="list-disc pl-5 space-y-2 text-xs md:text-sm">
                 <li>
@@ -85,7 +97,11 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           {/* Special Rules: Pa Ra */}
           <section className="bg-amber-950/30 p-4 rounded-lg border border-amber-900/30">
             <h3 className="text-lg md:text-xl font-cinzel text-amber-400 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">🐍</span> The Pa Ra Rule (Snake Eyes)
+              <span className="text-xl md:text-2xl">🐍</span>
+              <div className="flex flex-col">
+                <span className="leading-none">The Pa Ra Rule</span>
+                <span className="text-xs md:text-sm font-serif text-amber-700 tracking-normal">པ་རའི་སྒྲིག་གཞི།</span>
+              </div>
             </h3>
             <p className="mb-2">Rolling a <strong>1 and 1</strong> is called "Pa Ra":</p>
             <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm">
@@ -97,7 +113,11 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           {/* Instant Win */}
           <section className="bg-red-950/20 p-4 rounded-lg border border-red-900/30">
             <h3 className="text-lg md:text-xl font-cinzel text-red-400 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">✨</span> Instant Win
+              <span className="text-xl md:text-2xl">✨</span>
+              <div className="flex flex-col">
+                <span className="leading-none">Instant Win</span>
+                <span className="text-xs md:text-sm font-serif text-red-800 tracking-normal">དེ་མ་ཐག་པའི་་རྒྱལ་ཁ།</span>
+              </div>
             </h3>
             <p className="mb-2">In very rare circumstances, a player may win instantly:</p>
             <ul className="list-disc pl-5 space-y-2 text-xs md:text-sm">
@@ -110,28 +130,26 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             </ul>
           </section>
 
-          {/* Stacking, Killing, Blocking */}
+          {/* Tactics */}
           <section>
             <h3 className="text-lg md:text-xl font-cinzel text-amber-200 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">⚔️</span> Tactics
+              <span className="text-xl md:text-2xl">⚔️</span>
+              <div className="flex flex-col">
+                <span className="leading-none">Tactics</span>
+                <span className="text-xs md:text-sm font-serif text-stone-500 tracking-normal">ཐབས་ཇུས།</span>
+              </div>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-stone-800/50 p-3 md:p-4 rounded-lg border border-stone-700">
-                <h4 className="font-bold text-amber-400 mb-1">Stacking</h4>
+                <h4 className="font-bold text-amber-400 mb-1">Stacking བརྩེགས་སྟངས།</h4>
                 <p className="text-xs md:text-sm">
                   If you land on your own piece, they stack together. Stacks move as a single unit.
                 </p>
               </div>
               <div className="bg-stone-800/50 p-3 md:p-4 rounded-lg border border-stone-700">
-                <h4 className="font-bold text-red-400 mb-1">Killing</h4>
+                <h4 className="font-bold text-red-400 mb-1">Killing བསད་སྟངས།</h4>
                 <p className="text-xs md:text-sm">
                   If you land on an opponent's stack that is <strong>equal to or smaller</strong> than yours, you "kill" it. They return to hand, and you get a <strong>Bonus Roll</strong>!
-                </p>
-              </div>
-              <div className="bg-stone-800/50 p-3 md:p-4 rounded-lg border border-stone-700 md:col-span-2">
-                <h4 className="font-bold text-stone-300 mb-1">Blocking (The Larger Stack)</h4>
-                <p className="text-xs md:text-sm">
-                  You <strong>cannot</strong> land on or kill an opponent's stack if it is <strong>larger</strong> than the one you are moving. Your move is blocked.
                 </p>
               </div>
             </div>
@@ -140,43 +158,16 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           {/* Finishing the Game */}
           <section>
             <h3 className="text-lg md:text-xl font-cinzel text-amber-200 mb-2 flex items-center gap-2">
-              <span className="text-xl md:text-2xl">🏆</span> Finishing the Game
+              <span className="text-xl md:text-2xl">🏆</span>
+              <div className="flex flex-col">
+                <span className="leading-none">Finishing</span>
+                <span className="text-xs md:text-sm font-serif text-stone-500 tracking-normal">རྩེད་མོ་མཇུག་བསྡུ་སྟངས</span>
+              </div>
             </h3>
             <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm">
                 <li>You must roll a number that takes your piece <strong>past the 64th shell</strong>.</li>
                 <li>The first player to move all 9 coins off the board wins!</li>
             </ul>
-          </section>
-
-          {/* External Links */}
-          <section className="border-t border-stone-800 pt-6">
-            <h3 className="text-sm md:text-base font-cinzel text-stone-400 mb-4 uppercase tracking-widest">Learn More</h3>
-            <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://en.wikipedia.org/wiki/Sho_(board_game)" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 bg-stone-800/30 hover:bg-stone-800 p-3 rounded-lg border border-stone-700 transition-all text-xs md:text-sm group"
-                >
-                    <span className="text-xl">🇬🇧</span>
-                    <div>
-                        <div className="text-stone-100 font-bold group-hover:text-amber-500 transition-colors">Sho on Wikipedia</div>
-                        <div className="text-stone-500 text-[10px]">English Documentation</div>
-                    </div>
-                </a>
-                <a 
-                  href="https://bo.wikipedia.org/wiki/ཤོ།" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 bg-stone-800/30 hover:bg-stone-800 p-3 rounded-lg border border-stone-700 transition-all text-xs md:text-sm group"
-                >
-                    <span className="text-xl">🏔️</span>
-                    <div>
-                        <div className="text-stone-100 font-bold group-hover:text-amber-500 transition-colors">ཤོ། བོད་ཡིག་གི་ཝེ་ཁེ་རིག་མཛོད།</div>
-                        <div className="text-stone-500 text-[10px]">Tibetan Documentation</div>
-                    </div>
-                </a>
-            </div>
           </section>
         </div>
 
@@ -184,9 +175,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
         <div className="p-4 md:p-6 pt-0 text-center">
           <button 
             onClick={onClose}
-            className="px-6 md:px-8 py-2 md:py-3 bg-amber-700 hover:bg-amber-600 text-white font-cinzel font-bold rounded-lg shadow-lg transition-all transform hover:scale-105 text-sm md:text-base"
+            className="px-6 md:px-8 py-2 md:py-3 bg-amber-700 hover:bg-amber-600 text-white font-cinzel font-bold rounded-lg shadow-lg transition-all transform hover:scale-105 text-sm md:text-base flex flex-col items-center leading-tight mx-auto"
           >
-            Close Rules
+            <span>Close Rules</span>
+            <span className="text-[10px] font-serif tracking-normal">སྒྲིག་གཞི་ཁ་རྒྱོབ།</span>
           </button>
         </div>
       </div>
