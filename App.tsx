@@ -68,7 +68,7 @@ const SFX = {
   
   getContext: () => {
     if (!SFX.ctx) {
-      SFX.ctx = new (window.AudioContext || (window as any).webkitAudioContext)());
+      SFX.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     if (SFX.ctx.state === 'suspended') SFX.ctx.resume();
     return SFX.ctx;
@@ -354,7 +354,7 @@ const SFX = {
 };
 
 const getRandomDicePos = () => {
-    const r = Math.random() * 60;
+    const r = 40 + Math.random() * 40;
     const theta = Math.random() * Math.PI * 2;
     return { x: r * Math.cos(theta), y: r * Math.sin(theta), r: Math.random() * 360 };
 };
@@ -487,24 +487,31 @@ const App: React.FC = () => {
 
   const performRoll = async () => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
-    setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 800));
+    setIsRolling(true); 
+    SFX.playShake(); 
+    
+    // Simulate toss and dramatic reveal sequence
+    await new Promise(resolve => setTimeout(resolve, 1200)); 
+    
     const currentPlayerName = s.players[s.turnIndex].name;
     let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1;
     if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 2) { d1 = 2; d2 = 3; } else if (s.turnIndex === 1) { d1 = 3; d2 = 3; } }
     const isPaRa = (d1 === 1 && d2 === 1);
     
-    // Improved visual dice placement to avoid overlap
     const pos1 = getRandomDicePos(); 
     let pos2 = getRandomDicePos();
     let attempts = 0;
-    while (attempts < 10 && Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)) < 55) {
+    while (attempts < 15 && Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)) < 65) {
         pos2 = getRandomDicePos();
         attempts++;
     }
     
     const visuals = { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r };
     const total = d1 + d2; const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals };
-    setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
+    
+    setLastRoll(newRoll); 
+    setIsRolling(false); 
+    SFX.playLand();
     
     if (isPaRa) { 
         SFX.playPaRa(); 

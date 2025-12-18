@@ -93,56 +93,65 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
 
 const BoardDie: React.FC<{ value: number; x: number; y: number; rotation: number; isRolling: boolean }> = ({ value, x, y, rotation, isRolling }) => {
     const [animState, setAnimState] = useState<'initial' | 'settled'>('initial');
-    const randomSpinOffset = useRef(Math.random() * 360 - 180).current;
+    const [displayValue, setDisplayValue] = useState(value);
+    const randomSpinOffset = useRef(Math.random() * 720 - 360).current;
 
     useEffect(() => {
-        if (!isRolling) {
+        if (isRolling) {
+            const interval = setInterval(() => {
+                setDisplayValue(Math.floor(Math.random() * 6) + 1);
+            }, 80);
+            return () => clearInterval(interval);
+        } else {
+            setDisplayValue(value);
             setAnimState('initial');
             const timer = requestAnimationFrame(() => {
                  setAnimState('settled');
             });
             return () => cancelAnimationFrame(timer);
         }
-    }, [isRolling, x, y, rotation]);
+    }, [isRolling, value]);
 
     const dots: number[][] = [];
-    if (value % 2 !== 0) dots.push([1, 1]);
-    if (value > 1) { dots.push([0, 0], [2, 2]); }
-    if (value > 3) { dots.push([0, 2], [2, 0]); }
-    if (value === 6) { dots.push([1, 0], [1, 2]); }
+    if (displayValue % 2 !== 0) dots.push([1, 1]);
+    if (displayValue > 1) { dots.push([0, 0], [2, 2]); }
+    if (displayValue > 3) { dots.push([0, 2], [2, 0]); }
+    if (displayValue === 6) { dots.push([1, 0], [1, 2]); }
     
     let style: React.CSSProperties = {};
     if (isRolling) {
         style = {
             left: '50%',
             top: '50%',
-            transform: `translate(-50%, -50%)`,
+            transform: `translate(-50%, -50%) scale(1.1) rotate(${Date.now() % 360}deg)`,
+            filter: 'blur(1px)'
         }; 
     } else {
         const isSettled = animState === 'settled';
         const currentX = isSettled ? x : 0;
         const currentY = isSettled ? y : 0;
         const currentRot = isSettled ? rotation : (rotation + randomSpinOffset);
-        const currentScale = isSettled ? 1 : 1.2;
+        const currentScale = isSettled ? 1 : 1.4;
 
         style = {
             left: '50%',
             top: '50%',
             transform: `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) rotate(${currentRot}deg) scale(${currentScale})`,
-            transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+            transition: 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)' 
         };
     }
 
     return (
-        <div className={`absolute w-10 h-10 bg-amber-100 rounded-md shadow-lg border border-amber-300 flex overflow-hidden ${isRolling ? 'animate-bounce' : ''}`} style={style}>
+        <div className={`absolute w-10 h-10 bg-amber-100 rounded-md shadow-2xl border border-amber-300 flex overflow-hidden ${isRolling ? 'animate-pulse' : ''}`} style={style}>
+             <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-black/10 pointer-events-none" />
              {dots.map(([r, c], i) => {
-                 const isAce = value === 1; 
-                 const dotColor = isAce ? 'bg-red-600' : 'bg-black';
-                 const dotSize = isAce ? 'w-3 h-3' : 'w-2 h-2';
+                 const isAce = displayValue === 1; 
+                 const dotColor = isAce ? 'bg-red-600' : 'bg-stone-900';
+                 const dotSize = isAce ? 'w-3.5 h-3.5' : 'w-2 h-2';
                  return (
                     <div 
                         key={i} 
-                        className={`absolute ${dotColor} rounded-full ${dotSize}`}
+                        className={`absolute ${dotColor} rounded-full ${dotSize} shadow-inner`}
                         style={{ top: `${r * 33 + 17}%`, left: `${c * 33 + 17}%`, transform: 'translate(-50%, -50%)' }}
                     />
                  );
@@ -186,17 +195,14 @@ export const Board: React.FC<BoardProps> = ({
         const idx = i + 1;
         const shell = boardState.get(idx);
         
-        // Only consider direct neighbors for spacing to avoid "unnecessarily wide" paths
         const hasDirectNeighbor = 
             (i > 0 && (boardState.get(i)?.stackSize || 0) > 0) || 
             (i < TOTAL_SHELLS - 1 && (boardState.get(i + 2)?.stackSize || 0) > 0);
         
         let w = 1.0;
         if (shell && shell.stackSize > 0) {
-            // Reduced repulsion weight for occupied shells
             w += 1.8; 
         } else if (hasDirectNeighbor) {
-            // Reduced repulsion weight for direct neighbors
             w += 0.6; 
         }
         return w;
@@ -408,10 +414,10 @@ export const Board: React.FC<BoardProps> = ({
                     <div className="absolute inset-0 z-20">
                          {isRolling ? (
                              <>
-                                <div className="absolute left-1/2 top-1/2 -ml-[25px] -mt-[25px]">
+                                <div className="absolute left-1/2 top-1/2 -ml-[15px] -mt-[30px]">
                                     <BoardDie value={1} x={0} y={0} rotation={0} isRolling={true} />
                                 </div>
-                                <div className="absolute left-1/2 top-1/2 ml-[25px] mt-[25px]">
+                                <div className="absolute left-1/2 top-1/2 ml-[15px] mt-[10px]">
                                     <BoardDie value={6} x={0} y={0} rotation={0} isRolling={true} />
                                 </div>
                              </>
@@ -449,23 +455,17 @@ export const Board: React.FC<BoardProps> = ({
             const shellAvatar = owner ? getPlayerAvatar(owner) : undefined;
             const isBeingDragged = dragState.isDragging && dragState.sourceIndex === shell.id;
             const isSource = selectedSource === shell.id;
-            const isOwner = owner === currentPlayer;
             const isShaking = shakeShellId === shell.id;
             const hasBlockedMsg = blockedFeedback?.shellId === shell.id;
 
-            // --- "Past and Beside" Offset Logic ---
-            // Forward tangent vector (tx, ty) along the spiral
             const tx = Math.cos(shell.angle);
             const ty = Math.sin(shell.angle);
-            // Right normal vector (nx, ny) perpendicular to path
             const nx = Math.cos(shell.angle + Math.PI / 2);
             const ny = Math.sin(shell.angle + Math.PI / 2);
             
-            // Shell shifted slightly backward and left relative to the center of the shell node
             const shellOffX = tx * -12 + nx * -10;
             const shellOffY = ty * -12 + ny * -10;
 
-            // Coin stack shifted forward ("past") and to the right
             const stackOffX = tx * 28 + nx * 14;
             const stackOffY = ty * 28 + ny * 14;
 
@@ -480,7 +480,7 @@ export const Board: React.FC<BoardProps> = ({
                             if (isTarget && moveTarget) { 
                                 onSelectMove(moveTarget); 
                             } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) {
-                                if (isOwner) {
+                                if (owner === currentPlayer) {
                                     if (onShellClick) onShellClick(shell.id);
                                 } else {
                                     triggerBlockedFeedback(shell.id, selectedSource);
@@ -510,7 +510,7 @@ export const Board: React.FC<BoardProps> = ({
 
                     {stackSize > 0 && owner && !isBeingDragged && (
                         <div 
-                            className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} 
+                            className={`absolute z-30 ${owner === currentPlayer && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} 
                             style={{ transform: `translate(${stackOffX}px, ${stackOffY}px)` }} 
                             onMouseDown={(e) => handleMouseDown(e, shell.id)} 
                             onTouchStart={(e) => handleMouseDown(e, shell.id)}
