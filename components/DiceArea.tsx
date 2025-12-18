@@ -1,5 +1,6 @@
 import React from 'react';
 import { DiceRoll } from '../types';
+import { T } from '../translations';
 
 interface DiceAreaProps {
   currentRoll: DiceRoll | null;
@@ -19,85 +20,52 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
   flexiblePool 
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-1 md:p-6 bg-stone-800 rounded-xl border border-stone-600 shadow-xl transition-all duration-300">
+    <div className="flex flex-col items-center justify-center p-4 bg-stone-800 rounded-xl border border-stone-600 shadow-xl w-full">
         
-        {/* Status / Values */}
-        <div className="space-y-1 md:space-y-4 w-full flex flex-col items-center">
-            
-            {/* Flexible Pool Display */}
-            {flexiblePool !== null && (
-                <div className="w-full bg-amber-900/40 border border-amber-600/50 rounded-lg p-1.5 md:p-3 text-center mb-1 md:mb-2 animate-pulse">
-                    <div className="text-amber-400 text-[9px] md:text-xs uppercase tracking-widest font-bold mb-0.5 md:mb-1">Flexible Pa Ra Pool</div>
-                    <div className="text-2xl md:text-4xl font-cinzel text-white drop-shadow-md">{flexiblePool}</div>
-                    <div className="text-stone-400 text-[9px] mt-0.5 md:mt-1 font-serif">པ་ར་བཞུགས།</div>
+        {flexiblePool !== null && (
+            <div className="w-full bg-amber-900/40 border border-amber-600/50 rounded-lg p-3 text-center mb-4 animate-pulse">
+                <div className="text-amber-400 text-[10px] uppercase font-bold">{T.game.flexiblePool.en}</div>
+                <div className="text-4xl font-cinzel text-white">{flexiblePool}</div>
+                <div className="text-stone-400 text-[10px] font-serif">{T.game.flexiblePool.bo}</div>
+            </div>
+        )}
+
+        {pendingValues.length > 0 && flexiblePool === null && (
+            <div className="w-full mb-4">
+                <div className="text-[10px] text-stone-400 uppercase tracking-widest text-center mb-2 flex flex-col items-center">
+                  <span>{T.game.movesAvailable.en}</span><span className="opacity-50 font-serif">{T.game.movesAvailable.bo}</span>
                 </div>
-            )}
-
-            {/* Standard Pending Values */}
-            {pendingValues.length > 0 && flexiblePool === null && (
-                <div className="w-full">
-                    <div className="text-[9px] md:text-xs text-stone-400 uppercase tracking-widest text-center mb-1 md:mb-2 flex flex-col items-center gap-0.5">
-                      <span>Available Moves</span>
-                      <span className="opacity-50 font-serif">ག་རེ་གནང་ག</span>
-                    </div>
-                    <div className="flex gap-1.5 md:gap-2 flex-wrap justify-center">
-                        {pendingValues.map((val, idx) => (
-                            <span key={idx} className="bg-indigo-600 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-lg font-bold text-base md:text-xl shadow-lg border border-indigo-400/30">
-                                {val}
-                            </span>
-                        ))}
-                        {pendingValues.length > 1 && (
-                            <span className="bg-indigo-900/50 text-indigo-200 px-1.5 py-0.5 md:px-3 md:py-2 rounded-lg font-bold text-[10px] md:text-sm border border-indigo-700 flex items-center">
-                            Sum: {pendingValues.reduce((a,b)=>a+b, 0)}
-                            </span>
-                        )}
-                    </div>
+                <div className="flex gap-2 flex-wrap justify-center">
+                    {pendingValues.map((val, idx) => (
+                        <span key={idx} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-xl shadow-lg border border-indigo-400/30">{val}</span>
+                    ))}
                 </div>
-            )}
+            </div>
+        )}
 
-            {/* Empty State / Prompt - Hidden on Mobile */}
-            {!waitingForPaRa && flexiblePool === null && pendingValues.length === 0 && (
-                 <div className="hidden md:flex flex-col items-center text-stone-500 text-[10px] md:text-sm italic py-0.5 md:py-2 gap-1">
-                     <span>{canRoll ? "Ready to roll..." : "Waiting..." }</span>
-                     <span className="font-serif opacity-40">{canRoll ? "ཤོ་རྒྱག་རན་སོང་།" : "སྒུག་བཞུགས།"}</span>
-                 </div>
-            )}
+        {!waitingForPaRa && flexiblePool === null && pendingValues.length === 0 && (
+             <div className="flex flex-col items-center text-stone-500 text-sm italic mb-4">
+                 <span>{canRoll ? T.game.readyToRoll.en : T.game.waiting.en}</span>
+                 <span className="font-serif opacity-40">{canRoll ? T.game.readyToRoll.bo : T.game.waiting.bo}</span>
+             </div>
+        )}
 
-            {/* Action Button */}
-            <button
-                onClick={onRoll}
-                disabled={!canRoll && !waitingForPaRa}
-                className={`
-                    w-full px-4 py-2 md:px-6 md:py-4 rounded-lg font-cinzel font-bold text-base md:text-xl transition-all transform tracking-wider flex flex-col items-center leading-tight
-                    ${(canRoll || waitingForPaRa)
-                        ? 'bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white shadow-lg hover:scale-[1.02] active:scale-95 border border-amber-500/20' 
-                        : 'bg-stone-700 text-stone-500 cursor-not-allowed border border-stone-600'}
-                    ${waitingForPaRa ? 'animate-bounce border-2 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]' : ''}
-                `}
-            >
-                {waitingForPaRa 
-                    ? (
-                      <>
-                        <span>ROLL BONUS!</span>
-                        <span className="text-xs font-serif tracking-normal">པ་ར།</span>
-                      </>
-                    ) 
-                    : canRoll 
-                        ? (
-                          <>
-                            <span>ROLL DICE</span>
-                            <span className="text-xs font-serif tracking-normal">ཤོ་རྒྱོབ།</span>
-                          </>
-                        ) 
-                        : (
-                          <>
-                            <span>SELECT MOVE</span>
-                            <span className="text-xs font-serif tracking-normal">ག་རེ་སྤོ་ག་དོམ།</span>
-                          </>
-                        )
-                }
-            </button>
-        </div>
+        <button
+            onClick={onRoll}
+            disabled={!canRoll && !waitingForPaRa}
+            className={`
+                w-full p-4 rounded-lg font-cinzel font-bold text-xl transition-all flex flex-col items-center leading-tight
+                ${(canRoll || waitingForPaRa) ? 'bg-amber-700 hover:bg-amber-600 text-white shadow-lg' : 'bg-stone-700 text-stone-500 cursor-not-allowed'}
+                ${waitingForPaRa ? 'animate-bounce border-2 border-amber-400' : ''}
+            `}
+        >
+            {waitingForPaRa 
+                ? (<><span>{T.game.rollBonus.en}</span><span className="text-xs font-serif">{T.game.rollBonus.bo}</span></>) 
+                : canRoll 
+                    ? (<><span>{T.game.rollDice.en}</span><span className="text-xs font-serif">{T.game.rollDice.bo}</span></>) 
+                    : (<><span>{T.game.selectMove.en}</span><span className="text-xs font-serif">{T.game.selectMove.bo}</span></>)
+            }
+        </button>
     </div>
   );
 };

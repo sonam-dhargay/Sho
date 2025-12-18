@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { T } from '../translations';
 
 interface TutorialOverlayProps {
   step: number;
@@ -8,97 +8,36 @@ interface TutorialOverlayProps {
 }
 
 export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, onClose }) => {
-  const getStepContent = (s: number) => {
-    switch (s) {
-      case 1:
-        return {
-          title: "Welcome to Sho!",
-          text: "Sho is a traditional Tibetan race game. Your goal is to move all 9 of your coins from your Hand to the End of the spiral.",
-          highlight: "",
-          action: "Next"
-        };
-      case 2:
-        return {
-          title: "Rolling the Dice",
-          text: "The game is played with two dice. Let's start the game! Click the 'ROLL DICE' button.",
-          highlight: "controls",
-          action: null 
-        };
-      case 3:
-        return {
-          title: "The Opening Move",
-          text: "You rolled a 5. In Sho, the opening move always places 2 coins from your hand onto the board. Click your 'Hand' tile to select it.",
-          highlight: "hand",
-          action: null 
-        };
-      case 4:
-        return {
-          title: "Placing Coins",
-          text: "Valid moves are highlighted on the board. Click the glowing shell to place your stack.",
-          highlight: "board",
-          action: null 
-        };
-      case 5:
-        return {
-          title: "Opponent's Turn",
-          text: "Now it's the opponent's turn. Watch them roll and move.",
-          highlight: "board",
-          action: null 
-        };
-      case 6:
-        return {
-          title: "Key Mechanics",
-          text: (
-             <ul className="text-left list-disc pl-4 space-y-2">
-                 <li><strong>Stacking:</strong> Land on your own coins to build a stack. Stacks move as one unit.</li>
-                 <li><strong>Killing:</strong> Land on an opponent's stack (equal or smaller size) to send them back to hand.</li>
-                 <li><strong>Blocking:</strong> You cannot land on an opponent's stack if it is larger than yours.</li>
-             </ul>
-          ),
-          highlight: "",
-          action: "Next"
-        };
-      case 7:
-        return {
-          title: "The Pa Ra Rule",
-          text: "If you roll a 1 and 1 (Snake Eyes), it's called 'Pa Ra'. You get a bonus roll immediately, and both the 2 from the Pa Ra and your new roll become available to move!",
-          highlight: "",
-          action: "Finish Tutorial"
-        };
-      default:
-        return null;
-    }
-  };
-
-  const content = getStepContent(step);
-  if (!content) return null;
+  const stepData = T.tutorial.steps[step - 1];
+  if (!stepData) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] pointer-events-none flex flex-col justify-end items-center md:items-start p-4 md:p-6">
-      <div className="bg-stone-900/95 border-2 border-amber-500 rounded-xl p-6 max-w-md w-full shadow-[0_0_30px_rgba(0,0,0,0.8)] pointer-events-auto relative animate-bounce-in md:ml-2">
+    <div className="fixed inset-0 z-[100] pointer-events-none flex flex-col justify-end p-6">
+      <div className="bg-stone-900/95 border-2 border-amber-500 rounded-xl p-6 max-w-md w-full shadow-2xl pointer-events-auto relative animate-bounce-in">
         <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-cinzel font-bold text-amber-400">{content.title}</h3>
-            <button onClick={onClose} className="text-stone-500 hover:text-white font-bold px-2">Skip</button>
+            <div className="flex flex-col">
+                <h3 className="text-xl font-cinzel font-bold text-amber-400 leading-none">{stepData.title.en}</h3>
+                <span className="text-sm font-serif text-amber-600 mt-1">{stepData.title.bo}</span>
+            </div>
+            <button onClick={onClose} className="text-stone-500 hover:text-white font-bold">Skip</button>
         </div>
-        <div className="text-stone-200 mb-6 font-sans leading-relaxed">
-            {content.text}
+        <div className="text-stone-200 mb-6 font-sans text-sm leading-relaxed">
+            <p className="mb-2">{stepData.text.en}</p>
+            <p className="font-serif text-stone-400">{stepData.text.bo}</p>
         </div>
         <div className="flex justify-end">
-            {content.action && (
+            {stepData.action ? (
                 <button 
-                    onClick={content.action === 'Finish Tutorial' ? onClose : onNext}
-                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-lg"
+                    onClick={stepData.action.en === 'Finish Tutorial' ? onClose : onNext}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-6 rounded-lg flex flex-col items-center leading-tight"
                 >
-                    {content.action} &rarr;
+                    <span>{stepData.action.en}</span>
+                    <span className="text-[10px] font-serif">{stepData.action.bo}</span>
                 </button>
-            )}
-            {!content.action && (
-                <span className="text-stone-400 text-sm italic animate-pulse">
-                    Follow instructions to continue...
-                </span>
+            ) : (
+                <span className="text-stone-400 text-sm italic animate-pulse">Waiting for action...</span>
             )}
         </div>
-        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-stone-900 border-r-2 border-b-2 border-amber-500 rotate-45 md:hidden"></div>
       </div>
     </div>
   );

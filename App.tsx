@@ -9,15 +9,7 @@ import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { GoogleGenAI } from "@google/genai";
-
-// --- Helpers for Serialization ---
-const serializeBoard = (board: BoardState): any[] => {
-  return Array.from(board.entries());
-};
-
-const deserializeBoard = (data: any[]): BoardState => {
-  return new Map(data);
-};
+import { T } from './translations';
 
 // --- Player Generation Helper ---
 const generatePlayers = (
@@ -44,7 +36,7 @@ const generatePlayers = (
     ];
 };
 
-// --- Procedural Sound Effects & Ambient Music Manager ---
+// --- Procedural Sound Effects Manager ---
 const SFX = {
   ctx: null as AudioContext | null,
   musicNodes: [] as AudioNode[],
@@ -107,7 +99,7 @@ const SFX = {
       SFX.musicNodes.push(osc, lfo);
     });
 
-    const playPulse = () => {
+    SFX.musicIntervals.push(window.setInterval(() => {
         const t = ctx.currentTime;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
@@ -117,32 +109,10 @@ const SFX = {
         g.gain.setValueAtTime(0.05, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
         osc.connect(g);
-        g.connect(masterGain);
+        g.connect(masterGain!);
         osc.start(t);
         osc.stop(t + 0.5);
-    };
-
-    const pentatonic = [440, 493.88, 587.33, 659.25, 783.99];
-    const playMelody = () => {
-        const t = ctx.currentTime;
-        const f = pentatonic[Math.floor(Math.random() * pentatonic.length)];
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(f, t);
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.03, t + 1);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 4);
-        osc.connect(g);
-        g.connect(masterGain);
-        osc.start(t);
-        osc.stop(t + 4);
-    };
-
-    SFX.musicIntervals.push(window.setInterval(playPulse, 4000));
-    SFX.musicIntervals.push(window.setInterval(() => {
-        if (Math.random() > 0.4) playMelody();
-    }, 6000));
+    }, 4000));
   },
 
   stopAmbient: () => {
@@ -232,110 +202,12 @@ const SFX = {
     modulator.stop(t + 0.3);
   },
 
-  playStack: () => {
-    SFX.playCoinClick(0, 1.0);
-    SFX.playCoinClick(0.08, 1.1); 
-  },
-
-  playKill: () => {
-     const ctx = SFX.getContext();
-     const t = ctx.currentTime;
-     const osc = ctx.createOscillator();
-     osc.type = 'triangle';
-     osc.frequency.setValueAtTime(80, t);
-     osc.frequency.exponentialRampToValueAtTime(10, t + 0.4);
-     const gain = ctx.createGain();
-     gain.gain.setValueAtTime(0.5, t);
-     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
-     osc.connect(gain);
-     gain.connect(ctx.destination);
-     osc.start(t);
-     osc.stop(t + 0.4);
-     SFX.playCoinClick(0, 0.8);
-     SFX.playCoinClick(0.1, 0.9);
-     SFX.playCoinClick(0.25, 0.85);
-  },
-
-  playFinish: () => {
-      SFX.playCoinClick(0, 1.2);
-      SFX.playCoinClick(0.1, 1.5);
-      SFX.playCoinClick(0.2, 2.0);
-  },
-
-  playBounce: () => {
-      const ctx = SFX.getContext();
-      const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(150, t);
-      osc.frequency.exponentialRampToValueAtTime(40, t + 0.3);
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.5, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.3);
-  },
-
-  playHandBlocked: () => {
-      const ctx = SFX.getContext();
-      const t = ctx.currentTime;
-      [0, 0.12].forEach(offset => {
-          const osc = ctx.createOscillator();
-          osc.type = 'square'; 
-          osc.frequency.setValueAtTime(450, t + offset); 
-          osc.frequency.exponentialRampToValueAtTime(100, t + offset + 0.08); 
-          const gain = ctx.createGain();
-          gain.gain.setValueAtTime(0.5, t + offset);
-          gain.gain.exponentialRampToValueAtTime(0.01, t + offset + 0.1);
-          const filter = ctx.createBiquadFilter();
-          filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(1200, t + offset);
-          osc.connect(filter);
-          filter.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(t + offset);
-          osc.stop(t + offset + 0.12);
-      });
-  },
-
-  playPaRa: () => {
-      const ctx = SFX.getContext();
-      const t = ctx.currentTime;
-      [880, 1108, 1318].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, t);
-          const gain = ctx.createGain();
-          gain.gain.setValueAtTime(0, t);
-          gain.gain.linearRampToValueAtTime(0.1, t + 0.05 + (i * 0.05)); 
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 1.5); 
-          const vib = ctx.createOscillator();
-          vib.frequency.value = 4 + (i * 1.5);
-          const vibGain = ctx.createGain();
-          vibGain.gain.value = 5;
-          vib.connect(vibGain);
-          vibGain.connect(osc.frequency);
-          vib.start(t);
-          vib.stop(t + 1.5);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(t);
-          osc.stop(t + 1.5);
-      });
-      const sweepOsc = ctx.createOscillator();
-      sweepOsc.type = 'triangle';
-      sweepOsc.frequency.setValueAtTime(2000, t);
-      sweepOsc.frequency.linearRampToValueAtTime(4000, t + 0.5);
-      const sweepGain = ctx.createGain();
-      sweepGain.gain.setValueAtTime(0.05, t);
-      sweepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-      sweepOsc.connect(sweepGain);
-      sweepGain.connect(ctx.destination);
-      sweepOsc.start(t);
-      sweepOsc.stop(t + 0.5);
-  }
+  playStack: () => { SFX.playCoinClick(0, 1.0); SFX.playCoinClick(0.08, 1.1); },
+  playKill: () => { SFX.playCoinClick(0, 0.8); SFX.playCoinClick(0.1, 0.9); SFX.playCoinClick(0.25, 0.85); },
+  playFinish: () => { SFX.playCoinClick(0, 1.2); SFX.playCoinClick(0.1, 1.5); SFX.playCoinClick(0.2, 2.0); },
+  playBounce: () => { SFX.playCoinClick(0, 0.5); },
+  playHandBlocked: () => { SFX.playCoinClick(0, 0.3); SFX.playCoinClick(0.1, 0.2); },
+  playPaRa: () => { SFX.playCoinClick(0, 2.0); SFX.playCoinClick(0.1, 2.2); }
 };
 
 const getRandomDicePos = () => {
@@ -369,7 +241,6 @@ const calculatePotentialMoves = (
   const uniqueSingleVals = Array.from(new Set(moveVals));
   uniqueSingleVals.forEach(val => { const opt = evaluateTarget(val, [val]); if (opt) options.push(opt); });
   if (moveVals.length > 1) { const total = moveVals.reduce((a, b) => a + b, 0); const opt = evaluateTarget(total, moveVals); if (opt && !options.some(o => o.targetIndex === opt.targetIndex)) options.push(opt); }
-
   return options;
 };
 
@@ -396,7 +267,6 @@ const CameraModal: React.FC<{ onCapture: (data: string) => void; onClose: () => 
                 if (videoRef.current) videoRef.current.srcObject = s;
             } catch (err) {
                 console.error("Camera error:", err);
-                alert("Could not access camera.");
                 onClose();
             }
         };
@@ -418,14 +288,14 @@ const CameraModal: React.FC<{ onCapture: (data: string) => void; onClose: () => 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4">
             <div className="bg-stone-900 p-6 rounded-2xl border border-stone-800 flex flex-col items-center">
-                <h3 className="text-amber-500 font-cinzel text-xl mb-4">Capture Profile Photo པར་རྒྱག་པ།</h3>
+                <h3 className="text-amber-500 font-cinzel text-xl mb-4">{T.lobby.cameraLabel.en} {T.lobby.cameraLabel.bo}</h3>
                 <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-amber-600 shadow-2xl mb-6 bg-black">
                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                 </div>
                 <canvas ref={canvasRef} width={300} height={300} className="hidden" />
                 <div className="flex gap-4">
-                    <button onClick={onClose} className="px-6 py-2 rounded-lg bg-stone-800 text-stone-400 font-bold uppercase tracking-widest text-xs">Cancel རྩིས་མེད་གཏོང་བ།</button>
-                    <button onClick={capture} className="px-6 py-2 rounded-lg bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/40 uppercase tracking-widest text-xs">Snap! པར་རྒྱག་པ།</button>
+                    <button onClick={onClose} className="px-6 py-2 rounded-lg bg-stone-800 text-stone-400 font-bold uppercase tracking-widest text-xs">{T.common.cancel.en} {T.common.cancel.bo}</button>
+                    <button onClick={capture} className="px-6 py-2 rounded-lg bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/40 uppercase tracking-widest text-xs">{T.lobby.cameraButton.en} {T.lobby.cameraButton.bo}</button>
                 </div>
             </div>
         </div>
@@ -465,155 +335,53 @@ const App: React.FC = () => {
 
   useEffect(() => { gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep }; }, [board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep]);
 
-  const currentPlayer: Player = players[turnIndex] || { 
-    id: PlayerColor.Red, 
-    name: 'Red', 
-    coinsInHand: 0, 
-    coinsFinished: 0, 
-    colorHex: COLOR_PALETTE[0].hex 
-  };
-
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
-  const speak = (text: string) => { 
-    if ('speechSynthesis' in window) {
-        const u = new SpeechSynthesisUtterance(text); 
-        u.rate = 1.1; 
-        u.pitch = 0.9; 
-        window.speechSynthesis.speak(u); 
-    }
-  };
+  const speak = (text: string) => { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); u.rate = 1.1; window.speechSynthesis.speak(u); } };
 
   useEffect(() => { 
     const baseCount = 18742; 
     const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15)); 
-    const local = parseInt(localStorage.getItem('sho_plays_local') || '0', 10); 
-    setGlobalPlayCount(baseCount + growth + local); 
-    
-    // Live Counter Simulation
-    const interval = setInterval(() => {
-        if (Math.random() > 0.4) {
-            const increment = Math.random() > 0.8 ? 2 : 1;
-            setGlobalPlayCount(prev => prev + increment);
-            setIsCounterPulsing(true);
-            setTimeout(() => setIsCounterPulsing(false), 2000);
-        }
-    }, 55000 + Math.random() * 45000);
-    
+    setGlobalPlayCount(baseCount + growth); 
+    const interval = setInterval(() => { if (Math.random() > 0.4) { setGlobalPlayCount(prev => prev + 1); setIsCounterPulsing(true); setTimeout(() => setIsCounterPulsing(false), 2000); } }, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const trackGameStart = () => { 
-    const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1; 
-    localStorage.setItem('sho_plays_local', newLocal.toString()); 
-    setGlobalPlayCount(prev => prev + 1); 
-    setIsCounterPulsing(true);
-    setTimeout(() => setIsCounterPulsing(false), 1000);
-  };
-
-  const toggleMusic = () => { const newState = !isMusicEnabled; setIsMusicEnabled(newState); if (newState) { SFX.startAmbient(musicVolume / 100); } else { SFX.stopAmbient(); } };
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => { const vol = parseInt(e.target.value); setMusicVolume(vol); SFX.setMusicVolume(vol / 100); };
-
   const initializeGame = useCallback((p2Config?: { name: string, color: string, avatar?: string }, isTutorial = false) => {
-    if (!isTutorial) trackGameStart();
     const newBoard = new Map<number, BoardShell>();
     for (let i = 1; i <= TOTAL_SHELLS; i++) { newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false }); }
     setBoard(newBoard);
-    const mySettings = { name: playerName || 'Host', color: selectedColor, avatar: selectedAvatar };
-    let opponentSettings = p2Config || { name: 'Player 2', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] };
-    if (p2Config && p2Config.color === mySettings.color) { const alternativeColor = COLOR_PALETTE.find(c => c.hex !== mySettings.color)?.hex || '#3b82f6'; opponentSettings = { ...p2Config, color: alternativeColor }; addLog(`Color conflict resolved.`, 'info'); }
-    if ((gameMode === GameMode.AI || isTutorial) && !p2Config) { opponentSettings = { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: '🤖' }; }
+    const mySettings = { name: playerName || 'Player 1', color: selectedColor, avatar: selectedAvatar };
+    let opponentSettings = p2Config || { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] };
     const initialPlayers = generatePlayers(mySettings, opponentSettings);
-    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setWaitingForPaRa(false); setLastMove(null); setTotalMoves(0); setAiThinking(false); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null); addLog(isTutorial ? 'Tutorial Started.' : `Game Started.`, 'info');
-  }, [addLog, playerName, selectedColor, selectedAvatar, gameMode]);
+    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setWaitingForPaRa(false); setLastMove(null); setTotalMoves(0); setAiThinking(false); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
+  }, [playerName, selectedColor, selectedAvatar]);
 
   useEffect(() => {
-    const handleResize = () => { if (boardContainerRef.current) { const { width, height } = boardContainerRef.current.getBoundingClientRect(); const margin = 20; const availableW = width - margin; const availableH = height - margin; const scale = Math.min(availableW / 800, availableH / 800, 1); setBoardScale(scale > 0.3 ? scale : 0.3); } };
-    window.addEventListener('resize', handleResize); handleResize(); const t = setTimeout(handleResize, 100); return () => { window.removeEventListener('resize', handleResize); clearTimeout(t); };
+    const handleResize = () => { if (boardContainerRef.current) { const { width, height } = boardContainerRef.current.getBoundingClientRect(); const scale = Math.min((width - 20) / 800, (height - 20) / 800, 1); setBoardScale(Math.max(scale, 0.3)); } };
+    window.addEventListener('resize', handleResize); handleResize();
+    return () => window.removeEventListener('resize', handleResize);
   }, [gameMode, phase]);
-
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => { 
-      const file = e.target.files?.[0]; 
-      if (file) { 
-          const reader = new FileReader(); 
-          reader.onloadend = () => setSelectedAvatar(reader.result as string); 
-          reader.readAsDataURL(file); 
-      } 
-  };
 
   const performRoll = async () => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
-    setIsRolling(true); 
-    SFX.playShake(); 
-    
-    await new Promise(resolve => setTimeout(resolve, 1200)); 
-    
-    const currentPlayerName = s.players[s.turnIndex]?.name || "Player";
+    setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 1200)); 
     let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1;
-    if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 2) { d1 = 2; d2 = 3; } else if (s.turnIndex === 1) { d1 = 3; d2 = 3; } }
+    if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 1) { d1 = 2; d2 = 3; } }
     const isPaRa = (d1 === 1 && d2 === 1);
-    
-    const pos1 = getRandomDicePos(); 
-    let pos2 = getRandomDicePos();
-    let attempts = 0;
-    while (attempts < 15 && Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)) < 65) {
-        pos2 = getRandomDicePos();
-        attempts++;
-    }
-    
+    const pos1 = getRandomDicePos(); const pos2 = getRandomDicePos();
     const visuals = { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r };
     const total = d1 + d2; const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals };
-    
-    setLastRoll(newRoll); 
-    setIsRolling(false); 
-    SFX.playLand();
-    
-    if (isPaRa) { 
-        SFX.playPaRa(); 
-        setWaitingForPaRa(true); 
-        addLog(`PA RA (1,1)! Roll again for bonus moves.`, 'alert'); 
-    } 
+    setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
+    if (isPaRa) { SFX.playPaRa(); setWaitingForPaRa(true); addLog(`PA RA (1,1)! Roll again.`, 'alert'); } 
     else { 
-        if (s.waitingForPaRa) { 
-            const newMoveValues = [2, total];
-            setPendingMoveValues(newMoveValues);
-            addLog(`Pa Ra Bonus complete: moves of 2 and ${total} granted.`, 'alert'); 
-            setWaitingForPaRa(false); 
-            setPhase(GamePhase.MOVING); 
-        } else { 
-            addLog(`${currentPlayerName} rolled ${total}.`, 'info'); 
-            setPendingMoveValues([total]); 
-            setPhase(GamePhase.MOVING); 
-        } 
+        if (s.waitingForPaRa) { setPendingMoveValues([2, total]); setWaitingForPaRa(false); setPhase(GamePhase.MOVING); } 
+        else { setPendingMoveValues([total]); setPhase(GamePhase.MOVING); } 
     }
-    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
+    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 1) setTutorialStep(2);
   };
 
-  const handleSkipTurn = useCallback(() => { const s = gameStateRef.current; addLog(`Turn skipped.`, 'alert'); SFX.playHandBlocked(); setPendingMoveValues([]); setLastRoll(null); setPhase(GamePhase.ROLLING); setSelectedSourceIndex(null); setTurnIndex((prev) => (prev + 1) % s.players.length); }, [addLog]);
-
-  const handleInvalidMoveAttempt = (sourceIdx: number, targetIdx: number) => {
-      const s = gameStateRef.current;
-      if (s.phase !== GamePhase.MOVING) return;
-      const targetShell = s.board.get(targetIdx);
-      const player = s.players[s.turnIndex];
-      if (!player) return;
-      let movingStackSize = sourceIdx === 0 ? (player.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (s.board.get(sourceIdx)?.stackSize || 0);
-
-      if (targetShell?.owner && targetShell.owner !== player.id) {
-          if (targetShell.stackSize > movingStackSize) {
-              SFX.playBounce();
-              addLog(`Blocked! Enemy stack is too big.`, 'alert');
-              speak("Too large.");
-          }
-      } else if (targetShell?.owner === player.id) {
-          if (!s.isNinerMode && targetShell.stackSize + movingStackSize === 9) {
-              SFX.playBounce();
-              addLog("Forbidden! 9 stack limit.", 'alert');
-              speak("Forbidden.");
-          }
-      }
-  };
+  const handleSkipTurn = useCallback(() => { setPendingMoveValues([]); setLastRoll(null); setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }, [players.length]);
 
   const performMove = (sourceIdx: number, targetIdx: number) => {
     const s = gameStateRef.current;
@@ -622,290 +390,130 @@ const App: React.FC = () => {
     if (!move) return;
     if (move.type === MoveResultType.KILL) SFX.playKill(); else if (move.type === MoveResultType.STACK) SFX.playStack(); else if (move.type === MoveResultType.FINISH) SFX.playFinish(); else SFX.playCoinClick();
     const nb: BoardState = new Map(s.board); const player = s.players[s.turnIndex]; let bonusTurn = false; let turnContinues = false; let movingStackSize = 0; const newPlayers = [...s.players];
-    
-    if (move.sourceIndex === 0) { 
-        const isOpeningMove = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER; 
-        if (isOpeningMove) { movingStackSize = 2; newPlayers[s.turnIndex].coinsInHand -= 2; addLog(`Opening Move!`, "action"); } 
-        else { movingStackSize = 1; newPlayers[s.turnIndex].coinsInHand -= 1; } 
-        setPlayers(newPlayers); 
-    } 
-    else { 
-        const sourceShell = nb.get(move.sourceIndex) as BoardShell; 
-        movingStackSize = sourceShell.stackSize; 
-        nb.set(move.sourceIndex, { ...sourceShell, stackSize: 0, owner: null, isShoMo: false }); 
-    }
-
-    const targetShell = nb.get(move.targetIndex) as BoardShell; 
-    let isShoMoKill = false;
-    if (move.type === MoveResultType.FINISH) { 
-        newPlayers[turnIndex].coinsFinished += movingStackSize; 
-        setPlayers(newPlayers); 
-        addLog(`Coin finished!`, 'action'); 
-    } 
+    if (move.sourceIndex === 0) { const isOpening = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER; if (isOpening) { movingStackSize = 2; newPlayers[s.turnIndex].coinsInHand -= 2; } else { movingStackSize = 1; newPlayers[s.turnIndex].coinsInHand -= 1; } } 
+    else { const source = nb.get(move.sourceIndex)!; movingStackSize = source.stackSize; nb.set(move.sourceIndex, { ...source, stackSize: 0, owner: null, isShoMo: false }); }
+    const target = nb.get(move.targetIndex)!; 
+    if (move.type === MoveResultType.FINISH) { newPlayers[turnIndex].coinsFinished += movingStackSize; } 
     else {
-      if (move.type === MoveResultType.KILL) {
-        const enemyId = targetShell.owner; const enemyStack = targetShell.stackSize; const enemyIdx = players.findIndex(p => p.id === enemyId);
-        if (targetShell.isShoMo) { isShoMoKill = true; if (movingStackSize < 3) { const needed = 3 - movingStackSize; if (newPlayers[s.turnIndex].coinsInHand >= needed) { newPlayers[s.turnIndex].coinsInHand -= needed; movingStackSize = 3; addLog(`Killed Sho-mo bonus!`, 'action'); } } }
-        if (enemyIdx !== -1) { 
-            newPlayers[enemyIdx].coinsInHand += enemyStack; 
-            setPlayers(newPlayers); 
-            if (!isShoMoKill) addLog(`Killed ${enemyStack} coins!`, 'alert'); 
-        }
-        nb.set(move.targetIndex, { ...targetShell, stackSize: movingStackSize, owner: player.id, isShoMo: false }); bonusTurn = true;
-      } else if (move.type === MoveResultType.STACK) { 
-          nb.set(move.targetIndex, { ...targetShell, stackSize: targetShell.stackSize + movingStackSize, owner: player.id, isShoMo: false }); 
-          addLog(`Stacked.`, 'action'); bonusTurn = true; 
-      } 
-      else { 
-          const isShoMoCreation = (move.sourceIndex === 0 && movingStackSize === 2 && !isShoMoKill); 
-          nb.set(move.targetIndex, { ...targetShell, stackSize: movingStackSize, owner: player.id, isShoMo: isShoMoCreation }); 
-      }
+      if (move.type === MoveResultType.KILL) { const enemyIdx = players.findIndex(p => p.id === target.owner); if (enemyIdx !== -1) newPlayers[enemyIdx].coinsInHand += target.stackSize; nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: false }); bonusTurn = true; } 
+      else if (move.type === MoveResultType.STACK) { nb.set(move.targetIndex, { ...target, stackSize: target.stackSize + movingStackSize, owner: player.id, isShoMo: false }); bonusTurn = true; } 
+      else { nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize === 2) }); }
     }
-    setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() }); setTotalMoves(prev => prev + 1);
-    
-    let nextPendingMoves: number[] = [...s.pendingMoveValues];
-    let refundAmount = 0;
-    if (move.type === MoveResultType.FINISH) { 
-        const distToFinish = TOTAL_SHELLS + 1 - move.sourceIndex; 
-        const valueUsed = move.consumedValues.reduce((a, b) => a + b, 0); 
-        if (valueUsed > distToFinish) refundAmount = valueUsed - distToFinish; 
-    }
-    for (const val of move.consumedValues) { const idx = nextPendingMoves.indexOf(val); if (idx > -1) nextPendingMoves.splice(idx, 1); }
-    if (refundAmount > 0) nextPendingMoves.push(refundAmount); 
-    
-    if (nextPendingMoves.length > 0) { 
-        const movesForRemainder = getAvailableMoves(s.turnIndex, nb, newPlayers, nextPendingMoves, s.isNinerMode); 
-        if (movesForRemainder.length > 0) { 
-            setPendingMoveValues(nextPendingMoves); 
-            setPhase(GamePhase.MOVING); 
-            turnContinues = true;
-        } else { 
-            addLog(`Remainder lost.`, 'info'); 
-            turnContinues = false; 
-        } 
-    }
-
+    setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
+    let nextMoves = [...s.pendingMoveValues]; for (const val of move.consumedValues) { const idx = nextMoves.indexOf(val); if (idx > -1) nextMoves.splice(idx, 1); }
+    if (nextMoves.length > 0 && getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode).length > 0) { setPendingMoveValues(nextMoves); turnContinues = true; }
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
-    if (!turnContinues) { 
-        if (bonusTurn) { 
-            addLog("Bonus roll!", 'action'); 
-            setPhase(GamePhase.ROLLING); 
-            setPendingMoveValues([]); 
-        } else { 
-            setPendingMoveValues([]); 
-            setLastRoll(null); 
-            setWaitingForPaRa(false); 
-            setPhase(GamePhase.ROLLING); 
-            setTurnIndex((prev) => (prev + 1) % players.length); 
-        } 
-    }
-    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
+    if (!turnContinues) { if (bonusTurn) { setPhase(GamePhase.ROLLING); setPendingMoveValues([]); } else { setPendingMoveValues([]); setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); } }
+    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 3) setTutorialStep(4);
   };
 
-  useEffect(() => {
-    const isAI = gameMode === GameMode.AI; const isTutorial = gameMode === GameMode.TUTORIAL;
-    if ((isAI || isTutorial) && turnIndex === 1 && !aiThinking) {
-        const runAITurn = async () => {
-            setAiThinking(true);
-            try {
-                if (phase === GamePhase.ROLLING) { await new Promise(r => setTimeout(r, 1000)); performRoll(); }
-                else if (phase === GamePhase.MOVING) {
-                    await new Promise(r => setTimeout(r, 1500));
-                    const validMoves = getAvailableMoves(1, board, players, pendingMoveValues, gameStateRef.current.isNinerMode);
-                    if (validMoves.length === 0) { setAiThinking(false); return; }
-                    let chosenMove = validMoves[0];
-                    if (isTutorial) chosenMove = validMoves[0]; else if (process.env.API_KEY) {
-                        try {
-                            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); const myId = players[1].id; const oppId = players[0].id; const myStacks = []; const oppStacks = [];
-                            for (const [pos, shell] of board.entries()) { if (shell.owner === myId) myStacks.push({ pos, size: shell.stackSize }); if (shell.owner === oppId) oppStacks.push({ pos, size: shell.stackSize }); }
-                            const prompt = `Play Sho. You are Player 2 (Sapphire/Blue). Objective: Finish 9 coins. Board State: - My Stacks: ${JSON.stringify(myStacks)} - Enemy Stacks: ${JSON.stringify(oppStacks)} - Coins in Hand: ${players[1].coinsInHand} Valid Moves: ${JSON.stringify(validMoves.map((m, i) => ({index: i, type: m.type, source: m.sourceIndex, target: m.targetIndex})))} Return JSON {index: number, reason: string}`;
-                            const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [{ text: prompt }] }, config: { responseMimeType: "application/json" } });
-                            const aiDecision = JSON.parse(response.text); if (validMoves[aiDecision.index]) { chosenMove = validMoves[aiDecision.index]; }
-                        } catch (err) { 
-                             let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) score += 500; score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
-                        }
-                    } else {
-                        let bestScore = -Infinity; validMoves.forEach(m => { let score = 0; if (m.type === MoveResultType.FINISH) score += 2000; if (m.type === MoveResultType.KILL) score += 500; score += m.targetIndex; if (score > bestScore) { bestScore = score; chosenMove = m; } });
-                    }
-                    performMove(chosenMove.sourceIndex, chosenMove.targetIndex); if (isTutorial && tutorialStep === 5) setTimeout(() => setTutorialStep(6), 1000);
-                }
-            } catch (e) { } finally { setAiThinking(false); }
-        };
-        runAITurn();
-    }
-  }, [turnIndex, phase, gameMode, waitingForPaRa, pendingMoveValues, players, board, aiThinking, performRoll, performMove, tutorialStep]);
-
-  useEffect(() => { const s = gameStateRef.current; if (phase === GamePhase.MOVING && !isRolling && !waitingForPaRa) { const moves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); if (moves.length === 0) { const isAIPlayer = gameMode === GameMode.AI && turnIndex === 1; const isTutorialOpponent = gameMode === GameMode.TUTORIAL && turnIndex === 1; if (isAIPlayer || isTutorialOpponent) { setTimeout(() => handleSkipTurn(), 2000); } } } }, [phase, isRolling, waitingForPaRa, pendingMoveValues, turnIndex, board, players, isNinerMode, gameMode, handleSkipTurn]);
-
-  const requestRoll = () => { performRoll(); };
-  const requestMove = (s: number, t: number) => { performMove(s, t); };
-  const requestSkip = () => { handleSkipTurn(); };
-
-  const canInteract = () => { 
-    if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0 && !isRolling; 
-    return !isRolling; 
-  };
-
-  const currentValidMovesList = useCallback(() => { 
-    if (phase !== GamePhase.MOVING || players.length === 0) return []; 
-    return getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); 
-  }, [phase, players, turnIndex, board, pendingMoveValues, isNinerMode])();
-
+  const currentValidMovesList = useCallback(() => (phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode) : []), [phase, turnIndex, board, pendingMoveValues, isNinerMode])();
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const winner = players.find(p => p.coinsFinished >= COINS_PER_PLAYER);
-  const showLobby = !gameMode;
-  const showGame = gameMode === GameMode.LOCAL || gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL;
-  const showSkipButton = canInteract() && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && currentValidMovesList.length === 0;
 
   return (
-    <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row overflow-hidden font-sans fixed inset-0">
-        {(gameMode === GameMode.TUTORIAL || tutorialStep > 0) && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
+    <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans">
+        {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
         {showCamera && <CameraModal onCapture={(data) => setSelectedAvatar(data)} onClose={() => setShowCamera(false)} />}
 
-        {showLobby && (
-          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto">
-             <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-8">
-               <div className="flex flex-col items-center mb-6 md:mb-8">
-                  <h1 className="text-amber-500 font-bold tracking-widest text-center flex items-center justify-center gap-3 md:gap-5">
-                    <span className="font-serif opacity-70 text-5xl md:text-7xl leading-none">ཤོ</span> 
-                    <span className="text-3xl md:text-5xl leading-none font-serif">Sho</span>
-                  </h1>
-                  <p className="text-amber-400/80 mt-3 text-lg md:text-xl font-serif text-center leading-relaxed">པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།</p>
-                  <p className="text-stone-400 mt-1 tracking-widest uppercase text-center font-sans text-xs md:text-sm">Traditional Tibetan Dice Game བོད་ཀྱི་ཤོ་རྩེད་སྲོལ་རྒྱུན་མ།</p>
-               </div>
-              <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
+        {!gameMode && (
+          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto flex flex-col items-center justify-center p-4">
+               <h1 className="flex items-center gap-4 mb-4">
+                  <span className="text-7xl opacity-70">{T.lobby.title.bo}</span> 
+                  <span className="text-5xl">{T.lobby.title.en}</span>
+               </h1>
+               <p className="text-amber-400/80 mb-2 text-xl font-serif text-center">{T.lobby.verse.bo}</p>
+               <p className="text-stone-400 tracking-widest uppercase text-xs mb-8">{T.lobby.subtitle.en} {T.lobby.subtitle.bo}</p>
+              
+               <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
                   <div className="mb-4">
                       <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between">
-                        <span>Your Name</span>
-                        <span className="opacity-50 font-serif">ཁྱེད་རང་གི་མིང་།</span>
+                        <span>{T.lobby.nameLabel.en}</span><span className="font-serif opacity-50">{T.lobby.nameLabel.bo}</span>
                       </label>
-                      <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200 focus:border-amber-500 outline-none" maxLength={15} />
+                      <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200" maxLength={15} />
                   </div>
                   <div className="mb-4">
                       <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between">
-                        <span>Choose Color</span>
-                        <span className="opacity-50 font-serif">ཚོས་གཞི་དོམ།</span>
+                        <span>{T.lobby.colorLabel.en}</span><span className="font-serif opacity-50">{T.lobby.colorLabel.bo}</span>
                       </label>
-                      <div className="grid grid-cols-5 gap-2">
+                      <div className="flex gap-2">
                           {COLOR_PALETTE.map((c) => (
-                              <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 transition-all transform hover:scale-110 ${selectedColor === c.hex ? 'border-white scale-110 shadow-[0_0_10px_white]' : 'border-transparent opacity-70'}`} style={{ backgroundColor: c.hex }} title={c.name} />
+                              <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 ${selectedColor === c.hex ? 'border-white' : 'border-transparent'}`} style={{ backgroundColor: c.hex }} />
                           ))}
                       </div>
                   </div>
                   <div className="mb-4">
                        <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between">
-                        <span>Select Avatar</span>
-                        <span className="opacity-50 font-serif">གཟུགས་བརྙན་དོམ།</span>
+                        <span>{T.lobby.avatarLabel.en}</span><span className="font-serif opacity-50">{T.lobby.avatarLabel.bo}</span>
                        </label>
-                       <div className="flex flex-wrap gap-2 mb-2">
+                       <div className="flex gap-2">
                            {AVATAR_PRESETS.map((av) => (
-                               <button key={av} onClick={() => setSelectedAvatar(av)} className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 text-xl hover:bg-stone-800 ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}>{av}</button>
+                               <button key={av} onClick={() => setSelectedAvatar(av)} className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}>{av}</button>
                            ))}
-                           {selectedAvatar.startsWith('data:') && (
-                               <button onClick={() => {}} className="w-8 h-8 flex items-center justify-center rounded-lg border border-amber-500 bg-stone-800 overflow-hidden">
-                                   <img src={selectedAvatar} className="w-full h-full object-cover" />
-                               </button>
-                           )}
-                           <button onClick={() => setShowCamera(true)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 text-stone-400" title="Take Photo">📸</button>
-                           <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400" title="Upload Photo">
-                               <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                               📁
-                           </label>
+                           <button onClick={() => setShowCamera(true)} className="w-8 h-8 rounded-lg border border-stone-700 hover:bg-stone-800">📸</button>
                        </div>
                   </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl mb-6">
-                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
-                    <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">🏔️</div>
-                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest leading-none">Local</h3>
-                    <span className="text-[10px] text-stone-500 mt-1 font-serif">ས་གནས་སུ་རྩེ།</span>
+              <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mb-6">
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
+                    <div className="text-3xl mb-1">🏔️</div>
+                    <h3 className="text-lg font-bold uppercase">{T.lobby.modeLocal.en}</h3>
+                    <span className="text-[10px] font-serif opacity-50">{T.lobby.modeLocal.bo}</span>
                   </div>
-                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
-                    <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">🤖</div>
-                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest leading-none">Vs AI</h3>
-                    <span className="text-[10px] text-stone-500 mt-1 font-serif">མི་བཟོས་རིག་་ནུས་དང་མཉམ་དུ་རྩེ།</span>
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
+                    <div className="text-3xl mb-1">🤖</div>
+                    <h3 className="text-lg font-bold uppercase">{T.lobby.modeAI.en}</h3>
+                    <span className="text-[10px] font-serif opacity-50">{T.lobby.modeAI.bo}</span>
                   </div>
               </div>
 
-              {/* Bottom Menu: Tutorial and Rules as Links */}
-              <div className="flex items-center justify-center gap-6 mt-4 md:mt-6">
-                  <button 
-                      onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }}
-                      className="text-stone-500 hover:text-amber-500 transition-colors flex flex-col items-center gap-1 text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold font-sans group"
-                  >
-                      <div className="flex items-center gap-2">
-                        <span className="text-base group-hover:scale-110 transition-transform">🎓</span> <span className="hover:underline underline-offset-4">Tutorial</span>
-                      </div>
-                      <span className="opacity-50 font-serif normal-case tracking-normal">རྩེ་སྟངས་མྱུར་ཁྲིད།།</span>
+              <div className="flex gap-8 mb-8">
+                  <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center">
+                      <span className="font-bold uppercase text-xs tracking-widest">{T.lobby.tutorial.en}</span>
+                      <span className="font-serif text-[10px]">{T.lobby.tutorial.bo}</span>
                   </button>
-                  <div className="w-1 h-1 rounded-full bg-stone-700"></div>
-                  <button 
-                      onClick={() => setShowRules(true)}
-                      className="text-stone-500 hover:text-amber-500 transition-colors flex flex-col items-center gap-1 text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold font-sans group"
-                  >
-                      <div className="flex items-center gap-2">
-                        <span className="text-base group-hover:scale-110 transition-transform">📜</span> <span className="hover:underline underline-offset-4">Rules</span>
-                      </div>
-                      <span className="opacity-50 font-serif normal-case tracking-normal">ཤོ་ཡི་སྒྲིག་གཞི།</span>
+                  <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center">
+                      <span className="font-bold uppercase text-xs tracking-widest">{T.lobby.rules.en}</span>
+                      <span className="font-serif text-[10px]">{T.lobby.rules.bo}</span>
                   </button>
               </div>
 
-              <div className="mt-8 text-stone-500 text-[10px] uppercase tracking-[0.3em] font-sans flex flex-col items-center gap-1 opacity-60">
-                  <span className="flex items-center gap-2">Total Games Played འཛམ་གླིང་ཡོངས་སུ་རྩེད་གྲངས།</span>
-                  <span className={`text-amber-600 font-bold text-xl tabular-nums drop-shadow-[0_0_10px_rgba(180,83,9,0.3)] transition-all duration-1000 ${isCounterPulsing ? 'scale-125 text-amber-400 brightness-150' : ''}`}>{globalPlayCount.toLocaleString()}</span>
+              <div className="text-stone-500 text-[10px] uppercase tracking-widest text-center">
+                  {T.lobby.totalPlayed.en} {T.lobby.totalPlayed.bo}<br/>
+                  <span className={`text-amber-600 font-bold text-xl tabular-nums ${isCounterPulsing ? 'scale-110 text-amber-400' : ''}`}>{globalPlayCount.toLocaleString()}</span>
               </div>
-            </div>
           </div>
         )}
 
-        {showGame && (
+        {gameMode && (
             <>
-                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[55dvh] md:h-full order-1 overflow-hidden">
-                    <div className="p-1.5 md:p-4 flex flex-col gap-1.5 md:gap-3 flex-shrink-0">
-                        <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
-                            <div onClick={() => { setGameMode(null); setTutorialStep(0); }} className="cursor-pointer flex items-center gap-2 group">
-                              <h1 className="text-amber-500 font-bold tracking-widest font-serif flex items-center gap-2">
-                                <span className="opacity-70 text-2xl md:text-3xl leading-none">ཤོ</span> 
-                                <span className="text-base md:text-xl leading-none">Sho</span>
-                              </h1>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={toggleMusic} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
-                                <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
+                <div className="w-full md:w-1/4 flex flex-col border-r border-stone-800 bg-stone-950 z-20 shadow-2xl overflow-hidden">
+                    <div className="p-4 flex flex-col gap-3">
+                        <header className="flex justify-between items-center border-b border-stone-800 pb-4">
+                            <h1 onClick={() => setGameMode(null)} className="cursor-pointer text-amber-500 font-serif text-2xl">ཤོ Sho</h1>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-8 h-8 rounded-full border border-stone-600 flex items-center justify-center ${isMusicEnabled ? 'text-amber-500 border-amber-500' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
+                                <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 font-serif">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-1.5 md:gap-3 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
                             {players.map((p, i) => (
-                                <div key={p.id} className={`relative p-1 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg scale-102' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
-                                    {/* Turn Indicator Arrow */}
-                                    {turnIndex === i && (
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white animate-bounce pointer-events-none z-30">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ filter: `drop-shadow(0 0 4px ${p.colorHex})` }}>
-                                                <path d="M12 21l-12-18h24z" />
-                                            </svg>
+                                <div key={p.id} className={`p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-black/40 flex items-center justify-center">
+                                            {p.avatar?.startsWith('data:') ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-xl">{p.avatar}</span>}
                                         </div>
-                                    )}
-                                    <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-                                        <div className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden border border-white/20 flex items-center justify-center bg-black/40">
-                                            {p.avatar && (p.avatar.startsWith('data:') ? <img src={p.avatar} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-sm md:text-xl">{p.avatar}</span>)}
-                                        </div>
-                                        <h3 className="font-bold font-serif truncate text-[10px] md:text-base flex-1" style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <h3 className="font-bold font-serif truncate text-xs" style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
-                                    <div className="flex justify-between text-[9px] md:text-xs text-stone-400">
-                                        <div className="flex items-center gap-1">
-                                          <div className="flex flex-col items-center">
-                                            <span className="text-[7px] uppercase opacity-50">In</span>
-                                            <span className="text-[7px] font-serif opacity-30 -mt-1">ལག་ཁྱི་ཐོང།</span>
-                                          </div>
+                                    <div className="flex justify-between text-[10px] text-stone-400">
+                                        <div className="flex flex-col">
+                                          <span className="uppercase opacity-50">{T.game.inHand.en}</span>
                                           <span className="font-bold text-stone-200">{p.coinsInHand}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                          <div className="flex flex-col items-center">
-                                            <span className="text-[7px] uppercase opacity-50">Out</span>
-                                            <span className="text-[7px] font-serif opacity-30 -mt-1">འགྲུབ་སོང་།</span>
-                                          </div>
+                                        <div className="flex flex-col items-end">
+                                          <span className="uppercase opacity-50">{T.game.finished.en}</span>
                                           <span className="font-bold text-amber-500">{p.coinsFinished}</span>
                                         </div>
                                     </div>
@@ -913,69 +521,40 @@ const App: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="flex-1 flex flex-col p-1.5 md:p-4 gap-1.5 md:gap-3 overflow-hidden">
+                    <div className="flex-1 flex flex-col p-4 gap-4">
                         {phase === GamePhase.GAME_OVER ? (
-                            <div className="text-center p-3 md:p-8 bg-stone-800/50 rounded-xl border border-amber-500/50 flex-grow flex flex-col justify-center">
-                                <h2 className="text-xl md:text-4xl text-amber-400 mb-1 font-cinzel">Victory རྒྱལ་ཁ་འཐོབ།</h2>
-                                <p className="text-white mb-2 md:mb-4 text-xs md:text-base">{winner?.name} won!</p>
-                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-4 py-1.5 md:px-6 md:py-2 rounded-full font-bold text-sm md:text-base uppercase tracking-widest font-cinzel flex flex-col items-center leading-tight">
-                                  <span>New Game</span>
-                                  <span className="text-[10px] font-serif tracking-normal">རྩེད་མོ་གསར་དུ་འགོ་ཚུགས།</span>
-                                </button>
+                            <div className="text-center p-8 bg-stone-800 rounded-xl border border-amber-500">
+                                <h2 className="text-4xl text-amber-400 mb-2 font-cinzel">{T.game.victory.en} {T.game.victory.bo}</h2>
+                                <p className="mb-4">{winner?.name} {T.game.wonMsg.en} {T.game.wonMsg.bo}</p>
+                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-6 py-2 rounded-full font-bold uppercase tracking-widest">{T.game.newGame.en}</button>
                             </div>
                         ) : (
                             <div className="flex flex-col flex-grow">
-                                <div className={!canInteract() ? "opacity-50 pointer-events-none grayscale" : ""}>
-                                    <DiceArea currentRoll={lastRoll} onRoll={requestRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} />
-                                </div>
-                                {showSkipButton ? (
-                                    <button onClick={requestSkip} className="mt-1 md:mt-2 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 px-4 py-2 rounded-xl font-cinzel font-bold animate-pulse text-sm md:text-base flex-shrink-0 uppercase tracking-widest flex flex-col items-center leading-tight">
-                                      <span>⏭️ Skip Turn</span>
-                                      <span className="text-[10px] font-serif tracking-normal">ཐེངས་འདི་ཞོག</span>
+                                <DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} />
+                                {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (
+                                    <button onClick={handleSkipTurn} className="mt-4 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-3 rounded-xl font-cinzel font-bold flex flex-col items-center">
+                                      <span>{T.game.skipTurn.en}</span><span className="text-[10px] font-serif">{T.game.skipTurn.bo}</span>
                                     </button>
-                                ) : (
-                                    <div className="mt-1.5 md:mt-2 space-y-1 md:space-y-2 flex-shrink-0">
-                                        <div onClick={() => { 
-                                            if (canInteract() && phase === GamePhase.MOVING) {
-                                                if (currentPlayer.coinsInHand > 0) {
-                                                    const handMoves = calculatePotentialMoves(0, pendingMoveValues, board, currentPlayer, isNinerMode);
-                                                    if (handMoves.length > 0) { 
-                                                        SFX.playSelect(); 
-                                                        setSelectedSourceIndex(0); 
-                                                        if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4); 
-                                                    } else { speak("No valid moves from hand."); SFX.playBounce(); }
-                                                }
-                                            }
-                                        }} className={`p-1.5 md:p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${phase === GamePhase.MOVING && canInteract() ? (selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20' : 'border-stone-700 bg-stone-900/50') : 'border-stone-800 opacity-50'}`}>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center font-bold text-stone-500 text-xs md:text-base">0</div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-stone-200 text-xs md:text-base uppercase tracking-widest font-cinzel">From Hand</span>
-                                                    <span className="text-[8px] md:text-[10px] text-stone-500 font-serif">ལག་ཁྱི་ཐོང་།་{currentPlayer.coinsInHand} coins</span>
-                                                </div>
-                                            </div>
+                                )}
+                                <div className="mt-4 flex flex-col gap-2">
+                                    <div onClick={() => { if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); }} className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20' : 'border-stone-800 bg-stone-900/50'}`}>
+                                        <div className="flex flex-col items-center">
+                                            <span className="font-cinzel font-bold tracking-widest">{T.game.fromHand.en}</span>
+                                            <span className="font-serif text-xs text-stone-500">{T.game.fromHand.bo} {players[turnIndex].coinsInHand}</span>
                                         </div>
                                     </div>
-                                )}
-                                <div className="mt-2 flex-grow bg-black/40 rounded-lg border border-stone-800/50 p-1 md:p-3 overflow-y-auto font-mono text-[9px] md:text-[10px] no-scrollbar">
-                                    {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400 font-bold' : 'text-stone-500'}`}>{log.message}</div>)}
                                 </div>
-                                <div className="mt-2 flex items-center justify-center gap-2 border-t border-stone-800/50 pt-2 opacity-60">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                    <div className="flex flex-col items-center">
-                                      <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-stone-400">Total Played</span>
-                                      <span className="text-[8px] font-serif text-stone-600 -mt-1">རྩེད་གྲངས།</span>
-                                    </div>
-                                    <span className={`text-[10px] md:text-xs font-bold text-amber-500 tabular-nums transition-transform duration-500 ${isCounterPulsing ? 'scale-110' : ''}`}>{globalPlayCount.toLocaleString()}</span>
+                                <div className="mt-4 flex-grow bg-black/40 rounded-lg p-3 overflow-y-auto no-scrollbar font-mono text-[10px] text-stone-500">
+                                    {logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
-                <div className="flex-grow relative bg-[#1c1917] overflow-hidden flex items-center justify-center order-2 pt-2 md:pt-0" ref={boardContainerRef}>
-                    <div style={{ transform: `scale(${boardScale})`, transformOrigin: 'center', width: 800, height: 800 }} className="transition-transform duration-300">
+                <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden" ref={boardContainerRef}>
+                    <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform">
                         <Board 
-                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(move) => requestMove(move.sourceIndex, move.targetIndex)} currentPlayer={currentPlayer.id} turnPhase={phase} onShellClick={(idx) => { if (canInteract() && phase === GamePhase.MOVING && board.get(idx)?.owner === currentPlayer.id) { SFX.playSelect(); setSelectedSourceIndex(idx); } else setSelectedSourceIndex(null); }} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} onInvalidMoveAttempt={handleInvalidMoveAttempt} isNinerMode={isNinerMode}
+                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode}
                         />
                     </div>
                 </div>
