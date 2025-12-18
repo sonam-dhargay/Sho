@@ -132,6 +132,37 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
                 <li>The first player to move all 9 coins off the board wins!</li>
             </ul>
           </section>
+
+          {/* External Links */}
+          <section className="border-t border-stone-800 pt-6">
+            <h3 className="text-sm md:text-base font-cinzel text-stone-400 mb-4 uppercase tracking-widest">Learn More</h3>
+            <div className="flex flex-col sm:flex-row gap-4">
+                <a 
+                  href="https://en.wikipedia.org/wiki/Sho_(board_game)" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-stone-800/30 hover:bg-stone-800 p-3 rounded-lg border border-stone-700 transition-all text-xs md:text-sm group"
+                >
+                    <span className="text-xl">🇬🇧</span>
+                    <div>
+                        <div className="text-stone-100 font-bold group-hover:text-amber-500 transition-colors">Sho on Wikipedia</div>
+                        <div className="text-stone-500 text-[10px]">English Documentation</div>
+                    </div>
+                </a>
+                <a 
+                  href="https://bo.wikipedia.org/wiki/ཤོ།" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-stone-800/30 hover:bg-stone-800 p-3 rounded-lg border border-stone-700 transition-all text-xs md:text-sm group"
+                >
+                    <span className="text-xl">🏔️</span>
+                    <div>
+                        <div className="text-stone-100 font-bold group-hover:text-amber-500 transition-colors">ཤོ། བོད་ཡིག་གི་ཝེ་ཁེ་རིག་མཛོད།</div>
+                        <div className="text-stone-500 text-[10px]">Tibetan Documentation</div>
+                    </div>
+                </a>
+            </div>
+          </section>
         </div>
 
         {/* Footer */}

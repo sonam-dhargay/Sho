@@ -68,7 +68,7 @@ const SFX = {
   
   getContext: () => {
     if (!SFX.ctx) {
-      SFX.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      SFX.ctx = new (window.AudioContext || (window as any).webkitAudioContext)());
     }
     if (SFX.ctx.state === 'suspended') SFX.ctx.resume();
     return SFX.ctx;
@@ -762,7 +762,7 @@ const App: React.FC = () => {
                       onClick={() => setShowRules(true)}
                       className="flex-1 bg-stone-900/50 border border-stone-800 hover:border-amber-500/50 text-stone-400 hover:text-amber-500 py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold font-sans group"
                   >
-                      <span className="text-xl group-hover:scale-110 transition-transform">📜</span> Sho Rules
+                      <span className="text-xl group-hover:scale-110 transition-transform">📜</span> Rules of Sho
                   </button>
               </div>
 
