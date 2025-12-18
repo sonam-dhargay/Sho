@@ -710,23 +710,6 @@ const App: React.FC = () => {
                   <p className="text-stone-400 mt-2 tracking-widest uppercase text-center font-sans text-xs md:text-sm">Traditional Tibetan Dice Game</p>
                </div>
               <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
-                  <div className="mb-4 text-center">
-                    <button 
-                        onClick={() => setShowRules(true)} 
-                        className="text-stone-400 hover:text-amber-500 transition-colors uppercase text-xs tracking-widest font-bold mb-4 inline-flex items-center gap-2"
-                    >
-                        📜 HOW TO PLAY & RULES
-                    </button>
-                    <div className="flex items-center justify-center gap-4 p-3 bg-stone-800/40 rounded-lg border border-stone-700">
-                        <span className="text-[10px] text-stone-500 uppercase tracking-widest">Variant:</span>
-                        <button 
-                            onClick={() => setIsNinerMode(!isNinerMode)}
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${isNinerMode ? 'bg-amber-700 border-amber-500 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
-                        >
-                            {isNinerMode ? 'NINER MODE' : 'NO-NINER'}
-                        </button>
-                    </div>
-                  </div>
                   <div className="mb-4">
                       <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest">Your Name</label>
                       <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200 focus:border-amber-500 outline-none" maxLength={15} />
@@ -748,13 +731,39 @@ const App: React.FC = () => {
                            <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400"><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />📷</label>
                        </div>
                   </div>
+                  <div className="pt-2 border-t border-stone-800 mt-2">
+                    <div className="flex items-center justify-between gap-4 p-2 bg-stone-800/40 rounded-lg border border-stone-700">
+                        <span className="text-[10px] text-stone-500 uppercase tracking-widest">Variant:</span>
+                        <button 
+                            onClick={() => setIsNinerMode(!isNinerMode)}
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${isNinerMode ? 'bg-amber-700 border-amber-500 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
+                        >
+                            {isNinerMode ? 'NINER MODE' : 'NO-NINER'}
+                        </button>
+                    </div>
+                  </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-5xl mb-4">
-                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🎓</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Tutorial</h3></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mb-6">
                   <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🏔️</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Local</h3></div>
                   <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🤖</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Vs AI</h3></div>
                   <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 text-center relative transition-all flex flex-col items-center justify-center"><div className="text-3xl mb-3">🌍</div><h3 className="text-lg font-bold mb-2 text-stone-200 uppercase tracking-widest">Online</h3><button onClick={setupHost} className="w-full bg-amber-700 hover:bg-amber-600 text-white py-2 rounded mb-2 font-bold transition-colors text-xs uppercase">Host</button><div className="flex gap-2 w-full"><input type="text" placeholder="ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-xs" value={joinId} onChange={e => setJoinId(e.target.value)} /><button onClick={joinGame} className="bg-stone-700 hover:bg-stone-600 text-white px-3 rounded font-bold text-xs">{isJoining ? '...' : 'JOIN'}</button></div></div>
+              </div>
+
+              {/* Bottom Menu: Tutorial and Rules */}
+              <div className="flex flex-col md:flex-row gap-4 w-full max-w-xl justify-center">
+                  <button 
+                      onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }}
+                      className="flex-1 bg-stone-900/50 border border-stone-800 hover:border-amber-500/50 text-stone-400 hover:text-amber-500 py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold font-sans group"
+                  >
+                      <span className="text-xl group-hover:scale-110 transition-transform">🎓</span> Tutorial
+                  </button>
+                  <button 
+                      onClick={() => setShowRules(true)}
+                      className="flex-1 bg-stone-900/50 border border-stone-800 hover:border-amber-500/50 text-stone-400 hover:text-amber-500 py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold font-sans group"
+                  >
+                      <span className="text-xl group-hover:scale-110 transition-transform">📜</span> Sho Rules
+                  </button>
               </div>
 
               <div className="mt-8 text-stone-500 text-[10px] uppercase tracking-[0.3em] font-sans flex flex-col items-center gap-1 opacity-60">
