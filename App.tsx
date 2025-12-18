@@ -11,7 +11,7 @@ import { ShoLogo } from './components/ShoLogo';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { GoogleGenAI } from "@google/genai";
-import Peer, { DataConnection } from 'peerjs';
+import { Peer, DataConnection } from 'peerjs';
 
 // --- Configuration ---
 const PEER_CONFIG = {
@@ -19,8 +19,7 @@ const PEER_CONFIG = {
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
+            { urls: 'stun:stun1.l.google.com:19302' }
         ]
     }
 };
@@ -391,6 +390,7 @@ const calculatePotentialMoves = (
 const getAvailableMoves = (pIndex: number, pBoard: BoardState, pPlayers: Player[], pVals: number[], isNinerMode: boolean) => {
   let moves: MoveOption[] = [];
   const player = pPlayers[pIndex];
+  if (!player) return moves;
   if (player.coinsInHand > 0) { moves = [...moves, ...calculatePotentialMoves(0, pVals, pBoard, player, isNinerMode)]; }
   pBoard.forEach((shell) => { if (shell.owner === player.id && shell.stackSize > 0) { moves = [...moves, ...calculatePotentialMoves(shell.index, pVals, pBoard, player, isNinerMode)]; } });
   return moves;
@@ -446,7 +446,14 @@ const App: React.FC = () => {
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
-  const speak = (text: string) => { const u = new SpeechSynthesisUtterance(text); u.rate = 1.1; u.pitch = 0.9; window.speechSynthesis.speak(u); };
+  const speak = (text: string) => { 
+    if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(text); 
+        u.rate = 1.1; 
+        u.pitch = 0.9; 
+        window.speechSynthesis.speak(u); 
+    }
+  };
 
   useEffect(() => { 
     const baseCount = 18742; 
@@ -490,10 +497,9 @@ const App: React.FC = () => {
     setIsRolling(true); 
     SFX.playShake(); 
     
-    // Simulate toss and dramatic reveal sequence
     await new Promise(resolve => setTimeout(resolve, 1200)); 
     
-    const currentPlayerName = s.players[s.turnIndex].name;
+    const currentPlayerName = s.players[s.turnIndex]?.name || "Player";
     let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1;
     if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 2) { d1 = 2; d2 = 3; } else if (s.turnIndex === 1) { d1 = 3; d2 = 3; } }
     const isPaRa = (d1 === 1 && d2 === 1);
@@ -541,6 +547,7 @@ const App: React.FC = () => {
       if (s.phase !== GamePhase.MOVING) return;
       const targetShell = s.board.get(targetIdx);
       const player = s.players[s.turnIndex];
+      if (!player) return;
       let movingStackSize = sourceIdx === 0 ? (player.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (s.board.get(sourceIdx)?.stackSize || 0);
 
       if (targetShell?.owner && targetShell.owner !== player.id) {
@@ -680,21 +687,114 @@ const App: React.FC = () => {
 
   useEffect(() => { const s = gameStateRef.current; if (phase === GamePhase.MOVING && !isRolling && !waitingForPaRa) { const moves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); if (moves.length === 0) { const isAIPlayer = gameMode === GameMode.AI && turnIndex === 1; const isTutorialOpponent = gameMode === GameMode.TUTORIAL && turnIndex === 1; if (isAIPlayer || isTutorialOpponent) { setTimeout(() => handleSkipTurn(), 2000); } } } }, [phase, isRolling, waitingForPaRa, pendingMoveValues, turnIndex, board, players, isNinerMode, gameMode, handleSkipTurn]);
 
-  const setupHost = async () => { setJoinError(null); setHasOpponentJoined(false); setGameId(''); const peer = new Peer(undefined, PEER_CONFIG); peer.on('open', (id) => setGameId(id)); peer.on('error', (err) => setJoinError(`Failed: ${err.type}`)); peer.on('connection', (conn) => { connRef.current = conn; conn.on('data', (data: any) => { if (data.type === 'JOIN_REQ') { setPeerConnected(true); setHasOpponentJoined(true); initializeGame(data.payload); return; } if (data.type === 'ROLL_REQ') performRoll(); if (data.type === 'MOVE_REQ') performMove(data.payload.source, data.payload.target); if (data.type === 'SKIP_REQ') handleSkipTurn(); }); conn.on('close', () => setPeerConnected(false)); }); peerRef.current = peer; setMyPlayerIndex(0); setGameMode(GameMode.ONLINE_HOST); };
+  // --- Network Logic ---
+  const cleanupPeer = () => {
+    if (connRef.current) { connRef.current.close(); connRef.current = null; }
+    if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; }
+    setPeerConnected(false);
+    setHasOpponentJoined(false);
+    setGameId('');
+  };
 
-  const joinGame = async () => { if (!joinId) return; setIsJoining(true); setJoinError(null); const peer = new Peer(undefined, PEER_CONFIG); peer.on('error', (err) => { setJoinError(`Failed: ${err.type}`); setIsJoining(false); }); peer.on('open', (id) => { const conn = peer.connect(joinId); connRef.current = conn; conn.on('open', () => { conn.send({ type: 'JOIN_REQ', payload: { name: playerName, color: selectedColor, avatar: selectedAvatar } }); setPeerConnected(true); setGameMode(GameMode.ONLINE_GUEST); setMyPlayerIndex(1); setIsJoining(false); }); conn.on('data', (data: any) => { if (data.type === 'SYNC') { const p = data.payload; setBoard(deserializeBoard(p.board)); setPlayers(p.players); setTurnIndex(p.turnIndex); setPhase(p.phase); setLastRoll(p.lastRoll); setIsRolling(p.isRolling); setPendingMoveValues(p.pendingMoveValues); setWaitingForPaRa(p.waitingForPaRa); setLastMove(p.lastMove); setTotalMoves(p.totalMoves); if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode); } }); conn.on('close', () => setPeerConnected(false)); }); peerRef.current = peer; };
+  const setupHost = async () => { 
+    cleanupPeer();
+    setJoinError(null); 
+    setHasOpponentJoined(false); 
+    const peer = new Peer(undefined, PEER_CONFIG); 
+    peer.on('open', (id) => setGameId(id)); 
+    peer.on('error', (err) => { setJoinError(`Network Error: ${err.type}`); console.error(err); }); 
+    peer.on('connection', (conn) => { 
+        connRef.current = conn; 
+        conn.on('open', () => {
+            setPeerConnected(true);
+            addLog("Guest connected!");
+        });
+        conn.on('data', (data: any) => { 
+            if (data.type === 'JOIN_REQ') { setHasOpponentJoined(true); initializeGame(data.payload); return; } 
+            if (data.type === 'ROLL_REQ') performRoll(); 
+            if (data.type === 'MOVE_REQ') performMove(data.payload.source, data.payload.target); 
+            if (data.type === 'SKIP_REQ') handleSkipTurn(); 
+        }); 
+        conn.on('close', () => { setPeerConnected(false); setHasOpponentJoined(false); addLog("Opponent disconnected.", "alert"); }); 
+    }); 
+    peerRef.current = peer; 
+    setMyPlayerIndex(0); 
+    setGameMode(GameMode.ONLINE_HOST); 
+  };
 
-  const broadcastState = useCallback(() => { if (connRef.current?.open && gameMode === GameMode.ONLINE_HOST) { connRef.current.send({ type: 'SYNC', payload: { board: serializeBoard(board), players: players, turnIndex: turnIndex, phase: phase, lastRoll: lastRoll, isRolling: isRolling, pendingMoveValues: pendingMoveValues, waitingForPaRa: waitingForPaRa, lastMove: lastMove, totalMoves: totalMoves, isNinerMode: isNinerMode } }); } }, [gameMode, board, players, turnIndex, phase, lastRoll, isRolling, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isNinerMode]);
+  const joinGame = async () => { 
+    if (!joinId) return; 
+    cleanupPeer();
+    setIsJoining(true); 
+    setJoinError(null); 
+    const peer = new Peer(undefined, PEER_CONFIG); 
+    peer.on('error', (err) => { setJoinError(`ID not found or network error.`); setIsJoining(false); }); 
+    peer.on('open', (id) => { 
+        const conn = peer.connect(joinId, { reliable: true }); 
+        connRef.current = conn; 
+        conn.on('open', () => { 
+            conn.send({ type: 'JOIN_REQ', payload: { name: playerName, color: selectedColor, avatar: selectedAvatar } }); 
+            setPeerConnected(true); 
+            setGameMode(GameMode.ONLINE_GUEST); 
+            setMyPlayerIndex(1); 
+            setIsJoining(false); 
+            addLog("Joined game!");
+        }); 
+        conn.on('data', (data: any) => { 
+            if (data.type === 'SYNC') { 
+                const p = data.payload; 
+                setBoard(deserializeBoard(p.board)); 
+                setPlayers(p.players); 
+                setTurnIndex(p.turnIndex); 
+                setPhase(p.phase); 
+                setLastRoll(p.lastRoll); 
+                setIsRolling(p.isRolling); 
+                setPendingMoveValues(p.pendingMoveValues); 
+                setWaitingForPaRa(p.waitingForPaRa); 
+                setLastMove(p.lastMove); 
+                setTotalMoves(p.totalMoves); 
+                if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode); 
+            } 
+        }); 
+        conn.on('close', () => { setPeerConnected(false); addLog("Disconnected from Host.", "alert"); setGameMode(null); }); 
+    }); 
+    peerRef.current = peer; 
+  };
 
-  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST) broadcastState(); }, [broadcastState]); useEffect(() => { if (gameMode === GameMode.ONLINE_HOST && peerConnected) broadcastState(); }, [gameMode, peerConnected, broadcastState]);
+  const broadcastState = useCallback(() => { 
+    if (connRef.current?.open && gameMode === GameMode.ONLINE_HOST) { 
+        connRef.current.send({ type: 'SYNC', payload: { 
+            board: serializeBoard(board), 
+            players: players, 
+            turnIndex: turnIndex, 
+            phase: phase, 
+            lastRoll: lastRoll, 
+            isRolling: isRolling, 
+            pendingMoveValues: pendingMoveValues, 
+            waitingForPaRa: waitingForPaRa, 
+            lastMove: lastMove, 
+            totalMoves: totalMoves, 
+            isNinerMode: isNinerMode 
+        } }); 
+    } 
+  }, [gameMode, board, players, turnIndex, phase, lastRoll, isRolling, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isNinerMode]);
+
+  useEffect(() => { if (gameMode === GameMode.ONLINE_HOST) broadcastState(); }, [broadcastState]); 
 
   const requestRoll = () => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'ROLL_REQ' }); else performRoll(); };
   const requestMove = (s: number, t: number) => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'MOVE_REQ', payload: { source: s, target: t } }); else performMove(s, t); };
   const requestSkip = () => { if (gameMode === GameMode.ONLINE_GUEST) connRef.current?.send({ type: 'SKIP_REQ' }); else handleSkipTurn(); };
 
-  const canInteract = () => { if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0 && !isRolling; if (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) return turnIndex === myPlayerIndex && !isRolling && peerConnected; return !isRolling; };
+  const canInteract = () => { 
+    if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0 && !isRolling; 
+    if (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) return turnIndex === myPlayerIndex && !isRolling && peerConnected; 
+    return !isRolling; 
+  };
 
-  const currentValidMovesList = useCallback(() => { if (phase !== GamePhase.MOVING || players.length === 0) return []; return getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); }, [phase, players, turnIndex, board, pendingMoveValues, isNinerMode])();
+  const currentValidMovesList = useCallback(() => { 
+    if (phase !== GamePhase.MOVING || players.length === 0) return []; 
+    return getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode); 
+  }, [phase, players, turnIndex, board, pendingMoveValues, isNinerMode])();
 
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const winner = players.find(p => p.coinsFinished >= COINS_PER_PLAYER);
@@ -754,7 +854,16 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mb-6">
                   <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🏔️</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Local</h3></div>
                   <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🤖</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Vs AI</h3></div>
-                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 text-center relative transition-all flex flex-col items-center justify-center"><div className="text-3xl mb-3">🌍</div><h3 className="text-lg font-bold mb-2 text-stone-200 uppercase tracking-widest">Online</h3><button onClick={setupHost} className="w-full bg-amber-700 hover:bg-amber-600 text-white py-2 rounded mb-2 font-bold transition-colors text-xs uppercase">Host</button><div className="flex gap-2 w-full"><input type="text" placeholder="ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-xs" value={joinId} onChange={e => setJoinId(e.target.value)} /><button onClick={joinGame} className="bg-stone-700 hover:bg-stone-600 text-white px-3 rounded font-bold text-xs">{isJoining ? '...' : 'JOIN'}</button></div></div>
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 text-center relative transition-all flex flex-col items-center justify-center">
+                    <div className="text-3xl mb-3">🌍</div>
+                    <h3 className="text-lg font-bold mb-2 text-stone-200 uppercase tracking-widest">Online</h3>
+                    <button onClick={setupHost} className="w-full bg-amber-700 hover:bg-amber-600 text-white py-2 rounded mb-2 font-bold transition-colors text-xs uppercase">Host</button>
+                    <div className="flex gap-2 w-full">
+                        <input type="text" placeholder="ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-xs" value={joinId} onChange={e => setJoinId(e.target.value)} />
+                        <button onClick={joinGame} className="bg-stone-700 hover:bg-stone-600 text-white px-3 rounded font-bold text-xs">{isJoining ? '...' : 'JOIN'}</button>
+                    </div>
+                    {joinError && <p className="text-red-500 text-[9px] mt-2 font-sans font-bold">{joinError}</p>}
+                  </div>
               </div>
 
               {/* Bottom Menu: Tutorial and Rules */}
@@ -788,17 +897,24 @@ const App: React.FC = () => {
                     <h2 className="text-2xl font-cinzel text-amber-500 mb-2">Waiting for Opponent</h2>
                     <p className="text-stone-400 mb-6 text-sm">Share this Game ID with your friend to start playing:</p>
                     <div className="w-full bg-black p-4 rounded-xl border border-stone-700 mb-4 flex items-center justify-between">
-                        <span className="font-mono text-amber-400 text-lg font-bold">{gameId || 'Generating...'}</span>
-                        <button 
-                            onClick={() => { if (gameId) { navigator.clipboard.writeText(gameId); addLog('ID copied to clipboard'); } }}
-                            className="bg-stone-800 hover:bg-stone-700 p-2 rounded text-stone-300 transition-colors"
-                            title="Copy to Clipboard"
-                        >
-                            📋
-                        </button>
+                        <span className="font-mono text-amber-400 text-lg font-bold">{gameId || 'Connecting to Server...'}</span>
+                        {gameId && (
+                            <button 
+                                onClick={() => { navigator.clipboard.writeText(gameId); addLog('ID copied to clipboard'); }}
+                                className="bg-stone-800 hover:bg-stone-700 p-2 rounded text-stone-300 transition-colors"
+                                title="Copy to Clipboard"
+                            >
+                                📋
+                            </button>
+                        )}
                     </div>
+                    {gameId && (
+                        <div className="bg-green-900/20 text-green-500 text-[10px] px-3 py-1 rounded-full border border-green-800 mb-4 uppercase tracking-widest font-bold">
+                            Server Ready
+                        </div>
+                    )}
                     <button 
-                        onClick={() => { setGameMode(null); peerRef.current?.destroy(); }}
+                        onClick={() => { cleanupPeer(); setGameMode(null); }}
                         className="text-stone-500 hover:text-stone-300 text-xs uppercase tracking-widest mt-4 font-bold"
                     >
                         Cancel Hosting
@@ -812,7 +928,7 @@ const App: React.FC = () => {
                 <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[55dvh] md:h-full order-1 overflow-hidden">
                     <div className="p-1.5 md:p-4 flex flex-col gap-1.5 md:gap-3 flex-shrink-0">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
-                            <div onClick={() => { setGameMode(null); setTutorialStep(0); }} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
+                            <div onClick={() => { cleanupPeer(); setGameMode(null); setTutorialStep(0); }} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
                             <div className="flex items-center gap-2">
                                 <button onClick={toggleMusic} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
