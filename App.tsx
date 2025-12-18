@@ -396,6 +396,56 @@ const getAvailableMoves = (pIndex: number, pBoard: BoardState, pPlayers: Player[
   return moves;
 };
 
+// --- Camera Feature Components ---
+const CameraModal: React.FC<{ onCapture: (data: string) => void; onClose: () => void }> = ({ onCapture, onClose }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+
+    useEffect(() => {
+        const initCamera = async () => {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 300, facingMode: 'user' } });
+                setStream(s);
+                if (videoRef.current) videoRef.current.srcObject = s;
+            } catch (err) {
+                console.error("Camera error:", err);
+                alert("Could not access camera.");
+                onClose();
+            }
+        };
+        initCamera();
+        return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
+    }, []);
+
+    const capture = () => {
+        if (videoRef.current && canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(videoRef.current, 0, 0, 300, 300);
+                onCapture(canvasRef.current.toDataURL('image/jpeg'));
+                onClose();
+            }
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4">
+            <div className="bg-stone-900 p-6 rounded-2xl border border-stone-800 flex flex-col items-center">
+                <h3 className="text-amber-500 font-cinzel text-xl mb-4">Capture Profile Photo</h3>
+                <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-amber-600 shadow-2xl mb-6 bg-black">
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                </div>
+                <canvas ref={canvasRef} width={300} height={300} className="hidden" />
+                <div className="flex gap-4">
+                    <button onClick={onClose} className="px-6 py-2 rounded-lg bg-stone-800 text-stone-400 font-bold">Cancel</button>
+                    <button onClick={capture} className="px-6 py-2 rounded-lg bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/40">Snap!</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const App: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>(PLAYERS_CONFIG);
   const [board, setBoard] = useState<BoardState>(new Map());
@@ -416,6 +466,7 @@ const App: React.FC = () => {
   const [playerName, setPlayerName] = useState('Player');
   const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0].hex);
   const [selectedAvatar, setSelectedAvatar] = useState<string>(AVATAR_PRESETS[0]);
+  const [showCamera, setShowCamera] = useState(false);
   const [gameId, setGameId] = useState<string>('');
   const [joinId, setJoinId] = useState<string>('');
   const [peerConnected, setPeerConnected] = useState(false);
@@ -490,7 +541,14 @@ const App: React.FC = () => {
     window.addEventListener('resize', handleResize); handleResize(); const t = setTimeout(handleResize, 100); return () => { window.removeEventListener('resize', handleResize); clearTimeout(t); };
   }, [gameMode, phase]);
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSelectedAvatar(reader.result as string); reader.readAsDataURL(file); } };
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => { 
+      const file = e.target.files?.[0]; 
+      if (file) { 
+          const reader = new FileReader(); 
+          reader.onloadend = () => setSelectedAvatar(reader.result as string); 
+          reader.readAsDataURL(file); 
+      } 
+  };
 
   const performRoll = async () => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
@@ -807,7 +865,8 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row overflow-hidden font-sans fixed inset-0">
         {(gameMode === GameMode.TUTORIAL || tutorialStep > 0) && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
-        
+        {showCamera && <CameraModal onCapture={(data) => setSelectedAvatar(data)} onClose={() => setShowCamera(false)} />}
+
         {showLobby && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto">
              <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-8">
@@ -835,7 +894,16 @@ const App: React.FC = () => {
                            {AVATAR_PRESETS.map((av) => (
                                <button key={av} onClick={() => setSelectedAvatar(av)} className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 text-xl hover:bg-stone-800 ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}>{av}</button>
                            ))}
-                           <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400"><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />📷</label>
+                           {selectedAvatar.startsWith('data:') && (
+                               <button onClick={() => {}} className="w-8 h-8 flex items-center justify-center rounded-lg border border-amber-500 bg-stone-800 overflow-hidden">
+                                   <img src={selectedAvatar} className="w-full h-full object-cover" />
+                               </button>
+                           )}
+                           <button onClick={() => setShowCamera(true)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 text-stone-400" title="Take Photo">📸</button>
+                           <label className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 hover:bg-stone-800 cursor-pointer text-stone-400" title="Upload Photo">
+                               <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                               📁
+                           </label>
                        </div>
                   </div>
                   <div className="pt-2 border-t border-stone-800 mt-2">
@@ -938,8 +1006,10 @@ const App: React.FC = () => {
                             {players.map((p, i) => (
                                 <div key={p.id} className={`p-1 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg scale-102' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
                                     <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-                                        {p.avatar && (p.avatar.startsWith('data:') ? <img src={p.avatar} alt="avatar" className="w-5 h-5 md:w-6 md:h-6 rounded-full object-cover" /> : <span className="text-base md:text-lg">{p.avatar}</span>)}
-                                        <h3 className="font-bold font-serif truncate text-[10px] md:text-base" style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <div className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden border border-white/20 flex items-center justify-center bg-black/40">
+                                            {p.avatar && (p.avatar.startsWith('data:') ? <img src={p.avatar} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-sm md:text-xl">{p.avatar}</span>)}
+                                        </div>
+                                        <h3 className="font-bold font-serif truncate text-[10px] md:text-base flex-1" style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
                                     <div className="flex justify-between text-[9px] md:text-xs text-stone-400">
                                         <div className="flex items-center gap-1"><span className="text-[7px] uppercase opacity-50">In</span><span className="font-bold text-stone-200">{p.coinsInHand}</span></div>
