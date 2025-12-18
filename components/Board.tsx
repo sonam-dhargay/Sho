@@ -185,21 +185,19 @@ export const Board: React.FC<BoardProps> = ({
     const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
         const idx = i + 1;
         const shell = boardState.get(idx);
+        
+        // Only consider direct neighbors for spacing to avoid "unnecessarily wide" paths
         const hasDirectNeighbor = 
             (i > 0 && (boardState.get(i)?.stackSize || 0) > 0) || 
             (i < TOTAL_SHELLS - 1 && (boardState.get(i + 2)?.stackSize || 0) > 0);
         
-        const hasExtendedNeighbor = 
-            (i > 1 && (boardState.get(i - 1)?.stackSize || 0) > 0) || 
-            (i < TOTAL_SHELLS - 2 && (boardState.get(i + 3)?.stackSize || 0) > 0);
-        
         let w = 1.0;
         if (shell && shell.stackSize > 0) {
-            w += 6.5; 
+            // Reduced repulsion weight for occupied shells
+            w += 1.8; 
         } else if (hasDirectNeighbor) {
-            w += 3.2; 
-        } else if (hasExtendedNeighbor) {
-            w += 1.4; 
+            // Reduced repulsion weight for direct neighbors
+            w += 0.6; 
         }
         return w;
     });
