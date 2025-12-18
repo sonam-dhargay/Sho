@@ -455,16 +455,21 @@ export const Board: React.FC<BoardProps> = ({
             const isShaking = shakeShellId === shell.id;
             const hasBlockedMsg = blockedFeedback?.shellId === shell.id;
 
-            // --- "Beside" Offset Logic to prevent overlap ---
-            // Calculate a normal vector (perpendicular to path) for the side-by-side offset.
-            // Angle is the tangent (forward along spiral).
-            // Normal (right) = tangent + PI/2.
+            // --- "Past and Beside" Offset Logic ---
+            // Forward tangent vector (tx, ty) along the spiral
+            const tx = Math.cos(shell.angle);
+            const ty = Math.sin(shell.angle);
+            // Right normal vector (nx, ny) perpendicular to path
             const nx = Math.cos(shell.angle + Math.PI / 2);
             const ny = Math.sin(shell.angle + Math.PI / 2);
             
-            // Shift shell slightly one way (-18px) and coin stack the other way (+22px)
-            const shellOffset = -18;
-            const stackOffset = 22;
+            // Shell shifted slightly backward and left relative to the center of the shell node
+            const shellOffX = tx * -12 + nx * -10;
+            const shellOffY = ty * -12 + ny * -10;
+
+            // Coin stack shifted forward ("past") and to the right
+            const stackOffX = tx * 28 + nx * 14;
+            const stackOffY = ty * 28 + ny * 14;
 
             return (
                 <div 
@@ -488,7 +493,7 @@ export const Board: React.FC<BoardProps> = ({
                         }
                     }}
                 >
-                    <div style={{ transform: `translate(${nx * shellOffset}px, ${ny * shellOffset}px)` }}>
+                    <div style={{ transform: `translate(${shellOffX}px, ${shellOffY}px)` }}>
                          <CowrieShell angle={shell.angle} isTarget={isTarget} />
                     </div>
 
@@ -508,7 +513,7 @@ export const Board: React.FC<BoardProps> = ({
                     {stackSize > 0 && owner && !isBeingDragged && (
                         <div 
                             className={`absolute z-30 ${isOwner && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} 
-                            style={{ transform: `translate(${nx * stackOffset}px, ${ny * stackOffset}px)` }} 
+                            style={{ transform: `translate(${stackOffX}px, ${stackOffY}px)` }} 
                             onMouseDown={(e) => handleMouseDown(e, shell.id)} 
                             onTouchStart={(e) => handleMouseDown(e, shell.id)}
                         >
