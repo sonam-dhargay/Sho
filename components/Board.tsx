@@ -455,17 +455,16 @@ export const Board: React.FC<BoardProps> = ({
             const isShaking = shakeShellId === shell.id;
             const hasBlockedMsg = blockedFeedback?.shellId === shell.id;
 
-            // --- Radial Offset Logic to prevent overlap ---
-            // Calculate vector from center to shell
-            const vx = shell.x - CENTER_X;
-            const vy = shell.y - CENTER_Y;
-            const mag = Math.sqrt(vx * vx + vy * vy);
-            const nx = vx / mag;
-            const ny = vy / mag;
+            // --- "Beside" Offset Logic to prevent overlap ---
+            // Calculate a normal vector (perpendicular to path) for the side-by-side offset.
+            // Angle is the tangent (forward along spiral).
+            // Normal (right) = tangent + PI/2.
+            const nx = Math.cos(shell.angle + Math.PI / 2);
+            const ny = Math.sin(shell.angle + Math.PI / 2);
             
-            // Push shell slightly inward (-8px) and coin stack slightly outward (+26px)
-            const shellOffset = -8;
-            const stackOffset = 26;
+            // Shift shell slightly one way (-18px) and coin stack the other way (+22px)
+            const shellOffset = -18;
+            const stackOffset = 22;
 
             return (
                 <div 
