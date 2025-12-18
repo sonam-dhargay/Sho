@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Player, PlayerColor, BoardState, GamePhase, 
@@ -7,7 +6,6 @@ import {
 import { TOTAL_SHELLS, COINS_PER_PLAYER, PLAYERS_CONFIG, COLOR_PALETTE, AVATAR_PRESETS } from './constants';
 import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
-import { ShoLogo } from './components/ShoLogo';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { GoogleGenAI } from "@google/genai";
@@ -922,8 +920,10 @@ const App: React.FC = () => {
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto">
              <div className="min-h-full w-full flex flex-col items-center justify-center p-4 py-8">
                <div className="flex flex-col items-center mb-6 md:mb-8">
-                  <ShoLogo className="w-32 h-24 md:w-56 md:h-40 drop-shadow-2xl mb-4" />
-                  <h1 className="text-4xl md:text-6xl text-amber-500 font-bold tracking-widest text-center">SHO</h1>
+                  <h1 className="text-amber-500 font-bold tracking-widest text-center flex items-center justify-center gap-3 md:gap-5">
+                    <span className="font-serif opacity-70 text-5xl md:text-7xl leading-none">ཤོ</span> 
+                    <span className="text-3xl md:text-5xl leading-none font-serif">Sho</span>
+                  </h1>
                   <p className="text-stone-400 mt-2 tracking-widest uppercase text-center font-sans text-xs md:text-sm">Traditional Tibetan Dice Game</p>
                </div>
               <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
@@ -1047,7 +1047,12 @@ const App: React.FC = () => {
                 <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[55dvh] md:h-full order-1 overflow-hidden">
                     <div className="p-1.5 md:p-4 flex flex-col gap-1.5 md:gap-3 flex-shrink-0">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
-                            <div onClick={() => { cleanupPeer(); setGameMode(null); setTutorialStep(0); }} className="cursor-pointer flex items-center gap-2 group"><ShoLogo className="w-6 h-6 md:w-12 md:h-10 group-hover:scale-110 transition-transform" /><h1 className="text-lg md:text-2xl text-amber-500 font-bold tracking-widest font-serif">SHO</h1></div>
+                            <div onClick={() => { cleanupPeer(); setGameMode(null); setTutorialStep(0); }} className="cursor-pointer flex items-center gap-2 group">
+                              <h1 className="text-amber-500 font-bold tracking-widest font-serif flex items-center gap-2">
+                                <span className="opacity-70 text-2xl md:text-3xl leading-none">ཤོ</span> 
+                                <span className="text-base md:text-xl leading-none">Sho</span>
+                              </h1>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={toggleMusic} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center transition-all ${isMusicEnabled ? 'text-amber-500 border-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.5)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
