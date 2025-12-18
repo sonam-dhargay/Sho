@@ -540,14 +540,18 @@ export const Board: React.FC<BoardProps> = ({
                                    <AncientCoin color={shellColor} isSelected={false} avatar={shellAvatar} />
                                </div>
                            ))}
-                           {stackSize > 1 && (
-                               <div 
-                                className="absolute left-1/2 -translate-x-1/2 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-stone-600 shadow-md backdrop-blur-sm whitespace-nowrap pointer-events-none"
-                                style={{ top: `${-35 - (Math.min(stackSize, 9) * 6)}px`, zIndex: 100 }}
-                               >
-                                   {stackSize}
-                               </div>
-                           )}
+                           {/* Stack Size Label */}
+                           <div 
+                            className="absolute left-1/2 -translate-x-1/2 bg-stone-900/90 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-xl backdrop-blur-md whitespace-nowrap pointer-events-none flex items-center justify-center"
+                            style={{ 
+                                top: `${-42 - (Math.min(stackSize, 9) * 6)}px`, 
+                                zIndex: 100,
+                                transform: 'translate(-50%, 0)',
+                                minWidth: '24px'
+                            }}
+                           >
+                               {stackSize}
+                           </div>
                         </div>
                     )}
                 </div>
