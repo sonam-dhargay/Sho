@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface RulesModalProps {
@@ -92,6 +91,22 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             <ul className="list-disc pl-5 space-y-1 text-xs md:text-sm">
                 <li>You get to <strong>roll again</strong> immediately.</li>
                 <li>The move values of both rolls are added to your available moves. You can move one stack by the total or two stacks separately.</li>
+            </ul>
+          </section>
+
+          {/* Instant Win */}
+          <section className="bg-red-950/20 p-4 rounded-lg border border-red-900/30">
+            <h3 className="text-lg md:text-xl font-cinzel text-red-400 mb-2 flex items-center gap-2">
+              <span className="text-xl md:text-2xl">✨</span> Instant Win
+            </h3>
+            <p className="mb-2">In very rare circumstances, a player may win instantly:</p>
+            <ul className="list-disc pl-5 space-y-2 text-xs md:text-sm">
+                <li>
+                    <strong>Triple Pa Ra:</strong> If a player rolls a <strong>Pa Ra (1,1)</strong> three times in a row, they are declared the winner immediately.
+                </li>
+                <li>
+                    <strong>Stacked Dice:</strong> If the dice physically land <strong>stacked on top of each other</strong> during a roll, the player wins the game on the spot.
+                </li>
             </ul>
           </section>
 

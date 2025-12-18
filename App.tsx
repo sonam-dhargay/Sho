@@ -796,19 +796,20 @@ const App: React.FC = () => {
                   <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer group text-center transition-all flex flex-col items-center justify-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}><div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🤖</div><h3 className="text-lg font-bold text-stone-200 uppercase tracking-widest">Vs AI</h3></div>
               </div>
 
-              {/* Bottom Menu: Tutorial and Rules */}
-              <div className="flex flex-col md:flex-row gap-4 w-full max-w-xl justify-center">
+              {/* Bottom Menu: Tutorial and Rules as Links */}
+              <div className="flex items-center justify-center gap-6 mt-4 md:mt-6">
                   <button 
                       onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }}
-                      className="flex-1 bg-stone-900/50 border border-stone-800 hover:border-amber-500/50 text-stone-400 hover:text-amber-500 py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold font-sans group"
+                      className="text-stone-500 hover:text-amber-500 transition-colors flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold font-sans group"
                   >
-                      <span className="text-xl group-hover:scale-110 transition-transform">🎓</span> Tutorial
+                      <span className="text-base group-hover:scale-110 transition-transform">🎓</span> <span className="hover:underline underline-offset-4">Tutorial</span>
                   </button>
+                  <div className="w-1 h-1 rounded-full bg-stone-700"></div>
                   <button 
                       onClick={() => setShowRules(true)}
-                      className="flex-1 bg-stone-900/50 border border-stone-800 hover:border-amber-500/50 text-stone-400 hover:text-amber-500 py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold font-sans group"
+                      className="text-stone-500 hover:text-amber-500 transition-colors flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold font-sans group"
                   >
-                      <span className="text-xl group-hover:scale-110 transition-transform">📜</span> Rules of Sho
+                      <span className="text-base group-hover:scale-110 transition-transform">📜</span> <span className="hover:underline underline-offset-4">Rules of Sho</span>
                   </button>
               </div>
 
