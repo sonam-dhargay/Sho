@@ -61,7 +61,7 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
   return (
     <div 
       className={`
-        relative w-11 h-11 rounded-full 
+        relative w-16 h-16 rounded-full 
         shadow-[4px_6px_10px_rgba(0,0,0,0.8),inset_0px_2px_4px_rgba(255,255,255,0.2)]
         border border-white/20
         flex items-center justify-center
@@ -72,20 +72,20 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean; avatar?: strin
       }}
     >
       {avatar ? (
-        <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
+        <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-black/20 shadow-inner">
              {avatar.startsWith('data:') || avatar.startsWith('http') ? (
                  <img src={avatar} alt="avatar" className="w-full h-full object-cover opacity-90" />
              ) : (
-                 <span className="text-lg drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
+                 <span className="text-2xl drop-shadow-md select-none" style={{ lineHeight: 1 }}>{avatar}</span>
              )}
         </div>
       ) : (
         <>
-            <div className="w-8 h-8 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
-            <div className="absolute w-4 h-4 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
+            <div className="w-11 h-11 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
+            <div className="absolute w-6 h-6 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
         </>
       )}
-      <div className="absolute top-2 left-3 w-4 h-3 bg-white opacity-20 rounded-full blur-[1px] pointer-events-none"></div>
+      <div className="absolute top-3 left-4 w-7 h-5 bg-white opacity-20 rounded-full blur-[1px] pointer-events-none"></div>
     </div>
   );
 };
@@ -309,16 +309,16 @@ export const Board: React.FC<BoardProps> = ({
         : (boardState.get(sourceIdx)?.stackSize || 1);
 
     if (targetShell.owner !== currentPlayer) {
-        if (targetShell.stackSize > moverSize) msg = "TOO BIG";
+        if (targetShell.stackSize > moverSize) msg = "BLOCKED: TOO LARGE";
     } else {
-        if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "FORBIDDEN";
+        if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "BLOCKED: 9 LIMIT";
     }
 
     if (msg) {
         setShakeShellId(targetId);
         setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
         setTimeout(() => setShakeShellId(null), 400);
-        setTimeout(() => setBlockedFeedback(null), 1200);
+        setTimeout(() => setBlockedFeedback(null), 1500);
         onInvalidMoveAttempt?.(sourceIdx, targetId);
     }
   };
@@ -392,12 +392,17 @@ export const Board: React.FC<BoardProps> = ({
             }
             @keyframes blockedFadeUp {
                 0% { opacity: 0; transform: translateY(0); }
-                20% { opacity: 1; transform: translateY(-10px); }
-                80% { opacity: 1; transform: translateY(-20px); }
-                100% { opacity: 0; transform: translateY(-30px); }
+                10% { opacity: 1; transform: translateY(-15px); }
+                90% { opacity: 1; transform: translateY(-25px); }
+                100% { opacity: 0; transform: translateY(-40px); }
+            }
+            @keyframes xMarkFlash {
+                0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
             }
             .animate-shake-target { animation: shake 0.4s ease-in-out; }
-            .animate-blocked-label { animation: blockedFadeUp 1.2s ease-out forwards; }
+            .animate-blocked-label { animation: blockedFadeUp 1.5s ease-out forwards; }
+            .animate-x-mark { animation: xMarkFlash 0.4s ease-out forwards; }
         `}} />
 
         {/* Center Pad */}
@@ -497,11 +502,19 @@ export const Board: React.FC<BoardProps> = ({
                     {isTarget && <div className="absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none"></div>}
                     {isSource && !dragState.isDragging && <div className="absolute w-16 h-16 rounded-full border-2 border-amber-400 opacity-50 pointer-events-none"></div>}
                     
-                    {isShaking && <div className="absolute left-1/2 top-1/2 w-16 h-16 rounded-full border-4 border-red-500/60 opacity-80 pointer-events-none animate-shake-target"></div>}
+                    {isShaking && (
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] pointer-events-none">
+                            <div className="w-20 h-20 rounded-full border-4 border-red-600/80 animate-shake-target flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" className="w-16 h-16 text-red-600 animate-x-mark" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                        </div>
+                    )}
 
                     {hasBlockedMsg && (
-                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
-                            <span className="bg-red-600 text-white font-cinzel font-bold px-3 py-1 rounded-full text-xs shadow-xl animate-blocked-label">
+                        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none">
+                            <span className="bg-red-600 text-white font-cinzel font-bold px-4 py-2 rounded-lg text-xs md:text-sm shadow-2xl border-2 border-white/20 animate-blocked-label block text-center">
                                 {blockedFeedback?.message}
                             </span>
                         </div>
@@ -518,7 +531,7 @@ export const Board: React.FC<BoardProps> = ({
                                <div 
                                 key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500"
                                 style={{ 
-                                    top: `${-(i * 4.5)}px`, 
+                                    top: `${-(i * 6)}px`, 
                                     left: `${Math.sin(i * 0.8) * 3}px`, 
                                     zIndex: i, 
                                     transform: `translate(-50%, -50%) rotate(${Math.sin(i * 1.5 + shell.id) * 12}deg)` 
@@ -530,7 +543,7 @@ export const Board: React.FC<BoardProps> = ({
                            {stackSize > 1 && (
                                <div 
                                 className="absolute left-1/2 -translate-x-1/2 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-stone-600 shadow-md backdrop-blur-sm whitespace-nowrap pointer-events-none"
-                                style={{ top: `${-25 - (Math.min(stackSize, 9) * 4.5)}px`, zIndex: 100 }}
+                                style={{ top: `${-35 - (Math.min(stackSize, 9) * 6)}px`, zIndex: 100 }}
                                >
                                    {stackSize}
                                </div>
@@ -553,7 +566,7 @@ export const Board: React.FC<BoardProps> = ({
                         50% { transform: translate(calc(var(--start-x) + (var(--end-x) - var(--start-x))/2), calc(var(--start-y) + (var(--end-y) - var(--start-y))/2 - 60px)) scale(1.3); opacity: 1; }
                         100% { transform: translate(var(--end-x), var(--end-y)) scale(1); opacity: 1; }
                     }
-                    .animate-coin-arc { animation: coinArc 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; transform-origin: center center; margin-left: -20px; margin-top: -24px; }
+                    .animate-coin-arc { animation: coinArc 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; transform-origin: center center; margin-left: -32px; margin-top: -32px; }
                 `}} />
                 <AncientCoin color={stackingAnim.color} isSelected={true} avatar={stackingAnim.avatar} />
             </div>
@@ -585,7 +598,7 @@ export const Board: React.FC<BoardProps> = ({
                     return (
                         <div className="relative">
                             {Array.from({ length: Math.min(shell.stackSize, 9) }).map((_, i) => (
-                                <div key={i} className="absolute left-1/2 -translate-x-1/2" style={{ top: `${-(i * 4)}px`, zIndex: i, transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.index) * 20}deg)` }}>
+                                <div key={i} className="absolute left-1/2 -translate-x-1/2" style={{ top: `${-(i * 6)}px`, zIndex: i, transform: `translate(-50%, 0) rotate(${Math.sin(i * 132 + shell.index) * 20}deg)` }}>
                                     <AncientCoin color={color} isSelected={true} avatar={avatar} />
                                 </div>
                             ))}

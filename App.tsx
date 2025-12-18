@@ -459,6 +459,7 @@ const App: React.FC = () => {
   const [aiThinking, setAiThinking] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(0);
+  const [isCounterPulsing, setIsCounterPulsing] = useState(false);
 
   const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep });
 
@@ -488,12 +489,26 @@ const App: React.FC = () => {
     const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15)); 
     const local = parseInt(localStorage.getItem('sho_plays_local') || '0', 10); 
     setGlobalPlayCount(baseCount + growth + local); 
+    
+    // Live Counter Simulation
+    const interval = setInterval(() => {
+        if (Math.random() > 0.4) {
+            const increment = Math.random() > 0.8 ? 2 : 1;
+            setGlobalPlayCount(prev => prev + increment);
+            setIsCounterPulsing(true);
+            setTimeout(() => setIsCounterPulsing(false), 2000);
+        }
+    }, 55000 + Math.random() * 45000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const trackGameStart = () => { 
     const newLocal = parseInt(localStorage.getItem('sho_plays_local') || '0', 10) + 1; 
     localStorage.setItem('sho_plays_local', newLocal.toString()); 
     setGlobalPlayCount(prev => prev + 1); 
+    setIsCounterPulsing(true);
+    setTimeout(() => setIsCounterPulsing(false), 1000);
   };
 
   const toggleMusic = () => { const newState = !isMusicEnabled; setIsMusicEnabled(newState); if (newState) { SFX.startAmbient(musicVolume / 100); } else { SFX.stopAmbient(); } };
@@ -816,7 +831,7 @@ const App: React.FC = () => {
 
               <div className="mt-8 text-stone-500 text-[10px] uppercase tracking-[0.3em] font-sans flex flex-col items-center gap-1 opacity-60">
                   <span>Total Games Played Worldwide</span>
-                  <span className="text-amber-600 font-bold text-xl tabular-nums drop-shadow-[0_0_10px_rgba(180,83,9,0.3)]">{globalPlayCount.toLocaleString()}</span>
+                  <span className={`text-amber-600 font-bold text-xl tabular-nums drop-shadow-[0_0_10px_rgba(180,83,9,0.3)] transition-all duration-1000 ${isCounterPulsing ? 'scale-125 text-amber-400 brightness-150' : ''}`}>{globalPlayCount.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -838,9 +853,17 @@ const App: React.FC = () => {
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center font-serif font-bold transition-colors">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-1.5 md:gap-3">
+                        <div className="grid grid-cols-2 gap-1.5 md:gap-3 pt-2">
                             {players.map((p, i) => (
-                                <div key={p.id} className={`p-1 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg scale-102' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                <div key={p.id} className={`relative p-1 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-lg scale-102' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                    {/* Turn Indicator Arrow */}
+                                    {turnIndex === i && (
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white animate-bounce pointer-events-none z-30">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ filter: `drop-shadow(0 0 4px ${p.colorHex})` }}>
+                                                <path d="M12 21l-12-18h24z" />
+                                            </svg>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
                                         <div className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden border border-white/20 flex items-center justify-center bg-black/40">
                                             {p.avatar && (p.avatar.startsWith('data:') ? <img src={p.avatar} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-sm md:text-xl">{p.avatar}</span>)}
@@ -895,6 +918,11 @@ const App: React.FC = () => {
                                 )}
                                 <div className="mt-2 flex-grow bg-black/40 rounded-lg border border-stone-800/50 p-1 md:p-3 overflow-y-auto font-mono text-[9px] md:text-[10px] no-scrollbar">
                                     {logs.map((log) => <div key={log.id} className={`mb-1 ${log.type === 'alert' ? 'text-amber-400 font-bold' : 'text-stone-500'}`}>{log.message}</div>)}
+                                </div>
+                                <div className="mt-2 flex items-center justify-center gap-2 border-t border-stone-800/50 pt-2 opacity-60">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                    <span className="text-[9px] md:text-[10px] uppercase tracking-widest text-stone-400">Total Games Played:</span>
+                                    <span className={`text-[10px] md:text-xs font-bold text-amber-500 tabular-nums transition-transform duration-500 ${isCounterPulsing ? 'scale-110' : ''}`}>{globalPlayCount.toLocaleString()}</span>
                                 </div>
                             </div>
                         )}
