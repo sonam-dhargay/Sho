@@ -19,7 +19,8 @@ const PEER_CONFIG = {
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
         ]
     }
 };
@@ -759,21 +760,40 @@ const App: React.FC = () => {
     setJoinError(null); 
     setHasOpponentJoined(false); 
     const peer = new Peer(undefined, PEER_CONFIG); 
-    peer.on('open', (id) => setGameId(id)); 
-    peer.on('error', (err) => { setJoinError(`Network Error: ${err.type}`); console.error(err); }); 
+    
+    peer.on('open', (id) => {
+        setGameId(id);
+        addLog("Host ID ready.");
+    });
+
+    peer.on('error', (err) => { 
+        setJoinError(`Host Error: ${err.type}`); 
+        console.error("PeerJS Host Error:", err);
+    }); 
+
     peer.on('connection', (conn) => { 
         connRef.current = conn; 
         conn.on('open', () => {
             setPeerConnected(true);
             addLog("Guest connected!");
+            // Explicit acknowledgment back to guest
+            conn.send({ type: 'JOIN_ACK' });
         });
         conn.on('data', (data: any) => { 
-            if (data.type === 'JOIN_REQ') { setHasOpponentJoined(true); initializeGame(data.payload); return; } 
+            if (data.type === 'JOIN_REQ') { 
+                setHasOpponentJoined(true); 
+                initializeGame(data.payload); 
+                return; 
+            } 
             if (data.type === 'ROLL_REQ') performRoll(); 
             if (data.type === 'MOVE_REQ') performMove(data.payload.source, data.payload.target); 
             if (data.type === 'SKIP_REQ') handleSkipTurn(); 
         }); 
-        conn.on('close', () => { setPeerConnected(false); setHasOpponentJoined(false); addLog("Opponent disconnected.", "alert"); }); 
+        conn.on('close', () => { 
+            setPeerConnected(false); 
+            setHasOpponentJoined(false); 
+            addLog("Opponent disconnected.", "alert"); 
+        }); 
     }); 
     peerRef.current = peer; 
     setMyPlayerIndex(0); 
@@ -785,37 +805,68 @@ const App: React.FC = () => {
     cleanupPeer();
     setIsJoining(true); 
     setJoinError(null); 
+    
     const peer = new Peer(undefined, PEER_CONFIG); 
-    peer.on('error', (err) => { setJoinError(`ID not found or network error.`); setIsJoining(false); }); 
-    peer.on('open', (id) => { 
-        const conn = peer.connect(joinId, { reliable: true }); 
-        connRef.current = conn; 
-        conn.on('open', () => { 
-            conn.send({ type: 'JOIN_REQ', payload: { name: playerName, color: selectedColor, avatar: selectedAvatar } }); 
-            setPeerConnected(true); 
-            setGameMode(GameMode.ONLINE_GUEST); 
-            setMyPlayerIndex(1); 
-            setIsJoining(false); 
-            addLog("Joined game!");
-        }); 
-        conn.on('data', (data: any) => { 
-            if (data.type === 'SYNC') { 
-                const p = data.payload; 
-                setBoard(deserializeBoard(p.board)); 
-                setPlayers(p.players); 
-                setTurnIndex(p.turnIndex); 
-                setPhase(p.phase); 
-                setLastRoll(p.lastRoll); 
-                setIsRolling(p.isRolling); 
-                setPendingMoveValues(p.pendingMoveValues); 
-                setWaitingForPaRa(p.waitingForPaRa); 
-                setLastMove(p.lastMove); 
-                setTotalMoves(p.totalMoves); 
-                if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode); 
-            } 
-        }); 
-        conn.on('close', () => { setPeerConnected(false); addLog("Disconnected from Host.", "alert"); setGameMode(null); }); 
+    
+    peer.on('open', (id) => {
+        // Wait 1 second after our peer is open before connecting to signaling server
+        // to mitigate race condition where host ID is not yet propagated.
+        setTimeout(() => {
+            const conn = peer.connect(joinId.trim(), { reliable: true }); 
+            connRef.current = conn; 
+
+            conn.on('open', () => { 
+                conn.send({ type: 'JOIN_REQ', payload: { name: playerName, color: selectedColor, avatar: selectedAvatar } }); 
+                setPeerConnected(true); 
+                setGameMode(GameMode.ONLINE_GUEST); 
+                setMyPlayerIndex(1); 
+                setIsJoining(false); 
+                addLog("Successfully joined!");
+            }); 
+
+            conn.on('data', (data: any) => { 
+                if (data.type === 'JOIN_ACK') {
+                    addLog("Connection verified by Host.");
+                }
+                if (data.type === 'SYNC') { 
+                    const p = data.payload; 
+                    setBoard(deserializeBoard(p.board)); 
+                    setPlayers(p.players); 
+                    setTurnIndex(p.turnIndex); 
+                    setPhase(p.phase); 
+                    setLastRoll(p.lastRoll); 
+                    setIsRolling(p.isRolling); 
+                    setPendingMoveValues(p.pendingMoveValues); 
+                    setWaitingForPaRa(p.waitingForPaRa); 
+                    setLastMove(p.lastMove); 
+                    setTotalMoves(p.totalMoves); 
+                    if (p.isNinerMode !== undefined) setIsNinerMode(p.isNinerMode); 
+                } 
+            }); 
+
+            conn.on('close', () => { 
+                setPeerConnected(false); 
+                addLog("Disconnected from Host.", "alert"); 
+                setGameMode(null); 
+            });
+
+            conn.on('error', (err) => {
+                setJoinError(`Connection error: ${err.message}`);
+                setIsJoining(false);
+            });
+        }, 1000);
+    });
+
+    peer.on('error', (err) => { 
+        if (err.type === 'peer-unavailable') {
+            setJoinError(`Game ID "${joinId}" not found. Verify with host.`);
+        } else {
+            setJoinError(`Guest Error: ${err.type}`);
+        }
+        setIsJoining(false); 
+        console.error("PeerJS Guest Error:", err);
     }); 
+    
     peerRef.current = peer; 
   };
 
@@ -930,7 +981,7 @@ const App: React.FC = () => {
                         <input type="text" placeholder="ID" className="w-full bg-black border border-stone-700 p-2 rounded text-stone-300 focus:border-amber-500 outline-none text-xs" value={joinId} onChange={e => setJoinId(e.target.value)} />
                         <button onClick={joinGame} className="bg-stone-700 hover:bg-stone-600 text-white px-3 rounded font-bold text-xs">{isJoining ? '...' : 'JOIN'}</button>
                     </div>
-                    {joinError && <p className="text-red-500 text-[9px] mt-2 font-sans font-bold">{joinError}</p>}
+                    {joinError && <p className="text-red-500 text-[9px] mt-2 font-sans font-bold leading-tight">{joinError}</p>}
                   </div>
               </div>
 
@@ -977,7 +1028,7 @@ const App: React.FC = () => {
                         )}
                     </div>
                     {gameId && (
-                        <div className="bg-green-900/20 text-green-500 text-[10px] px-3 py-1 rounded-full border border-green-800 mb-4 uppercase tracking-widest font-bold">
+                        <div className="bg-green-900/20 text-green-500 text-[10px] px-3 py-1 rounded-full border border-green-800 mb-4 uppercase tracking-widest font-bold animate-pulse">
                             Server Ready
                         </div>
                     )}
