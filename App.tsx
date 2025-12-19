@@ -487,8 +487,10 @@ const App: React.FC = () => {
 
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden">
-                    <div className="p-4 flex flex-col gap-3 flex-shrink-0">
+                {/* Sidebar - Always visible controls on mobile */}
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0">
+                    {/* Header & Stats - Fixed */}
+                    <div className="p-4 flex flex-col gap-3 flex-shrink-0 bg-stone-950">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-4">
                             <h1 onClick={() => setGameMode(null)} className="cursor-pointer text-amber-500 text-2xl font-cinzel">ཤོ Sho</h1>
                             <div className="flex gap-2">
@@ -519,38 +521,52 @@ const App: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="flex-1 flex flex-col p-4 pt-0 gap-4 overflow-y-auto no-scrollbar">
+
+                    {/* Interactive Game Controls - Fixed and prioritized */}
+                    <div className="px-4 pb-2 flex flex-col gap-2 flex-shrink-0 bg-stone-950">
                         {phase === GamePhase.GAME_OVER ? (
-                            <div className="text-center p-8 bg-stone-800 rounded-xl border border-amber-500">
-                                <h2 className="text-4xl text-amber-400 mb-2 font-cinzel">Victory རྒྱལ་ཁ།</h2>
-                                <p className="mb-4 font-serif">{winner?.name} won! ལ་རྒྱལ་ཁ་ཐོབ་སོང་།</p>
-                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-6 py-2 rounded-full font-bold uppercase tracking-widest font-cinzel text-xs">New Game</button>
+                            <div className="text-center p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
+                                <h2 className="text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
+                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-4 py-1 rounded-full font-bold uppercase text-[10px] mt-1">New Game</button>
                             </div>
                         ) : (
-                            <div className="flex flex-col flex-grow">
-                                <div className="flex-shrink-0">
-                                    <DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} />
-                                </div>
-                                {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (
-                                    <button onClick={handleSkipTurn} className="mt-4 flex-shrink-0 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-3 rounded-xl font-bold flex flex-col items-center font-cinzel">
-                                      <span>Skip Turn སྐོར་ཐེངས་འདི་ཤོར།</span>
-                                    </button>
-                                )}
-                                <div className="mt-4 flex-shrink-0 flex flex-col gap-2">
-                                    <div onClick={() => { if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); }} className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20' : 'border-stone-800 bg-stone-900/50'}`}>
-                                        <div className="flex flex-col items-center">
-                                            <span className="font-bold tracking-widest uppercase font-cinzel text-sm">From Hand</span>
-                                            <span className="text-[10px] text-stone-500 font-serif">ལག་པ་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand} left)</span>
-                                        </div>
+                            <div className="flex flex-col gap-2">
+                                <DiceArea 
+                                  currentRoll={lastRoll} 
+                                  onRoll={performRoll} 
+                                  canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} 
+                                  pendingValues={pendingMoveValues} 
+                                  waitingForPaRa={waitingForPaRa} 
+                                  flexiblePool={null} 
+                                />
+                                
+                                <div className="flex gap-2">
+                                    <div 
+                                        onClick={() => { if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); }} 
+                                        className={`flex-1 p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-inner' : 'border-stone-800 bg-stone-900/50'}`}
+                                    >
+                                        <span className="font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-sm">From Hand</span>
+                                        <span className="text-[9px] text-stone-500 font-serif">ལག་པ་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
                                     </div>
-                                </div>
-                                <div className="mt-4 flex-grow bg-black/40 rounded-lg p-3 overflow-y-auto no-scrollbar font-mono text-[10px] text-stone-500 min-h-[100px] border border-stone-800">
-                                    {logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
+                                    
+                                    {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (
+                                        <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-2 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
+                                            <span className="text-[10px]">Skip Turn</span>
+                                            <span className="text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
+
+                    {/* Scrollable Logs - Takes remaining sidebar space */}
+                    <div className="flex-grow bg-black/40 mx-4 mb-2 rounded-lg p-3 overflow-y-auto no-scrollbar font-mono text-[9px] text-stone-500 border border-stone-800">
+                        {logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
+                    </div>
                 </div>
+
+                {/* Main Game Board - Takes remaining screen height */}
                 <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
