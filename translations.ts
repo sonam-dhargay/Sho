@@ -24,7 +24,7 @@ export const T = {
   game: {
     inHand: { en: "In", bo: "ལག་ཐོག།" },
     finished: { en: "Out", bo: "གདན་ཐོག" },
-    fromHand: { en: "From Hand", bo: "ལག་པ་ཁྱི་བཙུགས།" },
+    fromHand: { en: "From Hand", bo: "ལག་ཁྱི་བཙུགས།" },
     skipTurn: { en: "Skip Turn", bo: "སྐོར་ཐེངས་འདི་སྐྱུར།" },
     victory: { en: "Victory", bo: "རྒྱལ་ཁ།" },
     newGame: { en: "New Game", bo: "རྩེད་མོ་གསར་དུ་འགོ་ཚུགས།" },
