@@ -9,7 +9,6 @@ import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { GoogleGenAI } from "@google/genai";
-import { T } from './translations';
 
 // --- Player Generation Helper ---
 const generatePlayers = (
@@ -101,6 +100,7 @@ const SFX = {
 
     SFX.musicIntervals.push(window.setInterval(() => {
         const t = ctx.currentTime;
+        if (!SFX.masterMusicGain) return;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.type = 'sine';
@@ -109,7 +109,7 @@ const SFX = {
         g.gain.setValueAtTime(0.05, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
         osc.connect(g);
-        g.connect(masterGain!);
+        g.connect(SFX.masterMusicGain);
         osc.start(t);
         osc.stop(t + 0.5);
     }, 4000));
@@ -288,14 +288,14 @@ const CameraModal: React.FC<{ onCapture: (data: string) => void; onClose: () => 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4">
             <div className="bg-stone-900 p-6 rounded-2xl border border-stone-800 flex flex-col items-center">
-                <h3 className="text-amber-500 font-cinzel text-xl mb-4">{T.lobby.cameraLabel.en} {T.lobby.cameraLabel.bo}</h3>
+                <h3 className="text-amber-500 font-cinzel text-xl mb-4">Capture Profile Photo པར་རྒྱོབ།</h3>
                 <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-amber-600 shadow-2xl mb-6 bg-black">
                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                 </div>
                 <canvas ref={canvasRef} width={300} height={300} className="hidden" />
                 <div className="flex gap-4">
-                    <button onClick={onClose} className="px-6 py-2 rounded-lg bg-stone-800 text-stone-400 font-bold uppercase tracking-widest text-xs">{T.common.cancel.en} {T.common.cancel.bo}</button>
-                    <button onClick={capture} className="px-6 py-2 rounded-lg bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/40 uppercase tracking-widest text-xs">{T.lobby.cameraButton.en} {T.lobby.cameraButton.bo}</button>
+                    <button onClick={onClose} className="px-6 py-2 rounded-lg bg-stone-800 text-stone-400 font-bold uppercase tracking-widest text-xs">Cancel རྩིས་མེད་གཏོང་།</button>
+                    <button onClick={capture} className="px-6 py-2 rounded-lg bg-amber-600 text-white font-bold shadow-lg shadow-amber-900/40 uppercase tracking-widest text-xs">Snap! པར་རྒྱོབ།</button>
                 </div>
             </div>
         </div>
@@ -336,8 +336,6 @@ const App: React.FC = () => {
   useEffect(() => { gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep }; }, [board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep]);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
-
-  const speak = (text: string) => { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); u.rate = 1.1; window.speechSynthesis.speak(u); } };
 
   useEffect(() => { 
     const baseCount = 18742; 
@@ -418,102 +416,102 @@ const App: React.FC = () => {
         {showCamera && <CameraModal onCapture={(data) => setSelectedAvatar(data)} onClose={() => setShowCamera(false)} />}
 
         {!gameMode && (
-          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 font-serif overflow-y-auto flex flex-col items-center justify-center p-4">
-               <h1 className="flex items-center gap-4 mb-4">
-                  <span className="text-7xl opacity-70">{T.lobby.title.bo}</span> 
-                  <span className="text-5xl">{T.lobby.title.en}</span>
+          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-start md:justify-center p-4 pt-12 md:pt-4">
+               <h1 className="flex items-center gap-4 mb-4 font-cinzel">
+                  <span className="text-7xl opacity-70 font-serif">ཤོ</span> 
+                  <span className="text-5xl">Sho</span>
                </h1>
-               <p className="text-amber-400/80 mb-2 text-xl font-serif text-center">{T.lobby.verse.bo}</p>
-               <p className="text-stone-400 tracking-widest uppercase text-xs mb-8">{T.lobby.subtitle.en} {T.lobby.subtitle.bo}</p>
+               <p className="text-amber-400/80 mb-2 text-xl text-center font-serif">པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།</p>
+               <p className="text-stone-400 tracking-widest uppercase text-xs mb-8">Traditional Tibetan Dice Game <span className="font-serif">བོད་ཀྱི་ཤོ་རྩེད་སྲོལ་རྒྱུན་མ།</span></p>
               
                <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
                   <div className="mb-4">
                       <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between">
-                        <span>{T.lobby.nameLabel.en}</span><span className="font-serif opacity-50">{T.lobby.nameLabel.bo}</span>
+                        <span>Your Name</span><span className="opacity-50 font-serif">ཁྱེད་ཀྱི་མིང་།</span>
                       </label>
-                      <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200" maxLength={15} />
+                      <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200 outline-none focus:border-amber-500" maxLength={15} />
                   </div>
                   <div className="mb-4">
                       <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between">
-                        <span>{T.lobby.colorLabel.en}</span><span className="font-serif opacity-50">{T.lobby.colorLabel.bo}</span>
+                        <span>Choose Color</span><span className="opacity-50 font-serif">ཚོས་གཞི་དོམ།</span>
                       </label>
                       <div className="flex gap-2">
                           {COLOR_PALETTE.map((c) => (
-                              <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 ${selectedColor === c.hex ? 'border-white' : 'border-transparent'}`} style={{ backgroundColor: c.hex }} />
+                              <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 ${selectedColor === c.hex ? 'border-white shadow-[0_0_8px_white]' : 'border-transparent opacity-70'}`} style={{ backgroundColor: c.hex }} />
                           ))}
                       </div>
                   </div>
                   <div className="mb-4">
                        <label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between">
-                        <span>{T.lobby.avatarLabel.en}</span><span className="font-serif opacity-50">{T.lobby.avatarLabel.bo}</span>
+                        <span>Select Avatar</span><span className="opacity-50 font-serif">གཟུགས་བརྙན་དོམ།</span>
                        </label>
                        <div className="flex gap-2">
                            {AVATAR_PRESETS.map((av) => (
                                <button key={av} onClick={() => setSelectedAvatar(av)} className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}>{av}</button>
                            ))}
-                           <button onClick={() => setShowCamera(true)} className="w-8 h-8 rounded-lg border border-stone-700 hover:bg-stone-800">📸</button>
+                           <button onClick={() => setShowCamera(true)} className="w-8 h-8 rounded-lg border border-stone-700 hover:bg-stone-800 flex items-center justify-center">📸</button>
                        </div>
                   </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mb-6">
-                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
-                    <div className="text-3xl mb-1">🏔️</div>
-                    <h3 className="text-lg font-bold uppercase">{T.lobby.modeLocal.en}</h3>
-                    <span className="text-[10px] font-serif opacity-50">{T.lobby.modeLocal.bo}</span>
+              <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mb-6 px-2">
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center group transition-colors" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
+                    <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">🏔️</div>
+                    <h3 className="text-lg font-bold uppercase font-cinzel">Local</h3>
+                    <span className="text-[10px] opacity-50 font-serif">ས་གནས་སུ་རྩེ།</span>
                   </div>
-                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
-                    <div className="text-3xl mb-1">🤖</div>
-                    <h3 className="text-lg font-bold uppercase">{T.lobby.modeAI.en}</h3>
-                    <span className="text-[10px] font-serif opacity-50">{T.lobby.modeAI.bo}</span>
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center group transition-colors" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
+                    <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">🤖</div>
+                    <h3 className="text-lg font-bold uppercase font-cinzel">Vs AI</h3>
+                    <span className="text-[10px] opacity-50 font-serif">མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།</span>
                   </div>
               </div>
 
               <div className="flex gap-8 mb-8">
                   <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center">
-                      <span className="font-bold uppercase text-xs tracking-widest">{T.lobby.tutorial.en}</span>
-                      <span className="font-serif text-[10px]">{T.lobby.tutorial.bo}</span>
+                      <span className="font-bold uppercase text-xs tracking-widest font-cinzel">Tutorial</span>
+                      <span className="text-[10px] font-serif">རྩེ་སྟང་མྱུར་ཁྲིད།</span>
                   </button>
                   <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center">
-                      <span className="font-bold uppercase text-xs tracking-widest">{T.lobby.rules.en}</span>
-                      <span className="font-serif text-[10px]">{T.lobby.rules.bo}</span>
+                      <span className="font-bold uppercase text-xs tracking-widest font-cinzel">Rules</span>
+                      <span className="text-[10px] font-serif">ཤོ་ཡི་སྒྲིག་གཞི།</span>
                   </button>
               </div>
 
               <div className="text-stone-500 text-[10px] uppercase tracking-widest text-center">
-                  {T.lobby.totalPlayed.en} {T.lobby.totalPlayed.bo}<br/>
-                  <span className={`text-amber-600 font-bold text-xl tabular-nums ${isCounterPulsing ? 'scale-110 text-amber-400' : ''}`}>{globalPlayCount.toLocaleString()}</span>
+                  Total Games Played <span className="font-serif">འཛམ་གླིང་ཁྱོན་ཡོངས་སུ་རྩེད་གྲངས།</span><br/>
+                  <span className={`text-amber-600 font-bold text-xl tabular-nums transition-all duration-700 inline-block ${isCounterPulsing ? 'scale-125 text-amber-400 brightness-125' : ''}`}>{globalPlayCount.toLocaleString()}</span>
               </div>
           </div>
         )}
 
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-r border-stone-800 bg-stone-950 z-20 shadow-2xl overflow-hidden">
-                    <div className="p-4 flex flex-col gap-3">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden">
+                    <div className="p-4 flex flex-col gap-3 flex-shrink-0">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-4">
-                            <h1 onClick={() => setGameMode(null)} className="cursor-pointer text-amber-500 font-serif text-2xl">ཤོ Sho</h1>
+                            <h1 onClick={() => setGameMode(null)} className="cursor-pointer text-amber-500 text-2xl font-cinzel">ཤོ Sho</h1>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-8 h-8 rounded-full border border-stone-600 flex items-center justify-center ${isMusicEnabled ? 'text-amber-500 border-amber-500' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
-                                <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 font-serif">?</button>
+                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-8 h-8 rounded-full border border-stone-600 flex items-center justify-center ${isMusicEnabled ? 'text-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
+                                <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center">?</button>
                             </div>
                         </header>
                         <div className="grid grid-cols-2 gap-3">
                             {players.map((p, i) => (
-                                <div key={p.id} className={`p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                <div key={p.id} className={`p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="w-8 h-8 rounded-full overflow-hidden bg-black/40 flex items-center justify-center">
                                             {p.avatar?.startsWith('data:') ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-xl">{p.avatar}</span>}
                                         </div>
-                                        <h3 className="font-bold font-serif truncate text-xs" style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <h3 className="font-bold truncate text-xs font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
                                     <div className="flex justify-between text-[10px] text-stone-400">
                                         <div className="flex flex-col">
-                                          <span className="uppercase opacity-50">{T.game.inHand.en}</span>
+                                          <span className="uppercase opacity-50 text-[8px]">In <span className="font-serif">ལག་ཐོག།</span></span>
                                           <span className="font-bold text-stone-200">{p.coinsInHand}</span>
                                         </div>
                                         <div className="flex flex-col items-end">
-                                          <span className="uppercase opacity-50">{T.game.finished.en}</span>
+                                          <span className="uppercase opacity-50 text-[8px]">Out <span className="font-serif">གདན་ཐོག</span></span>
                                           <span className="font-bold text-amber-500">{p.coinsFinished}</span>
                                         </div>
                                     </div>
@@ -521,38 +519,40 @@ const App: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="flex-1 flex flex-col p-4 gap-4">
+                    <div className="flex-1 flex flex-col p-4 pt-0 gap-4 overflow-y-auto no-scrollbar">
                         {phase === GamePhase.GAME_OVER ? (
                             <div className="text-center p-8 bg-stone-800 rounded-xl border border-amber-500">
-                                <h2 className="text-4xl text-amber-400 mb-2 font-cinzel">{T.game.victory.en} {T.game.victory.bo}</h2>
-                                <p className="mb-4">{winner?.name} {T.game.wonMsg.en} {T.game.wonMsg.bo}</p>
-                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-6 py-2 rounded-full font-bold uppercase tracking-widest">{T.game.newGame.en}</button>
+                                <h2 className="text-4xl text-amber-400 mb-2 font-cinzel">Victory རྒྱལ་ཁ།</h2>
+                                <p className="mb-4 font-serif">{winner?.name} won! ལ་རྒྱལ་ཁ་ཐོབ་སོང་།</p>
+                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-6 py-2 rounded-full font-bold uppercase tracking-widest font-cinzel text-xs">New Game</button>
                             </div>
                         ) : (
                             <div className="flex flex-col flex-grow">
-                                <DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} />
+                                <div className="flex-shrink-0">
+                                    <DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} />
+                                </div>
                                 {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (
-                                    <button onClick={handleSkipTurn} className="mt-4 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-3 rounded-xl font-cinzel font-bold flex flex-col items-center">
-                                      <span>{T.game.skipTurn.en}</span><span className="text-[10px] font-serif">{T.game.skipTurn.bo}</span>
+                                    <button onClick={handleSkipTurn} className="mt-4 flex-shrink-0 w-full bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-3 rounded-xl font-bold flex flex-col items-center font-cinzel">
+                                      <span>Skip Turn སྐོར་ཐེངས་འདི་ཤོར།</span>
                                     </button>
                                 )}
-                                <div className="mt-4 flex flex-col gap-2">
+                                <div className="mt-4 flex-shrink-0 flex flex-col gap-2">
                                     <div onClick={() => { if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); }} className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20' : 'border-stone-800 bg-stone-900/50'}`}>
                                         <div className="flex flex-col items-center">
-                                            <span className="font-cinzel font-bold tracking-widest">{T.game.fromHand.en}</span>
-                                            <span className="font-serif text-xs text-stone-500">{T.game.fromHand.bo} {players[turnIndex].coinsInHand}</span>
+                                            <span className="font-bold tracking-widest uppercase font-cinzel text-sm">From Hand</span>
+                                            <span className="text-[10px] text-stone-500 font-serif">ལག་པ་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand} left)</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="mt-4 flex-grow bg-black/40 rounded-lg p-3 overflow-y-auto no-scrollbar font-mono text-[10px] text-stone-500">
+                                <div className="mt-4 flex-grow bg-black/40 rounded-lg p-3 overflow-y-auto no-scrollbar font-mono text-[10px] text-stone-500 min-h-[100px] border border-stone-800">
                                     {logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
-                <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden" ref={boardContainerRef}>
-                    <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform">
+                <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full" ref={boardContainerRef}>
+                    <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode}
                         />

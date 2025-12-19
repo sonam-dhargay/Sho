@@ -1,6 +1,5 @@
 import React from 'react';
 import { DiceRoll } from '../types';
-import { T } from '../translations';
 
 interface DiceAreaProps {
   currentRoll: DiceRoll | null;
@@ -24,16 +23,15 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
         
         {flexiblePool !== null && (
             <div className="w-full bg-amber-900/40 border border-amber-600/50 rounded-lg p-3 text-center mb-4 animate-pulse">
-                <div className="text-amber-400 text-[10px] uppercase font-bold">{T.game.flexiblePool.en}</div>
+                <div className="text-amber-400 text-[10px] uppercase font-bold">Flexible Pa Ra Pool པ་ར་བཞུགས།</div>
                 <div className="text-4xl font-cinzel text-white">{flexiblePool}</div>
-                <div className="text-stone-400 text-[10px] font-serif">{T.game.flexiblePool.bo}</div>
             </div>
         )}
 
         {pendingValues.length > 0 && flexiblePool === null && (
             <div className="w-full mb-4">
                 <div className="text-[10px] text-stone-400 uppercase tracking-widest text-center mb-2 flex flex-col items-center">
-                  <span>{T.game.movesAvailable.en}</span><span className="opacity-50 font-serif">{T.game.movesAvailable.bo}</span>
+                  <span>Available Moves ཤོ་མིག་གྲངས།</span>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-center">
                     {pendingValues.map((val, idx) => (
@@ -45,8 +43,7 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
 
         {!waitingForPaRa && flexiblePool === null && pendingValues.length === 0 && (
              <div className="flex flex-col items-center text-stone-500 text-sm italic mb-4">
-                 <span>{canRoll ? T.game.readyToRoll.en : T.game.waiting.en}</span>
-                 <span className="font-serif opacity-40">{canRoll ? T.game.readyToRoll.bo : T.game.waiting.bo}</span>
+                 <span>{canRoll ? "Ready to roll... ཤོ་རྒྱག་ཆོག་རེད་།" : "Waiting... སྒུག་བཞུགས།"}</span>
              </div>
         )}
 
@@ -60,10 +57,10 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
             `}
         >
             {waitingForPaRa 
-                ? (<><span>{T.game.rollBonus.en}</span><span className="text-xs font-serif">{T.game.rollBonus.bo}</span></>) 
+                ? (<><span>ROLL BONUS! པ་ར།</span></>) 
                 : canRoll 
-                    ? (<><span>{T.game.rollDice.en}</span><span className="text-xs font-serif">{T.game.rollDice.bo}</span></>) 
-                    : (<><span>{T.game.selectMove.en}</span><span className="text-xs font-serif">{T.game.selectMove.bo}</span></>)
+                    ? (<><span>ROLL DICE ཤོ་རྒྱོབ།</span></>) 
+                    : (<><span>SELECT MOVE ག་རེ་གནང་ག།</span></>)
             }
         </button>
     </div>
