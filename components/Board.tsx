@@ -300,18 +300,23 @@ export const Board: React.FC<BoardProps> = ({
 
   const triggerBlockedFeedback = (targetId: number, sourceIdx: number) => {
     const targetShell = boardState.get(targetId);
-    if (!targetShell?.owner) return; 
-
     let msg = "";
     const currentPlayerObj = players.find(p => p.id === currentPlayer);
     let moverSize = sourceIdx === 0 
         ? (currentPlayerObj?.coinsInHand === COINS_PER_PLAYER ? 2 : 1) 
         : (boardState.get(sourceIdx)?.stackSize || 1);
 
-    if (targetShell.owner !== currentPlayer) {
-        if (targetShell.stackSize > moverSize) msg = "BLOCKED: TOO LARGE";
-    } else {
-        if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "BLOCKED: 9 LIMIT";
+    if (targetShell) {
+        if (targetShell.owner && targetShell.owner !== currentPlayer) {
+            if (targetShell.stackSize > moverSize) msg = "BLOCKED: TOO LARGE བཀག།";
+            else msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+        } else if (targetShell.owner === currentPlayer) {
+            if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "BLOCKED: 9 LIMIT དགུ་བརྩེགས་མི་ཆོག།";
+            else msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+        } else {
+            // Empty shell but not in validMoves
+            msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+        }
     }
 
     if (msg) {

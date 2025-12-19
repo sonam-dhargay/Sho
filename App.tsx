@@ -421,8 +421,8 @@ const App: React.FC = () => {
                   <span className="text-7xl opacity-70 font-serif">ཤོ</span> 
                   <span className="text-5xl">Sho</span>
                </h1>
-               <p className="text-amber-400/80 mb-2 text-xl text-center font-serif">པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།</p>
-               <p className="text-stone-400 tracking-widest uppercase text-xs mb-8">Traditional Tibetan Dice Game <span className="font-serif">བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་ཤོ་རྩེད།</span></p>
+               <p className="text-amber-400/60 mb-2 text-sm text-center font-serif tracking-widest italic">པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།</p>
+               <p className="text-stone-400 tracking-widest uppercase text-xs mb-8">Traditional Tibetan Dice Game <span className="font-serif">བོད་ཀྱི་ཤོ་རྩེད་སྲོལ་རྒྱུན་མ།</span></p>
               
                <div className="mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800">
                   <div className="mb-4">
@@ -575,7 +575,7 @@ const App: React.FC = () => {
                 <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[52dvh] md:h-full" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
-                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode}
+                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playHandBlocked()}
                         />
                     </div>
                 </div>
