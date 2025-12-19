@@ -15,7 +15,7 @@ export const T = {
     avatarLabel: { en: "Select Avatar", bo: "གཟུགས་བརྙན་དོམ།" },
     cameraLabel: { en: "Capture Profile Photo", bo: "པར་རྒྱོབ།" },
     cameraButton: { en: "Snap!", bo: "པར་རྒྱོབ།" },
-    modeLocal: { en: "Local", bo: "ས་གནས་སུ་རྩེ།" },
+    modeLocal: { en: "Local", bo: "རང་ཤག་ཏུ་་རྩེ།" },
     modeAI: { en: "Vs AI", bo: "མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།" },
     tutorial: { en: "Tutorial", bo: "རྩེ་སྟངས་མྱུར་ཁྲིད།" },
     rules: { en: "Rules", bo: "ཤོ་ཡི་སྒྲིག་གཞི།" },
