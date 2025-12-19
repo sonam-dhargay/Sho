@@ -56,8 +56,13 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
               </div>
           </section>
 
+          <section className="bg-stone-800/50 p-4 rounded-lg border border-stone-700">
+            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Blocking བཀག་སྟངས།</h3>
+            <p className="text-sm">You cannot land on an opponent's stack that is larger than your own. It is 'blocked'. རང་ལས་མང་བའི་ཁ་གཏད་ཀྱི་ལག་ཁྱིའི་ཐོག་ཏུ་བབས་མི་ཆོག། དེ་ལ་བཀག་པ་ཟེར།</p>
+          </section>
+
           <section>
-            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་མཇུག་སྒྲིལ་སྟངས།</h3>
+            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་ mjug sgril stangs.</h3>
             <p className="text-sm">You must roll a number that takes your piece past the 64th shell. ཁྱེད་རང་གི་ལག་ཁྱི་དེ་རྡེའུ་ ༦༤ བརྒལ་བར་འགྲོ་ཐུབ་པའི་་ཤོ་མིག་ཞིག་བབས་དགོས།</p>
             <p className="text-sm mt-2">The first player to move all 9 coins off the board wins! ལག་ཁྱི་་ ༩ ཆར་ཚང་མ་ལ་བརྒལ་མཁན་དེ་ལ་རྒྱལ་ཁ་ཐོབ་པ་་ཡིན།</p>
           </section>
