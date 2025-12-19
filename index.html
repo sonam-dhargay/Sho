@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -24,6 +23,8 @@
         font-family: 'Lato', sans-serif;
         background-color: #1a1a1a;
         color: #f3f4f6;
+        margin: 0;
+        overflow: hidden;
       }
       
       h1, h2, h3, button {
@@ -32,17 +33,46 @@
 
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
+        width: 4px;
       }
       ::-webkit-scrollbar-track {
-        background: #2d2d2d; 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #555; 
+        background: rgba(168, 85, 247, 0.2); 
         border-radius: 4px;
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #777; 
+
+      /* Mobile Landscape Optimization */
+      @media (orientation: landscape) and (max-height: 500px) {
+        .mobile-landscape-row {
+          flex-direction: row !important;
+        }
+        .mobile-landscape-sidebar {
+          width: 35% !important;
+          height: 100vh !important;
+          border-right: 1px solid #2d2d2d;
+          border-bottom: none !important;
+        }
+        .mobile-landscape-board {
+          width: 65% !important;
+          height: 100vh !important;
+        }
+        .mobile-landscape-hide-logs {
+          display: none !important;
+        }
+        .mobile-landscape-compact-stats {
+          padding: 0.25rem !important;
+          gap: 0.25rem !important;
+        }
+      }
+      
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
   <script type="importmap">
