@@ -470,7 +470,7 @@ const App: React.FC = () => {
               <div className="flex gap-8 mb-8">
                   <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center">
                       <span className="font-bold uppercase text-xs tracking-widest font-cinzel">Tutorial</span>
-                      <span className="text-[10px] font-serif">རྩེ་སྟང་མྱུར་ཁྲིད།</span>
+                      <span className="text-[10px] font-serif">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
                   </button>
                   <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center">
                       <span className="font-bold uppercase text-xs tracking-widest font-cinzel">Rules</span>
@@ -546,13 +546,13 @@ const App: React.FC = () => {
                                         className={`flex-1 p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-inner' : 'border-stone-800 bg-stone-900/50'}`}
                                     >
                                         <span className="font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-sm">From Hand</span>
-                                        <span className="text-[9px] text-stone-500 font-serif">ལག་པ་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
+                                        <span className="text-[9px] text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
                                     </div>
                                     
                                     {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (
                                         <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-2 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
                                             <span className="text-[10px]">Skip Turn</span>
-                                            <span className="text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span>
+                                            <span className="text-[9px] font-serif">རྒྱག་ཐེངས་འདི་སྐྱུར།</span>
                                         </button>
                                     )}
                                 </div>
