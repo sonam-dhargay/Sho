@@ -26,7 +26,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
         <div className="p-6 space-y-8 font-sans text-stone-300 leading-relaxed">
           <section className="bg-stone-800/50 p-4 rounded-lg border border-stone-700 flex flex-col md:flex-row justify-between gap-4">
               <div>
-                  <h4 className="font-bold text-amber-400 mb-2">Game Variant རྩེད་མོ་འདམ་ག།: {isNinerMode ? "Niner Mode དགུ་མ།" : "No-Niner Mode དགུ་མ་མིན་པ།"}</h4>
+                  <h4 className="font-bold text-amber-400 mb-2">Game Variant རྩེད་རིགས་འདམ་ག: {isNinerMode ? "Niner Mode དགུ་མ།" : "No-Niner Mode དགུ་མ་མིན་པ།"}</h4>
                   <p className="text-sm text-stone-400 italic">{isNinerMode ? "In Niner mode, players are allowed to build a stack of nine coins and charge forward. དགུ་མའི་ནང་དུ་རྩེད་མོ་བ་ཚོས་ལག་ཁྱི་དགུ་བརྩེགས་ནས་མདུན་དུ་བསྐྱོད་ཆོག" : "In this variant, it is forbidden to build a stack of all nine coins. འདིའི་ནང་དུ་ལག་ཁྱི་དགུ་བརྩེགས་མི་ཆོག"}</p>
               </div>
               <button onClick={onToggleNinerMode} className="bg-amber-700 px-6 py-2 rounded-full font-bold text-white text-xs uppercase">
