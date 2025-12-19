@@ -26,9 +26,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
       text: "Valid moves are highlighted on the board. Click the glowing shell to place your stack. ལག་ཁྱི་འཇོག་ཆོག་ས་དག་ལ་འོད་སྒོར་ཡོད་རེད། འོད་རྒྱག་སའི་རྡེའུ་ལ་ནོན།",
     },
     {
-      title: "Pa Ra Rule པ་རའི་སྒྲིག་ལམ།",
-      text: "If you roll a 1 and 1, it's called 'Pa Ra'. You get a bonus roll immediately! གལ་ཏེ་ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་'པ་ར་'ཟེར། ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་བསྐྱར་དུ་རྒྱག་རྒྱུ་ཐོབ།",
-      action: "Finish མཇུག་བསྡུ་བ།"
+      title: "Pa Ra Rule པ་རའི་སྒྲིག་གཞི།",
+      text: "If you roll a 1 and 1, it's called 'Pa Ra'. You get a bonus roll immediately! གལ་ཏེ་ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་དེ་ལ་'པ་ར་'ཟེར། ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་བསྐྱར་དུ་རྒྱག་རྒྱུའི་གོ་སྐབས་ཐོབ།",
+      action: "Finish རྫོགས་སོ།"
     }
   ];
 
