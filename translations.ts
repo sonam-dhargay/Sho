@@ -69,12 +69,12 @@ export const T = {
   tutorial: {
     steps: [
       {
-        title: { en: "Welcome to Sho!", bo: "ཤོ་ལ་དགའ་བསུ་ཞུ།" },
-        text: { en: "Sho is a traditional Tibetan race game. Your goal is to move all 9 of your coins from your Hand to the End of the spiral.", bo: "ཤོ་ནི་བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་རྩེད་མོ་ཞིག་ཡིན། ཁྱེད་ཀྱི་དམིགས་ཡུལ་ནི་ཤོ་རྡོག་ ༩ ཚང་མ་མཇུག་བསྡུ་སར་བསྐྱོད་རྒྱུ་དེ་ཡིན།" },
+        title: { en: "Welcome to Sho!", bo: "ཤོ་རྩེད་ལ་རོལ་བར་ཕེབས་ཤོག།" },
+        text: { en: "Sho is a traditional Tibetan race game. Your goal is to move all 9 of your coins from your Hand to the End of the spiral.", bo: "ཤོ་ནི་བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་རྩེད་མོ་ཞིག་རེད། ཁྱེད་ཀྱི་དམིགས་ཡུལ་ལག་ཁྱི་ ༩ ཆར་ལ་རྒྱབ་པ་བྱེད་རྒྱུ་དེ་ཡིན།" },
         action: { en: "Next", bo: "མུ་མཐུད་པ།" }
       },
       {
-        title: { en: "Rolling the Dice", bo: "ཤོ་རྒྱག་པ།" },
+        title: { en: "Rolling the Dice", bo: "ཤོ་རྒྱག་སྟངས།" },
         text: { en: "The game is played with two dice. Let's start the game! Click the 'ROLL DICE' button.", bo: "རྩེད་མོ་འདི་ཤོ་གཉིས་ཀྱིས་རྩེ་དགོས། ད་འགོ་འཛུགས་དོ། 'ROLL DICE' ལ་ནོན་དང་།" },
       },
       {
