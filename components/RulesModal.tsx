@@ -61,6 +61,15 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             <p className="text-sm">You cannot land on an opponent's stack that is larger than your own. It is 'blocked'. རང་ལས་མང་བའི་ཁ་གཏད་ཀྱི་ལག་ཁྱིའི་ཐོག་ཏུ་བབས་མི་ཆོག། དེ་ལ་བཀག་པ་ཟེར།</p>
           </section>
 
+          <section className="bg-amber-950/20 p-4 rounded-lg border border-amber-900/30">
+            <h3 className="text-xl font-cinzel text-amber-400 mb-2">Instant Win དེ་མ་ཐག་པའི་རྒྱལ་ཁ།</h3>
+            <p className="text-sm mb-2">In very rare circumstances, a player may win instantly: ཆེས་དཀོན་པའི་གནས་སྟངས་འོག་དེ་མ་ཐག་རྒྱལ་ཁ་ཐོབ་སྲིད།</p>
+            <ul className="list-disc list-inside text-sm space-y-1">
+              <li><strong>Triple Pa Ra:</strong> Roll a Pa Ra (1,1) three times in a row. པ་ར་གསུམ་བརྩེགས།</li>
+              <li><strong>Stacked Dice:</strong> Dice land physically stacked on top of each other. ཤོ་བརྩེགས་བབས་པ།</li>
+            </ul>
+          </section>
+
           <section>
             <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་ mjug sgril stangs.</h3>
             <p className="text-sm">You must roll a number that takes your piece past the 64th shell. ཁྱེད་རང་གི་ལག་ཁྱི་དེ་རྡེའུ་ ༦༤ བརྒལ་བར་འགྲོ་ཐུབ་པའི་་ཤོ་མིག་ཞིག་བབས་དགོས།</p>
