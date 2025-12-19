@@ -8,7 +8,7 @@ export const T = {
   },
   lobby: {
     title: { en: "Sho", bo: "ཤོ" },
-    subtitle: { en: "Traditional Tibetan Dice Game", bo: "བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་རྩེད་མོ།" },
+    subtitle: { en: "Traditional Tibetan Dice Game", bo: "བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་ཤོ་རྩེད།" },
     verse: { en: "Para Penpa Tashi Zhug. Gyak-khen Trinley Namgyal Re.", bo: "པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།" },
     nameLabel: { en: "Your Name", bo: "ཁྱེད་ཀྱི་མིང་།" },
     colorLabel: { en: "Choose Color", bo: "ཚོས་གཞི་དོམ།" },
