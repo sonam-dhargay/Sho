@@ -488,32 +488,32 @@ const App: React.FC = () => {
         {gameMode && (
             <>
                 {/* Sidebar - Always visible controls on mobile */}
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[48dvh] md:h-full order-1 overflow-hidden flex-shrink-0">
                     {/* Header & Stats - Fixed */}
-                    <div className="p-4 flex flex-col gap-3 flex-shrink-0 bg-stone-950">
-                        <header className="flex justify-between items-center border-b border-stone-800 pb-4">
-                            <h1 onClick={() => setGameMode(null)} className="cursor-pointer text-amber-500 text-2xl font-cinzel">ཤོ Sho</h1>
+                    <div className="p-3 md:p-4 flex flex-col gap-2 md:gap-3 flex-shrink-0 bg-stone-950">
+                        <header className="flex justify-between items-center border-b border-stone-800 pb-2 md:pb-4">
+                            <h1 onClick={() => setGameMode(null)} className="cursor-pointer text-amber-500 text-xl md:text-2xl font-cinzel">ཤོ Sho</h1>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-8 h-8 rounded-full border border-stone-600 flex items-center justify-center ${isMusicEnabled ? 'text-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
-                                <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center">?</button>
+                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-7 h-7 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center ${isMusicEnabled ? 'text-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
+                                <button onClick={() => setShowRules(true)} className="w-7 h-7 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2 md:gap-3">
                             {players.map((p, i) => (
-                                <div key={p.id} className={`p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                <div key={p.id} className={`p-2 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-black/40 flex items-center justify-center">
-                                            {p.avatar?.startsWith('data:') ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-xl">{p.avatar}</span>}
+                                        <div className="w-6 h-6 md:w-8 md:h-8 rounded-full overflow-hidden bg-black/40 flex items-center justify-center">
+                                            {p.avatar?.startsWith('data:') ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-sm md:text-xl">{p.avatar}</span>}
                                         </div>
-                                        <h3 className="font-bold truncate text-xs font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <h3 className="font-bold truncate text-[10px] md:text-xs font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
-                                    <div className="flex justify-between text-[10px] text-stone-400">
+                                    <div className="flex justify-between text-[8px] md:text-[10px] text-stone-400">
                                         <div className="flex flex-col">
-                                          <span className="uppercase opacity-50 text-[8px]">In <span className="font-serif">ལག་ཐོག།</span></span>
+                                          <span className="uppercase opacity-50 text-[7px] md:text-[8px]">In <span className="font-serif">ལག་ཐོག།</span></span>
                                           <span className="font-bold text-stone-200">{p.coinsInHand}</span>
                                         </div>
                                         <div className="flex flex-col items-end">
-                                          <span className="uppercase opacity-50 text-[8px]">Out <span className="font-serif">གདན་ཐོག</span></span>
+                                          <span className="uppercase opacity-50 text-[7px] md:text-[8px]">Out <span className="font-serif">གདན་ཐོག</span></span>
                                           <span className="font-bold text-amber-500">{p.coinsFinished}</span>
                                         </div>
                                     </div>
@@ -523,11 +523,11 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Interactive Game Controls - Fixed and prioritized */}
-                    <div className="px-4 pb-2 flex flex-col gap-2 flex-shrink-0 bg-stone-950">
+                    <div className="px-3 md:px-4 pb-2 flex flex-col gap-2 flex-shrink-0 bg-stone-950">
                         {phase === GamePhase.GAME_OVER ? (
-                            <div className="text-center p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
-                                <h2 className="text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
-                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-4 py-1 rounded-full font-bold uppercase text-[10px] mt-1">New Game</button>
+                            <div className="text-center p-3 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
+                                <h2 className="text-lg md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
+                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-4 py-1 rounded-full font-bold uppercase text-[9px] md:text-[10px] mt-1">New Game</button>
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
@@ -543,16 +543,16 @@ const App: React.FC = () => {
                                 <div className="flex gap-2">
                                     <div 
                                         onClick={() => { if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); }} 
-                                        className={`flex-1 p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-inner' : 'border-stone-800 bg-stone-900/50'}`}
+                                        className={`flex-1 p-2 md:p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-inner' : 'border-stone-800 bg-stone-900/50'}`}
                                     >
-                                        <span className="font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-sm">From Hand</span>
-                                        <span className="text-[9px] text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
+                                        <span className="font-bold tracking-widest uppercase font-cinzel text-[9px] md:text-sm">From Hand</span>
+                                        <span className="text-[8px] md:text-[9px] text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
                                     </div>
                                     
                                     {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (
                                         <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-2 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
-                                            <span className="text-[10px]">Skip Turn</span>
-                                            <span className="text-[9px] font-serif">རྒྱག་ཐེངས་འདི་སྐྱུར།</span>
+                                            <span className="text-[9px] md:text-[10px]">Skip Turn</span>
+                                            <span className="text-[8px] md:text-[9px] font-serif">རྒྱག་ཐེངས་འདི་སྐྱུར།</span>
                                         </button>
                                     )}
                                 </div>
@@ -561,13 +561,13 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Scrollable Logs - Takes remaining sidebar space */}
-                    <div className="flex-grow bg-black/40 mx-4 mb-2 rounded-lg p-3 overflow-y-auto no-scrollbar font-mono text-[9px] text-stone-500 border border-stone-800">
+                    <div className="flex-grow bg-black/40 mx-3 md:mx-4 mb-2 rounded-lg p-2 md:p-3 overflow-y-auto no-scrollbar font-mono text-[8px] md:text-[9px] text-stone-500 border border-stone-800">
                         {logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                     </div>
                 </div>
 
                 {/* Main Game Board - Takes remaining screen height */}
-                <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full" ref={boardContainerRef}>
+                <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[52dvh] md:h-full" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode}
