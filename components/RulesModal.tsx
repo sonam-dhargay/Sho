@@ -71,8 +71,8 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
           </section>
 
           <section>
-            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་ mjug sgril stangs.</h3>
-            <p className="text-sm">You must roll a number that takes your piece past the 64th shell. ཁྱེད་རང་གི་ལག་ཁྱི་དེ་རྡེའུ་ ༦༤ བརྒལ་བར་འགྲོ་ཐུབ་པའི་་ཤོ་མིག་ཞིག་བབས་དགོས།</p>
+            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་མཇུག་སྒྲིལ་སྟངས།.</h3>
+            <p className="text-sm">You must roll a number that takes your piece past the 64th shell. ཁྱེད་རང་གི་ལག་ཁྱི་དེ་དག་རྡེའུ་ ༦༤ བརྒལ་བར་འགྲོ་ཐུབ་པའི་་ཤོ་མིག་ཞིག་བབས་དགོས།</p>
             <p className="text-sm mt-2">The first player to move all 9 coins off the board wins! ལག་ཁྱི་་ ༩ ཆར་ཚང་མ་ལ་བརྒལ་མཁན་དེ་ལ་རྒྱལ་ཁ་ཐོབ་པ་་ཡིན།</p>
           </section>
 
