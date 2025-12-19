@@ -26,9 +26,19 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
       text: "Valid moves are highlighted on the board. Click the glowing shell to place your stack. ལག་ཁྱི་འཇོག་ཆོག་ས་དག་ལ་འོད་སྒོར་ཡོད་རེད། འོད་རྒྱག་སའི་རྡེའུ་ལ་ནོན།",
     },
     {
-      title: "Pa Ra Rule པ་རའི་སྒྲིག་གཞི།",
-      text: "If you roll a 1 and 1, it's called 'Pa Ra'. You get a bonus roll immediately! གལ་ཏེ་ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་དེ་ལ་'པ་ར་'ཟེར། ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་བསྐྱར་དུ་རྒྱག་རྒྱུའི་གོ་སྐབས་ཐོབ།",
-      action: "Finish རྫོགས་སོ།"
+      title: "Opponent's Turn ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས།",
+      text: "Now it's the opponent's turn. Watch them roll and move. ད་ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས་རེད། ཁོ་ཚོས་ག་རེ་བྱེད་ཀྱི་འདུག་ལྟོས་དང་།",
+      action: "Next མུ་མཐུད"
+    },
+    {
+      title: "Key Mechanics གལ་གནད་ཅན་གྱི་སྒྲིག་གཞི།",
+      text: "Stacking: Land on your own coins to build a stack. Killing: Land on an opponent's stack to send them back. Blocking: You cannot land on a larger opponent's stack. བརྩེགས་སྟངས། རང་གི་ལག་ཁྱིའི་ཐོག་བབས་ན་བརྩེགས་ཆོག གསོད་སྟངས། ཁ་གཏད་ལག་ཁྱིའི་ཐོག་བབས་ན་བསད་ནས་ལག་པར་སློག་ཆོག བཀག་སྟངས། རང་ལས་མང་བའི་ལག་ཁྱིའི་་ཐོག་བཙུགས་་མི་ཆོག",
+      action: "Next མུ་མཐུད་པ།"
+    },
+    {
+      title: "The Pa Ra Rule པ་རའི་སྒྲིག་གཞི།",
+      text: "If you roll a 1 and 1, it's called 'Pa Ra'. You get a bonus roll immediately! གལ་ཏེ་ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་'པ་ར་'ཟེར། ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་བསྐྱར་དུ་རྒྱག་རྒྱུའི་གོ་སྐབས་ཐོབ།",
+      action: "Finish མྱུར་ཁྲིད་མཇུག་བསྡུ་བའོ།"
     }
   ];
 
@@ -46,7 +56,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
         <div className="flex justify-end">
             {current.action ? (
                 <button 
-                    onClick={current.action.includes('Finish') ? onClose : onNext}
+                    onClick={step === steps.length ? onClose : onNext}
                     className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-5 rounded-lg uppercase tracking-widest text-[10px] shadow-lg shadow-amber-900/40 transition-colors"
                 >
                     {current.action}
