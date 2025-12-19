@@ -365,7 +365,7 @@ const App: React.FC = () => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
     setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 1200)); 
     let d1 = Math.floor(Math.random() * 6) + 1; let d2 = Math.floor(Math.random() * 6) + 1;
-    if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 1) { d1 = 2; d2 = 3; } }
+    if (s.gameMode === GameMode.TUTORIAL) { if (s.tutorialStep === 2) { d1 = 2; d2 = 6; } }
     const isPaRa = (d1 === 1 && d2 === 1);
     const pos1 = getRandomDicePos(); const pos2 = getRandomDicePos();
     const visuals = { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r };
@@ -376,7 +376,7 @@ const App: React.FC = () => {
         if (s.waitingForPaRa) { setPendingMoveValues([2, total]); setWaitingForPaRa(false); setPhase(GamePhase.MOVING); } 
         else { setPendingMoveValues([total]); setPhase(GamePhase.MOVING); } 
     }
-    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 1) setTutorialStep(2);
+    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
 
   const handleSkipTurn = useCallback(() => { setPendingMoveValues([]); setLastRoll(null); setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }, [players.length]);
@@ -402,7 +402,7 @@ const App: React.FC = () => {
     if (nextMoves.length > 0 && getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode).length > 0) { setPendingMoveValues(nextMoves); turnContinues = true; }
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
     if (!turnContinues) { if (bonusTurn) { setPhase(GamePhase.ROLLING); setPendingMoveValues([]); } else { setPendingMoveValues([]); setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); } }
-    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 3) setTutorialStep(4);
+    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
   };
 
   const currentValidMovesList = useCallback(() => (phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode) : []), [phase, turnIndex, board, pendingMoveValues, isNinerMode])();
@@ -542,7 +542,12 @@ const App: React.FC = () => {
                                 
                                 <div className="flex gap-2">
                                     <div 
-                                        onClick={() => { if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); }} 
+                                        onClick={() => { 
+                                          if (phase === GamePhase.MOVING && players[turnIndex].coinsInHand > 0) {
+                                            setSelectedSourceIndex(0);
+                                            if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4);
+                                          } 
+                                        }} 
                                         className={`flex-1 p-2 md:p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/20 shadow-inner' : 'border-stone-800 bg-stone-900/50'}`}
                                     >
                                         <span className="font-bold tracking-widest uppercase font-cinzel text-[9px] md:text-sm">From Hand</span>
