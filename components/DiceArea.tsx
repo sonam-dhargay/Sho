@@ -51,8 +51,8 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
             onClick={onRoll}
             disabled={!canRoll && !waitingForPaRa}
             className={`
-                w-full p-2 md:p-3.5 rounded-lg font-cinzel font-bold text-xs md:text-lg transition-all flex flex-col items-center leading-tight
-                ${(canRoll || waitingForPaRa) ? 'bg-amber-700 hover:bg-amber-600 text-white shadow-lg shadow-amber-900/20' : 'bg-stone-700 text-stone-500 cursor-not-allowed'}
+                w-full p-2 md:p-3.5 rounded-lg font-cinzel font-bold transition-all flex flex-col items-center justify-center leading-tight
+                ${(canRoll || waitingForPaRa) ? 'bg-amber-700 hover:bg-amber-600 text-white shadow-lg shadow-amber-900/20 text-xs md:text-lg' : 'bg-stone-700 text-stone-500 cursor-not-allowed text-[9px] md:text-sm'}
                 ${waitingForPaRa ? 'animate-bounce border border-amber-400' : ''}
             `}
         >
