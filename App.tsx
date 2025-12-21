@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Player, PlayerColor, BoardState, GamePhase, 
@@ -62,6 +61,12 @@ const SFX = {
 };
 
 const getRandomDicePos = () => { const r = 40 + Math.random() * 40; const theta = Math.random() * Math.PI * 2; return { x: r * Math.cos(theta), y: r * Math.sin(theta), r: Math.random() * 360 }; };
+
+// Standard 2-die probability distribution
+const DICE_PROBS: Record<number, number> = {
+    2: 1/36, 3: 2/36, 4: 3/36, 5: 4/36, 6: 5/36, 7: 6/36,
+    8: 5/36, 9: 4/36, 10: 3/36, 11: 2/36, 12: 1/36
+};
 
 const calculatePotentialMoves = (sourceIdx: number, moveVals: number[], currentBoard: BoardState, player: Player, isNinerMode: boolean): MoveOption[] => {
   const options: MoveOption[] = [];
@@ -176,7 +181,7 @@ const App: React.FC = () => {
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
   };
 
-  // AI Logic Effect
+  // AI Strategic Logic Effect
   useEffect(() => {
     if (gameMode === GameMode.AI && turnIndex === 1 && phase !== GamePhase.GAME_OVER && !isRolling) {
       const timer = setTimeout(() => {
@@ -185,44 +190,103 @@ const App: React.FC = () => {
         } else if (phase === GamePhase.MOVING) {
           const aiMoves = getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode);
           if (aiMoves.length > 0) {
-            // Priority: Kill > Finish > Stack > Place
-            const sortedMoves = [...aiMoves].sort((a, b) => {
-              const getScore = (m: MoveOption) => {
-                if (m.type === MoveResultType.KILL) return 1000 + m.targetIndex;
-                if (m.type === MoveResultType.FINISH) return 900;
-                if (m.type === MoveResultType.STACK) return 500 + m.targetIndex;
-                return m.targetIndex;
-              };
-              return getScore(b) - getScore(a);
-            });
-            const chosen = sortedMoves[0];
             
-            // Strategic Feedback
+            const evaluateMove = (m: MoveOption) => {
+                let score = m.targetIndex; // Base score for progression
+                const aiPlayer = players[turnIndex];
+                const humanPlayer = players[0];
+                const aiStackSize = m.sourceIndex === 0 ? (aiPlayer.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (board.get(m.sourceIndex)?.stackSize || 1);
+                
+                // 1. Kill Logic
+                if (m.type === MoveResultType.KILL) {
+                    score += 2000;
+                    // Extra bonus for killing large stacks
+                    const targetShell = board.get(m.targetIndex);
+                    if (targetShell) score += targetShell.stackSize * 200;
+                }
+
+                // 2. Finish Logic
+                if (m.type === MoveResultType.FINISH) {
+                    score += 1800;
+                    // Prioritize clearing when nearly done
+                    if (aiPlayer.coinsFinished >= 6) score += 500;
+                }
+
+                // 3. Stacking Logic (Defense)
+                if (m.type === MoveResultType.STACK) {
+                    const targetShell = board.get(m.targetIndex);
+                    const newSize = (targetShell?.stackSize || 0) + aiStackSize;
+                    // Prefer stacks of 3-5 (strong defense)
+                    if (newSize >= 3 && newSize <= 5) score += 600;
+                    else score += 300;
+                }
+
+                // 4. Safety Assessment (Risk)
+                // Evaluate if any human piece can kill this piece at the target location
+                let totalRisk = 0;
+                Array.from(board.values()).forEach((shell: BoardShell) => {
+                    if (shell.owner === humanPlayer.id && shell.stackSize > 0) {
+                        const dist = m.targetIndex - shell.index;
+                        if (dist >= 2 && dist <= 12) {
+                            const killProb = DICE_PROBS[dist] || 0;
+                            if (shell.stackSize > aiStackSize) {
+                                // High risk if human stack is bigger
+                                totalRisk += killProb * 5000;
+                            }
+                        }
+                    }
+                });
+                score -= totalRisk;
+
+                // 5. Blocking Potential
+                // Landing just in front of a human stack to impede them
+                Array.from(board.values()).forEach((shell: BoardShell) => {
+                    if (shell.owner === humanPlayer.id && shell.stackSize > 0) {
+                        const dist = m.targetIndex - shell.index;
+                        if (dist > 0 && dist <= 3 && aiStackSize > shell.stackSize) {
+                            score += 400; // Good blocking position
+                        }
+                    }
+                });
+
+                // 6. End-game push
+                if (m.targetIndex > 50) score += 200;
+
+                return { move: m, score };
+            };
+
+            const scoredMoves = aiMoves.map(evaluateMove).sort((a, b) => b.score - a.score);
+            const best = scoredMoves[0];
+            const move = best.move;
+            
+            // Strategic Reasoning Feedback
             let reason = "";
-            if (chosen.type === MoveResultType.KILL) {
+            if (move.type === MoveResultType.KILL) {
                 reason = "AI chose to kill the stack for a bonus roll! བསད་སོང་།";
-            } else if (chosen.type === MoveResultType.FINISH) {
+            } else if (move.type === MoveResultType.FINISH) {
                 reason = "AI is racing to the finish! ཕུད་སོང་།";
-            } else if (chosen.type === MoveResultType.STACK) {
+            } else if (move.type === MoveResultType.STACK) {
                 reason = "AI is reinforcing its stack for protection. བརྩེགས་སོང་།";
             } else {
-                // Check if this move blocks an opponent piece (primitive check)
-                const targetShell = board.get(chosen.targetIndex);
-                const humanPlayer = players[0];
-                // Fix: Explicitly type the shell variable as BoardShell to fix property access errors on type unknown
-                const isBlockingMove = Array.from(board.values()).some((shell: BoardShell) => 
-                    shell.owner === humanPlayer.id && 
-                    shell.index < chosen.targetIndex && 
-                    shell.stackSize < (chosen.sourceIndex === 0 ? 1 : board.get(chosen.sourceIndex)?.stackSize || 1)
-                );
-                if (isBlockingMove) {
-                    reason = "AI moves strategically to block your progress. བཀག་སོང་།";
+                // Determine if it was a safety-based or blocking-based move
+                const riskAtBest = best.score < move.targetIndex; // Heuristic for risk-avoidance
+                if (riskAtBest) {
+                    reason = "AI moves cautiously to avoid your larger stack. གཟབ་གཟབ་ཀྱིས་མདུན་བསྐྱོད།";
                 } else {
-                    reason = `AI advances to shell ${chosen.targetIndex}. མདུན་དུ་བསྐྱོད།`;
+                    const targetShell = board.get(move.targetIndex);
+                    const humanPlayer = players[0];
+                    const isBlocking = Array.from(board.values()).some((shell: BoardShell) => 
+                        shell.owner === humanPlayer.id && shell.index < move.targetIndex && (move.targetIndex - shell.index) <= 3
+                    );
+                    if (isBlocking) {
+                        reason = "AI moves strategically to block your progress. བཀག་སོང་།";
+                    } else {
+                        reason = `AI advances to shell ${move.targetIndex}. མདུན་དུ་བསྐྱོད།`;
+                    }
                 }
             }
             addLog(reason, 'alert');
-            performMove(chosen.sourceIndex, chosen.targetIndex);
+            performMove(move.sourceIndex, move.targetIndex);
           } else {
             handleSkipTurn();
             addLog(`${players[1].name} skips turn. སྐོར་ཐེངས་བསྐྱུར་སོང་།`, 'info');
