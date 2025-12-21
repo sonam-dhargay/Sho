@@ -110,6 +110,7 @@ const App: React.FC = () => {
   const [boardScale, setBoardScale] = useState(0.8);
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
+  const [handShake, setHandShake] = useState(false);
 
   const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep });
   useEffect(() => { gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep }; }, [board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, lastMove, totalMoves, isRolling, isNinerMode, gameMode, tutorialStep]);
@@ -216,6 +217,18 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row">
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes handBlockedShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+          }
+          .animate-hand-blocked {
+            animation: handBlockedShake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+            background-color: rgba(127, 29, 29, 0.4) !important;
+          }
+        `}} />
         {!gameMode && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-start md:justify-center p-4 pt-4 md:pt-4">
                <div className="flex flex-col items-center flex-shrink-0 mb-4 md:mb-8">
@@ -250,10 +263,12 @@ const App: React.FC = () => {
                           if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4);
                         } else {
                           SFX.playBlocked();
+                          setHandShake(true);
+                          setTimeout(() => setHandShake(false), 400);
                           addLog("There are no more coins (lak-khyi) in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
                         }
                       } 
-                    }} className={`flex-1 p-3 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}><span className={`font-bold tracking-widest uppercase font-cinzel text-xs md:text-lg ${shouldHighlightHand ? 'text-amber-400' : ''}`}>From Hand</span><span className="text-[8px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span></div>{currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (gameMode !== GameMode.AI || turnIndex === 0) && ( <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1.5 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel"><span className="text-[8px] md:text-[10px]">Skip Turn</span><span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span></button> )}</div></div> )}</div>
+                    }} className={`flex-1 p-3 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}><span className={`font-bold tracking-widest uppercase font-cinzel text-xs md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span><span className="text-[8px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span></div>{currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (gameMode !== GameMode.AI || turnIndex === 0) && ( <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1.5 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel"><span className="text-[8px] md:text-[10px]">Skip Turn</span><span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span></button> )}</div></div> )}</div>
                     <div className="flex-grow bg-black/40 mx-2 md:mx-4 mb-1.5 rounded-lg p-1.5 md:p-3 overflow-y-auto no-scrollbar font-mono text-[7px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">{logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}</div>
                 </div>
                 <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}><div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300"><Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} /></div></div>
