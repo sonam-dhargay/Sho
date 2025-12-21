@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Player, PlayerColor, BoardState, GamePhase, 
@@ -195,10 +196,36 @@ const App: React.FC = () => {
               return getScore(b) - getScore(a);
             });
             const chosen = sortedMoves[0];
+            
+            // Strategic Feedback
+            let reason = "";
+            if (chosen.type === MoveResultType.KILL) {
+                reason = "AI chose to kill the stack for a bonus roll! བསད་སོང་།";
+            } else if (chosen.type === MoveResultType.FINISH) {
+                reason = "AI is racing to the finish! ཕུད་སོང་།";
+            } else if (chosen.type === MoveResultType.STACK) {
+                reason = "AI is reinforcing its stack for protection. བརྩེགས་སོང་།";
+            } else {
+                // Check if this move blocks an opponent piece (primitive check)
+                const targetShell = board.get(chosen.targetIndex);
+                const humanPlayer = players[0];
+                // Fix: Explicitly type the shell variable as BoardShell to fix property access errors on type unknown
+                const isBlockingMove = Array.from(board.values()).some((shell: BoardShell) => 
+                    shell.owner === humanPlayer.id && 
+                    shell.index < chosen.targetIndex && 
+                    shell.stackSize < (chosen.sourceIndex === 0 ? 1 : board.get(chosen.sourceIndex)?.stackSize || 1)
+                );
+                if (isBlockingMove) {
+                    reason = "AI moves strategically to block your progress. བཀག་སོང་།";
+                } else {
+                    reason = `AI advances to shell ${chosen.targetIndex}. མདུན་དུ་བསྐྱོད།`;
+                }
+            }
+            addLog(reason, 'alert');
             performMove(chosen.sourceIndex, chosen.targetIndex);
           } else {
             handleSkipTurn();
-            addLog(`${players[1].name} skips turn.`, 'info');
+            addLog(`${players[1].name} skips turn. སྐོར་ཐེངས་བསྐྱུར་སོང་།`, 'info');
           }
         }
       }, 1000);
