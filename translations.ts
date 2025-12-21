@@ -13,8 +13,6 @@ export const T = {
     nameLabel: { en: "Your Name", bo: "ཁྱེད་ཀྱི་མིང་།" },
     colorLabel: { en: "Choose Color", bo: "ཚོས་གཞི་དོམ།" },
     avatarLabel: { en: "Select Avatar", bo: "གཟུགས་བརྙན་དོམ།" },
-    cameraLabel: { en: "Capture Profile Photo", bo: "པར་རྒྱོབ།" },
-    cameraButton: { en: "Snap!", bo: "པར་རྒྱོབ།" },
     modeLocal: { en: "Local", bo: "རང་ཤག་ཏུ་་རྩེ།" },
     modeAI: { en: "Vs AI", bo: "མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།" },
     tutorial: { en: "Tutorial", bo: "རྩེ་སྟངས་མྱུར་ཁྲིད།" },
@@ -30,8 +28,8 @@ export const T = {
     newGame: { en: "New Game", bo: "རྩེད་མོ་གསར་དུ་འགོ་ཚུགས།" },
     wonMsg: { en: "won!", bo: "ལ་རྒྱལ་ཁ་ཐོབ་སོང་།" },
     movesAvailable: { en: "Available Moves", bo: "ཤོ་མིག་གྲངས།" },
-    flexiblePool: { en: "Flexible Pa Ra Pool", bo: "པ་ར་བཞུགས།" },
-    readyToRoll: { en: "Ready to roll...", bo: "ཤོ་རྒྱག་ཆོག་རེད་།" },
+    flexiblePool: { en: "Flexible Pa Ra Pool", bo: "པ་ར་བབས་པ།" },
+    readyToRoll: { en: "Ready to roll...", bo: "ཤོ་རྒྱག་ཆོག་རེད།" },
     waiting: { en: "Waiting...", bo: "སྒུག་བཞུགས།" },
     rollDice: { en: "ROLL DICE", bo: "ཤོ་རྒྱོབ།" },
     rollBonus: { en: "ROLL BONUS!", bo: "པ་ར།" },
@@ -42,7 +40,7 @@ export const T = {
     variant: { en: "Game Variant", bo: "རྩེད་མོ་འདམ་ག།" },
     ninerMode: { en: "Niner Mode", bo: "དགུ་མ།" },
     noNinerMode: { en: "No-Niner Mode", bo: "དགུ་མ་མིན་པ།" },
-    ninerDesc: { en: "In Niner mode, players are allowed to build a stack of nine coins and charge forward.", bo: "དགུ་མའི་ནང་དུ་རྩེད་མོ་བ་ཚོས་ཤོ་རྡོག་དགུ་བརྩེགས་ནས་མདུན་དུ་བསྐྱོད་ཆོག" },
+    ninerDesc: { en: "In Niner mode, players are allowed to build a stack of nine coins and charge forward.", bo: "དགུ་མའི་ནང་དུ་ཤོ་རྡོག་དགུ་བརྩེགས་ནས་མདུན་དུ་བསྐྱོད་ཆོག" },
     noNinerDesc: { en: "In this variant, it is forbidden to build a stack of all nine coins.", bo: "འདིའི་ནང་དུ་ཤོ་རྡོག་དགུ་བརྩེགས་རྒྱག་མི་ཆོག" },
     objectiveTitle: { en: "Objective", bo: "དམིགས་ཡུལ།" },
     objectiveDesc: { en: "Sho is a race game played on a spiral of 64 shells. Each player has 9 coins. The goal is to move all your coins from your hand (start) to the end of the spiral.", bo: "ཤོ་ནི་འགྲན་བསྡུར་གྱི་རྩེད་མོ་ཞིག་ཡིན་ཞིང་། དུང་དཀར་ ༦༤ ཡི་ཐོག་ཏུ་རྩེ་དགོས། རྩེད་མོ་བ་རེར་ཤོ་རྡོག་ ༩ རེ་ཡོད། དམིགས་ཡུལ་ནི་ཤོ་རྡོག་ཚང་མ་མཇུག་བསྡུ་སར་བསྐྱོད་རྒྱུ་དེ་ཡིན།" },
@@ -63,7 +61,7 @@ export const T = {
     killingTitle: { en: "Killing", bo: "བསད་སྟངས།" },
     killingDesc: { en: "If you land on an opponent's stack that is equal to or smaller than yours, you 'kill' it. They return to hand, and you get a Bonus Roll!", bo: "གལ་ཏེ་ཁ་གཏད་ཀྱི་ལག་ཁྱི་ཁྱེད་ལས་ཉུང་བའམ་མཉམ་པ་ཡོད་ན། དེ་བསད་ནས་ལག་པར་སློག་ཆོག ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་རྒྱག་རྒྱུའི་ཁེ་ཕན་ཐོབ།" },
     finishingTitle: { en: "Finishing", bo: "རྩེད་མོ་མཇུག་སྒྲིལ་སྟངས།" },
-    finishingRule1: { en: "You must roll a number that takes your piece past the 64th shell.", bo: "ལག་ཁྱི་རྣམས་རྡེའུ་ ༦༤ ལས་བརྒལ་བར་བྱེད་པ'ི་ཤོ་མིག་ཞིག་བབས་དགོས།" },
+    finishingRule1: { en: "You must roll a number that takes your piece past the 64th shell.", bo: "ལག་ཁྱི་རྣམས་རྡེའུ་ ༦༤ ལས་བརྒལ་བར་བྱེད་པའི་ཤོ་མིག་ཞིག་བབས་དགོས།" },
     finishingRule2: { en: "The first player to move all 9 coins off the board wins!", bo: "ལག་ཁྱི་ ༩ ཆར་ལ་བརྒལ་མཁན་དེ་ལ་རྒྱལ་ཁ་ཐོབ་པ་ཡིན།" },
   },
   tutorial: {
@@ -86,12 +84,12 @@ export const T = {
         text: { en: "Valid moves are highlighted on the board. Click the glowing shell to place your stack.", bo: "ལག་ཁྱི་འཇོག་ཆོག་ས་དག་ལ་འོད་སྒོར་ཡོད་རེད། འོད་རྒྱག་སའི་རྡེའུ་ལ་ནོན།" },
       },
       {
-        title: { en: "Opponent's Turn", bo: "ཁ་གཏད་ཀྱི་རྒྱག་་ཐེངས།" },
+        title: { en: "Opponent's Turn", bo: "ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས།" },
         text: { en: "Now it's the opponent's turn. Watch them roll and move.", bo: "ད་ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས་རེད། ཁོ་ཚོས་ག་རེ་བྱེད་ཀྱི་འདུག་ལྟོས་དང་།" },
       },
       {
         title: { en: "Key Mechanics", bo: "གལ་གནད་ཅན་གྱི་སྒྲིག་གཞི།" },
-        text: { en: "Stacking: Land on your own coins to build a stack. Killing: Land on an opponent's stack to send them back. Blocking: You cannot land on a larger opponent's stack.", bo: "བརྩེགས་སྟངས། རང་གི་ལག་ཁྱིའི་ཐོག་བབས་ན་བརྩེགས་ཆོག གསོད་སྟངས། ཁ་གཏད་ལག་ཁྱིའི་ཐོག་བབས་ན་བསད་ནས་ལག་པར་སློག་ཆོག བཀག་སྟངས། རང་ལས་མང་བའི་ལག་ཁྱིའི་་ཐོག་བཙུགས་་མི་ཆོག" },
+        text: { en: "Stacking: Land on your own coins to build a stack. Killing: Land on an opponent's stack to send them back. Blocking: You cannot land on a larger opponent's stack.", bo: "བརྩེགས་སྟངས། རང་གི་ལག་ཁྱིའི་ཐོག་བབས་ན་བརྩེགས་ཆོག གསོད་སྟངས། ཁ་གཏད་ལག་ཁྱིའི་ཐོག་བབས་ན་བསད་ནས་ལག་པར་སློག་ཆོག བཀག་སྟངས། རང་ལས་མང་བའི་ལག་ཁྱིའི་ཐོག་བཙུགས་མི་ཆོག" },
         action: { en: "Next", bo: "མུ་མཐུད་པ།" }
       },
       {
