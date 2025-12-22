@@ -3,7 +3,7 @@ import {
   Player, PlayerColor, BoardState, GamePhase, 
   DiceRoll, MoveResultType, MoveOption, GameLog, BoardShell, GameMode
 } from './types';
-import { TOTAL_SHELLS, COINS_PER_PLAYER, PLAYERS_CONFIG, COLOR_PALETTE, AVATAR_PRESETS } from './constants';
+import { TOTAL_SHELLS, COINS_PER_PLAYER, PLAYERS_CONFIG, COLOR_PALETTE } from './constants';
 import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
@@ -206,7 +206,7 @@ const App: React.FC = () => {
         const isOpening = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER; 
         movingStackSize = isOpening ? (s.isOpeningPaRa ? 3 : 2) : 1; 
         newPlayers[s.turnIndex].coinsInHand -= movingStackSize; 
-        if (s.isOpeningPaRa) setIsOpeningPaRa(false); // Only first placement gets the 3-coin benefit
+        if (s.isOpeningPaRa) setIsOpeningPaRa(false);
     } else { 
         const source = nb.get(move.sourceIndex)!; 
         movingStackSize = source.stackSize; 
@@ -252,9 +252,7 @@ const App: React.FC = () => {
     if (nextMoves.length === 0 || movesLeft.length === 0) {
         setPendingMoveValues([]); 
         setIsOpeningPaRa(false);
-        
         const totalExtraRolls = s.extraRolls + localExtraRollInc;
-        
         if (totalExtraRolls > 0) {
             setExtraRolls(prev => prev - 1);
             setPhase(GamePhase.ROLLING);
@@ -266,7 +264,6 @@ const App: React.FC = () => {
     } else {
         setPendingMoveValues(nextMoves);
     }
-    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
   };
 
   // AI Strategic Loop
@@ -288,7 +285,6 @@ const App: React.FC = () => {
               } else {
                   aiSize = s.board.get(m.sourceIndex)?.stackSize || 1;
               }
-
               if (m.type === MoveResultType.KILL) score += 2000 + (s.board.get(m.targetIndex)?.stackSize || 0) * 100;
               if (m.type === MoveResultType.FINISH) score += 1800;
               if (m.type === MoveResultType.STACK) {
@@ -319,11 +315,11 @@ const App: React.FC = () => {
 
   const currentValidMovesList = phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode, isOpeningPaRa) : [];
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
-
   const shouldHighlightHand = phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0) && players[turnIndex].coinsInHand > 0;
 
   return (
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row">
+        {gameMode === GamePhase.SETUP && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">Initializing...</div>}
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
         <style dangerouslySetInnerHTML={{__html: `
@@ -339,51 +335,73 @@ const App: React.FC = () => {
           }
         `}} />
         {!gameMode && (
-          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-start md:justify-center p-4">
-               <div className="flex flex-col items-center flex-shrink-0 mb-6 md:mb-10 w-full max-w-sm md:max-w-md">
-                   <h1 className="flex items-center gap-4 mb-2 font-cinzel">
-                      <span className="text-4xl md:text-7xl opacity-70 font-serif">ཤོ</span> 
-                      <span className="text-2xl md:text-5xl">Sho</span>
+          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
+               {/* Title Section - Restored the "ཤོ Sho" combined title */}
+               <div className="flex flex-col items-center flex-shrink-0 w-full max-w-sm md:max-w-md">
+                   <h1 className="flex items-center gap-6 mb-4 font-cinzel">
+                      <span className="text-7xl md:text-9xl text-amber-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">ཤོ</span>
+                      <span className="text-5xl md:text-7xl text-amber-500 tracking-widest drop-shadow-lg">Sho</span>
                    </h1>
-                   <p className="text-amber-400/60 mb-1 text-[10px] md:text-xs text-center font-serif tracking-widest italic uppercase opacity-80">པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།</p>
-                   <p className="text-stone-400 tracking-widest uppercase text-[9px] md:text-xs">Traditional Tibetan Dice Game <span className="font-serif">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</span></p>
+                   <div className="h-px w-32 bg-amber-900/40 mb-4" />
+                   <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
+                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
                </div>
                
-               <div className="mb-6 md:mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800 backdrop-blur-md">
-                  <div className="mb-4"><label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between"><span>Your Name</span><span className="opacity-50 font-serif">ཁྱེད་ཀྱི་མིང་།</span></label><input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200 outline-none focus:border-amber-500" maxLength={15} /></div>
-                  <div className="mb-4"><label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between"><span>Choose Color</span><span className="opacity-50 font-serif">ཚོས་གཞི་དོམ།</span></label><div className="flex gap-2">{COLOR_PALETTE.map((c) => ( <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 ${selectedColor === c.hex ? 'border-white shadow-[0_0_8px_white]' : 'border-transparent opacity-70'}`} style={{ backgroundColor: c.hex }} /> ))}</div></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 w-full max-w-md mb-6 px-2">
-                  <div className="bg-stone-900/80 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center group transition-all hover:-translate-y-1" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
-                      <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">🏔️</div>
-                      <h3 className="text-lg font-bold uppercase font-cinzel">Local</h3>
-                      <span className="text-[10px] opacity-50 font-serif">རང་ཤག་ཏུ་རྩེ།</span>
+               {/* Body Section (Configuration + Modes) */}
+               <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-8 md:gap-14">
+                  <div className="w-full bg-stone-900/30 p-8 rounded-[3rem] border border-stone-800/50 backdrop-blur-2xl shadow-2xl">
+                      <div className="mb-10">
+                        <label className="text-stone-500 text-[10px] uppercase block mb-3 tracking-widest flex justify-between font-bold px-1">
+                          <span>Identity ཁྱེད་ཀྱི་མིང་།</span>
+                        </label>
+                        <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-4 text-stone-100 outline-none transition-all text-center text-2xl font-cinzel tracking-wider" placeholder="NAME" maxLength={15} />
+                      </div>
+                      <div>
+                        <label className="text-stone-500 text-[10px] uppercase block mb-5 tracking-widest flex justify-between font-bold px-1">
+                          <span>Banner ཚོས་གཞི་དོམ།</span>
+                        </label>
+                        <div className="flex justify-between px-2 gap-4">
+                          {COLOR_PALETTE.map((c) => ( 
+                            <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-12 h-12 rounded-2xl transition-all rotate-45 ${selectedColor === c.hex ? 'border-2 border-white scale-110 shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: c.hex }} /> 
+                          ))}
+                        </div>
+                      </div>
                   </div>
-                  <div className="bg-stone-900/80 border border-stone-800 p-6 rounded-xl hover:border-amber-600 cursor-pointer text-center group transition-all hover:-translate-y-1" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
-                      <div className="text-3xl mb-1 group-hover:scale-110 transition-transform">🤖</div>
-                      <h3 className="text-lg font-bold uppercase font-cinzel">Vs AI</h3>
-                      <span className="text-[10px] opacity-50 font-serif">མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།</span>
+
+                  <div className="grid grid-cols-2 gap-6 w-full px-2">
+                      <button className="bg-stone-900/40 border-2 border-stone-800/80 p-8 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
+                          <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🏔️</span>
+                          <h3 className="text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">Local</h3>
+                          <span className="text-[10px] text-stone-500 font-serif">རང་ཤག་ཏུ་རྩེ།</span>
+                      </button>
+                      <button className="bg-stone-900/40 border-2 border-stone-800/80 p-8 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
+                          <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🤖</span>
+                          <h3 className="text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">AI</h3>
+                          <span className="text-[10px] text-stone-500 font-serif">མི་བཟོས་རིག་ནུས།</span>
+                      </button>
                   </div>
-              </div>
+               </div>
 
-              <div className="flex gap-8 mb-8">
-                  <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors">
-                      <span className="font-bold uppercase text-xs tracking-widest font-cinzel">Tutorial</span>
-                      <span className="text-[10px] font-serif">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
-                  </button>
-                  <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors">
-                      <span className="font-bold uppercase text-xs tracking-widest font-cinzel">Rules</span>
-                      <span className="text-[10px] font-serif">ཤོ་ཡི་སྒྲིག་གཞི།</span>
-                  </button>
-              </div>
+               {/* Footer Section */}
+               <div className="w-full flex flex-col items-center gap-10 mt-10">
+                  <div className="flex gap-16">
+                      <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors group">
+                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel group-hover:tracking-[0.2em] transition-all">Tutorial</span>
+                          <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
+                      </button>
+                      <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors group">
+                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel group-hover:tracking-[0.2em] transition-all">Rules</span>
+                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོ་ཡི་སྒྲིག་གཞི།</span>
+                      </button>
+                  </div>
 
-              <div className="text-stone-500 text-[10px] uppercase tracking-widest text-center pb-4">
-                  Total Games Played <span className="font-serif">འཛམ་གླིང་ཁྱོན་ཡོངས་སུ་རྩེད་གྲངས།</span><br/>
-                  <span className={`text-amber-600 font-bold text-xl tabular-nums transition-all duration-700 inline-block ${isCounterPulsing ? 'scale-125 text-amber-400 brightness-125' : ''}`}>
-                    {globalPlayCount.toLocaleString()}
-                  </span>
-              </div>
+                  <div className="flex flex-col items-center">
+                      <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">Games Commenced</span>
+                      <span className={`text-amber-700/80 font-bold text-4xl tabular-nums transition-all duration-700 mt-2 ${isCounterPulsing ? 'scale-110 text-amber-500 brightness-125' : ''}`}>
+                        {globalPlayCount.toLocaleString()}
+                      </span>
+                  </div>
+               </div>
           </div>
         )}
         {gameMode && (
@@ -424,7 +442,6 @@ const App: React.FC = () => {
                       if (phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0)) { 
                         if (players[turnIndex].coinsInHand > 0) {
                           setSelectedSourceIndex(0); 
-                          if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) setTutorialStep(4);
                         } else {
                           SFX.playBlocked();
                           setHandShake(true);

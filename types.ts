@@ -10,7 +10,6 @@ export interface Player {
   coinsInHand: number; // Coins waiting to enter board (Position 0)
   coinsFinished: number; // Coins that have exited (Position > 64)
   colorHex: string;
-  avatar?: string; // Emoji character or Base64 Image URL
 }
 
 export interface BoardShell {
