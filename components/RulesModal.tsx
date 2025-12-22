@@ -18,7 +18,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
       >
         <div className="sticky top-0 bg-stone-900 border-b border-amber-900/50 p-6 flex justify-between items-center z-10">
           <div className="flex flex-col">
-            <h2 className="text-3xl font-cinzel text-amber-500 font-bold leading-none">Rules of Sho ཤོའི་སྒྲིག་གཞི།</h2>
+            <h2 className="text-3xl font-cinzel text-amber-500 font-bold leading-none">Rules of Sho ཤོ་འི་སྒྲིག་གཞི།</h2>
           </div>
           <button onClick={onClose} className="text-stone-400 hover:text-white text-2xl font-bold">×</button>
         </div>
@@ -45,14 +45,25 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             <p className="text-sm">Killer Bonus: If an opponent lands on and kills your 'Sho-mo', they can place three coins in its place immediately (taking the extra from their hand). གསོད་རིན། གལ་ཏེ་ཁ་གཏད་ཀྱིས་་ཁྱེད་ཀྱི་'ཤོ་མོ་'བསད་པ་ཡིན་ན། ཁོས་དེའི་ཚབ་ཏུ་ལག་ཁྱི་གསུམ་འཇོག་ཆོག</p>
           </section>
 
+          <section className="bg-amber-950/20 p-4 rounded-lg border border-amber-900/30">
+            <h3 className="text-xl font-cinzel text-amber-400 mb-2">The Pa Ra Rule པ་རའི་སྒྲིག་གཞི།</h3>
+            <p className="text-sm mb-2">Rolling a 1 and 1 is called 'Pa Ra'. It is the most powerful roll in the game. ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་'པ་ར་'ཟེར།</p>
+            <ul className="list-disc list-inside text-sm space-y-1">
+              <li><strong>Bonus Roll:</strong> You get to roll again immediately. ཤོ་བསྐྱར་དུ་རྒྱག་ཆོག</li>
+              <li><strong>Opening Pa Ra:</strong> If you roll a Pa Ra on your very first turn, you can place 3 coins (lak-khyi) on the board instead of 2. ཤོ་འགོ་འཛུགས་སྐབས་པ་ར་བབས་ན་ལག་ཁྱི་གསུམ་འཇོག་ཆོག</li>
+              <li><strong>Move Stacking:</strong> The move values from the Pa Ra (2) and your bonus roll are both added to your pool. ཤོ་མིག་རྣམས་བསྡོམས་ནས་གཏོང་ཆོག</li>
+              <li><strong>Infinite Chain:</strong> Rolling multiple Pa Ras in a row keeps giving you bonus rolls! པ་ར་མུ་མཐུད་བབས་ན་ཤོ་རྒྱག་ཐེངས་མང་པོ་ཐོབ།</li>
+            </ul>
+          </section>
+
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-stone-800/50 p-4 rounded-lg">
                   <h4 className="font-bold text-amber-400 mb-1">Stacking བརྩེགས་སྟངས།</h4>
-                  <p className="text-xs">If you land on your own piece, they stack together. Stacks move as a single unit. གལ་ཏེ་རང་གི་ལག་ཁྱིའི་ཐོག་ཏུ་བབས་ན་བརྩེགས་ནས་མཉམ་དུ་འགྲོ་ཐུབ།</p>
+                  <p className="text-xs">If you land on your own piece, they stack together. Stacks move as a single unit. In this game, stacking also grants a bonus roll! གལ་ཏེ་རང་གི་ལག་ཁྱིའི་ཐོག་ཏུ་བབས་ན་བརྩེགས་ཆོག་པ་མ་ཟད་ཤོ་ཐེངས་གཅིག་ཁ་སྣོན་ཐོབ།</p>
               </div>
               <div className="bg-stone-800/50 p-4 rounded-lg border border-red-900/20">
                   <h4 className="font-bold text-red-400 mb-1">Killing བསད་སྟངས།</h4>
-                  <p className="text-xs">If you land on an opponent's stack that is equal to or smaller than yours, you 'kill' it. They return to hand, and you get a Bonus Roll! གལ་ཏེ་ཁ་གཏད་ཀྱི་ལག་ཁྱི་ཁྱེད་ལས་ཉུང་བའམ་མཉམ་པ་ཡིན་ན། དེ་བསད་ནས་ལག་པར་སློག་ཆོག ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་རྒྱག་རྒྱུའི་ཁེ་ཕན་ཡོད།</p>
+                  <p className="text-xs">If you land on an opponent's stack that is equal to or smaller than yours, you 'kill' it. They return to hand, and you get a Bonus Roll! གལ་ཏེ་ཁ་གཏད་ཀྱི་ལག་ཁྱི་བསད་པ་ཡིན་ན་ཤོ་ཐེངས་གཅིག་ཁ་སྣོན་ཐོབ།</p>
               </div>
           </section>
 

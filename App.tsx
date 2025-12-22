@@ -48,13 +48,24 @@ const getRandomDicePos = () => { const r = 35 + Math.random() * 45; const theta 
 
 const DICE_PROBS: Record<number, number> = { 2: 1/36, 3: 2/36, 4: 3/36, 5: 4/36, 6: 5/36, 7: 6/36, 8: 5/36, 9: 4/36, 10: 3/36, 11: 2/36, 12: 1/36 };
 
-const calculatePotentialMoves = (sourceIdx: number, moveVals: number[], currentBoard: BoardState, player: Player, isNinerMode: boolean): MoveOption[] => {
+const calculatePotentialMoves = (sourceIdx: number, moveVals: number[], currentBoard: BoardState, player: Player, isNinerMode: boolean, isOpeningPaRa: boolean): MoveOption[] => {
   const options: MoveOption[] = [];
   const evaluateTarget = (dist: number, consumed: number[]): MoveOption | null => {
     const targetIdx = sourceIdx + dist;
     if (targetIdx > TOTAL_SHELLS) { return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.FINISH }; }
     const targetShell = currentBoard.get(targetIdx); if (!targetShell) return null;
-    let movingStackSize = sourceIdx === 0 ? (player.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (currentBoard.get(sourceIdx)?.stackSize || 0);
+    
+    let movingStackSize = 0;
+    if (sourceIdx === 0) {
+        if (player.coinsInHand === COINS_PER_PLAYER) {
+            movingStackSize = isOpeningPaRa ? 3 : 2;
+        } else {
+            movingStackSize = 1;
+        }
+    } else {
+        movingStackSize = currentBoard.get(sourceIdx)?.stackSize || 0;
+    }
+
     if (targetShell.owner === player.id) { const rs = targetShell.stackSize + movingStackSize; if (!isNinerMode && rs === 9) return null; return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.STACK }; }
     if (targetShell.owner && targetShell.owner !== player.id) { if (movingStackSize >= targetShell.stackSize) return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.KILL }; return null; }
     return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.PLACE };
@@ -64,10 +75,10 @@ const calculatePotentialMoves = (sourceIdx: number, moveVals: number[], currentB
   return options;
 };
 
-const getAvailableMoves = (pIndex: number, pBoard: BoardState, pPlayers: Player[], pVals: number[], isNinerMode: boolean) => {
+const getAvailableMoves = (pIndex: number, pBoard: BoardState, pPlayers: Player[], pVals: number[], isNinerMode: boolean, isOpeningPaRa: boolean) => {
   let moves: MoveOption[] = []; const player = pPlayers[pIndex]; if (!player) return moves;
-  if (player.coinsInHand > 0) { moves = [...moves, ...calculatePotentialMoves(0, pVals, pBoard, player, isNinerMode)]; }
-  pBoard.forEach((shell) => { if (shell.owner === player.id && shell.stackSize > 0) moves = [...moves, ...calculatePotentialMoves(shell.index, pVals, pBoard, player, isNinerMode)]; });
+  if (player.coinsInHand > 0) { moves = [...moves, ...calculatePotentialMoves(0, pVals, pBoard, player, isNinerMode, isOpeningPaRa)]; }
+  pBoard.forEach((shell) => { if (shell.owner === player.id && shell.stackSize > 0) moves = [...moves, ...calculatePotentialMoves(shell.index, pVals, pBoard, player, isNinerMode, isOpeningPaRa)]; });
   return moves;
 };
 
@@ -79,8 +90,9 @@ const App: React.FC = () => {
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [pendingMoveValues, setPendingMoveValues] = useState<number[]>([]);
-  const [paRaCount, setPaRaCount] = useState(0); // Tracks consecutive 1,1 rolls
-  const [extraRolls, setExtraRolls] = useState(0); // Tracks stacked bonus turns from kills/stacks
+  const [paRaCount, setPaRaCount] = useState(0); 
+  const [extraRolls, setExtraRolls] = useState(0); 
+  const [isOpeningPaRa, setIsOpeningPaRa] = useState(false); // New state to track if current moves come from an opening Pa Ra
   const [logs, setLogs] = useState<GameLog[]>([]);
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [lastMove, setLastMove] = useState<MoveOption | null>(null);
@@ -98,10 +110,10 @@ const App: React.FC = () => {
   const [handShake, setHandShake] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep });
+  const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
   useEffect(() => { 
-    gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep }; 
-  }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep]);
+    gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
+  }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa]);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
@@ -115,7 +127,7 @@ const App: React.FC = () => {
     const newBoard = new Map<number, BoardShell>(); for (let i = 1; i <= TOTAL_SHELLS; i++) newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false });
     setBoard(newBoard);
     const initialPlayers = generatePlayers({ name: playerName, color: selectedColor, avatar: selectedAvatar }, p2Config || { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] });
-    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setPaRaCount(0); setExtraRolls(0); setLastMove(null); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
+    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setPaRaCount(0); setExtraRolls(0); setIsOpeningPaRa(false); setLastMove(null); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
     addLog("New game started! ཤོ་འགོ་ཚུགས་སོང་།", 'info');
   }, [playerName, selectedColor, selectedAvatar, addLog]);
 
@@ -127,6 +139,7 @@ const App: React.FC = () => {
   const handleSkipTurn = useCallback(() => {
     const s = gameStateRef.current;
     setPendingMoveValues([]);
+    setIsOpeningPaRa(false);
     if (s.extraRolls > 0) {
         setExtraRolls(prev => prev - 1);
         setPhase(GamePhase.ROLLING);
@@ -168,6 +181,11 @@ const App: React.FC = () => {
         addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again. པ་ར་བབས་སོང་།`, 'alert'); 
     } 
     else { 
+        const isOpening = players[s.turnIndex].coinsInHand === COINS_PER_PLAYER;
+        if (s.paRaCount > 0 && isOpening) {
+            setIsOpeningPaRa(true);
+            addLog(`OPENING PA RA! You can place 3 coins! པ་ར་བབས་སོང་། ལག་ཁྱི་གསུམ་འཇོག་ཆོག`, 'alert');
+        }
         const movePool = [...Array(s.paRaCount).fill(2), total];
         setPendingMoveValues(movePool); 
         setPaRaCount(0); 
@@ -178,7 +196,7 @@ const App: React.FC = () => {
 
   const performMove = (sourceIdx: number, targetIdx: number) => {
     const s = gameStateRef.current;
-    const currentMovesList = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode);
+    const currentMovesList = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
     const move = currentMovesList.find(m => m.sourceIndex === sourceIdx && m.targetIndex === targetIdx);
     if (!move) return;
 
@@ -190,8 +208,9 @@ const App: React.FC = () => {
 
     if (move.sourceIndex === 0) { 
         const isOpening = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER; 
-        movingStackSize = isOpening ? 2 : 1; 
+        movingStackSize = isOpening ? (s.isOpeningPaRa ? 3 : 2) : 1; 
         newPlayers[s.turnIndex].coinsInHand -= movingStackSize; 
+        if (s.isOpeningPaRa) setIsOpeningPaRa(false); // Only first placement gets the 3-coin benefit
     } else { 
         const source = nb.get(move.sourceIndex)!; 
         movingStackSize = source.stackSize; 
@@ -218,7 +237,7 @@ const App: React.FC = () => {
             addLog(`${player.name} stacked and earned a bonus turn! བརྩེགས་རིན་ཤོ་ཐེངས་གཅིག་ཐོབ་སོང་།`, 'action');
         } else {
             SFX.playCoinClick();
-            nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize === 2) });
+            nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize >= 2) });
         }
     }
 
@@ -230,15 +249,14 @@ const App: React.FC = () => {
 
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
 
-    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode);
+    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode, s.isOpeningPaRa);
     
-    // Stack the extra rolls from kills and stacks
     if (localExtraRollInc > 0) setExtraRolls(prev => prev + localExtraRollInc);
 
     if (nextMoves.length === 0 || movesLeft.length === 0) {
         setPendingMoveValues([]); 
+        setIsOpeningPaRa(false);
         
-        // Final state check within this update scope using functional updates or tracking the current value
         const totalExtraRolls = s.extraRolls + localExtraRollInc;
         
         if (totalExtraRolls > 0) {
@@ -263,12 +281,18 @@ const App: React.FC = () => {
         if (s.phase === GamePhase.ROLLING) {
           performRoll();
         } else if (s.phase === GamePhase.MOVING) {
-          const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode);
+          const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
           if (aiMoves.length > 0) {
             const scoredMoves = aiMoves.map(m => {
               let score = m.targetIndex; 
               const aiPlayer = s.players[1]; const humPlayer = s.players[0];
-              const aiSize = m.sourceIndex === 0 ? (aiPlayer.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (s.board.get(m.sourceIndex)?.stackSize || 1);
+              let aiSize = 0;
+              if (m.sourceIndex === 0) {
+                  aiSize = aiPlayer.coinsInHand === COINS_PER_PLAYER ? (s.isOpeningPaRa ? 3 : 2) : 1;
+              } else {
+                  aiSize = s.board.get(m.sourceIndex)?.stackSize || 1;
+              }
+
               if (m.type === MoveResultType.KILL) score += 2000 + (s.board.get(m.targetIndex)?.stackSize || 0) * 100;
               if (m.type === MoveResultType.FINISH) score += 1800;
               if (m.type === MoveResultType.STACK) {
@@ -295,9 +319,9 @@ const App: React.FC = () => {
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [turnIndex, phase, gameMode, isRolling, paRaCount, extraRolls, board, pendingMoveValues, isNinerMode, players, handleSkipTurn]);
+  }, [turnIndex, phase, gameMode, isRolling, paRaCount, extraRolls, board, pendingMoveValues, isNinerMode, players, handleSkipTurn, isOpeningPaRa]);
 
-  const currentValidMovesList = phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode) : [];
+  const currentValidMovesList = phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode, isOpeningPaRa) : [];
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
 
   const shouldHighlightHand = phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0) && players[turnIndex].coinsInHand > 0;
