@@ -2,9 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Sho - Tibetan Dice Game</title>
     
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a1a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sho" />
+    <link rel="apple-touch-icon" href="https://api.iconify.design/noto:game-die.svg" />
+    <link rel="manifest" href="manifest.json" />
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JP0RJN1V46"></script>
     <script>
@@ -25,6 +33,10 @@
         color: #f3f4f6;
         margin: 0;
         overflow: hidden;
+        /* Prevent elastic scrolling on iOS */
+        position: fixed;
+        width: 100%;
+        height: 100%;
       }
       
       h1, h2, h3, button {
