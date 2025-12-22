@@ -8,6 +8,7 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
+import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -266,7 +267,7 @@ const App: React.FC = () => {
     }
   };
 
-  // AI Strategic Loop
+  // Enhanced AI Strategic Loop
   useEffect(() => {
     if (gameMode === GameMode.AI && turnIndex === 1 && phase !== GamePhase.GAME_OVER && !isRolling) {
       const timer = setTimeout(() => {
@@ -490,10 +491,12 @@ const App: React.FC = () => {
                                 <h1 className="text-amber-500 text-base md:text-2xl font-cinzel">ཤོ Sho</h1>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center text-[10px] md:text-xs ${isMusicEnabled ? 'text-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
                                 <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
+                        
+                        <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
+
                         <div className="grid grid-cols-2 gap-1 md:gap-2 mt-1">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
