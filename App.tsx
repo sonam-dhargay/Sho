@@ -79,7 +79,8 @@ const App: React.FC = () => {
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [pendingMoveValues, setPendingMoveValues] = useState<number[]>([]);
-  const [waitingForPaRa, setWaitingForPaRa] = useState(false);
+  const [paRaCount, setPaRaCount] = useState(0); // Tracks consecutive 1,1 rolls
+  const [extraRolls, setExtraRolls] = useState(0); // Tracks stacked bonus turns from kills/stacks
   const [logs, setLogs] = useState<GameLog[]>([]);
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [lastMove, setLastMove] = useState<MoveOption | null>(null);
@@ -97,8 +98,10 @@ const App: React.FC = () => {
   const [handShake, setHandShake] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, isRolling, isNinerMode, gameMode, tutorialStep });
-  useEffect(() => { gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, isRolling, isNinerMode, gameMode, tutorialStep }; }, [board, players, turnIndex, phase, pendingMoveValues, waitingForPaRa, isRolling, isNinerMode, gameMode, tutorialStep]);
+  const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep });
+  useEffect(() => { 
+    gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep }; 
+  }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep]);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
@@ -112,7 +115,7 @@ const App: React.FC = () => {
     const newBoard = new Map<number, BoardShell>(); for (let i = 1; i <= TOTAL_SHELLS; i++) newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false });
     setBoard(newBoard);
     const initialPlayers = generatePlayers({ name: playerName, color: selectedColor, avatar: selectedAvatar }, p2Config || { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] });
-    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setWaitingForPaRa(false); setLastMove(null); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
+    setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setPaRaCount(0); setExtraRolls(0); setLastMove(null); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
     addLog("New game started! ཤོ་འགོ་ཚུགས་སོང་།", 'info');
   }, [playerName, selectedColor, selectedAvatar, addLog]);
 
@@ -122,14 +125,21 @@ const App: React.FC = () => {
   }, [gameMode]);
 
   const handleSkipTurn = useCallback(() => {
+    const s = gameStateRef.current;
     setPendingMoveValues([]);
-    setPhase(GamePhase.ROLLING);
-    setTurnIndex((prev) => (prev + 1) % players.length);
-    addLog(`${players[turnIndex].name} skipped their turn.`, 'info');
+    if (s.extraRolls > 0) {
+        setExtraRolls(prev => prev - 1);
+        setPhase(GamePhase.ROLLING);
+        addLog(`${players[turnIndex].name} used an extra roll!`, 'info');
+    } else {
+        setPhase(GamePhase.ROLLING);
+        setTurnIndex((prev) => (prev + 1) % players.length);
+        addLog(`${players[turnIndex].name} skipped their turn.`, 'info');
+    }
   }, [players, turnIndex, addLog]);
 
   const performRoll = async () => {
-    const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING && !s.waitingForPaRa) return;
+    const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING) return;
     setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 800)); 
     let d1 = Math.floor(Math.random() * 6) + 1, d2 = Math.floor(Math.random() * 6) + 1;
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) { d1 = 2; d2 = 6; }
@@ -145,8 +155,24 @@ const App: React.FC = () => {
     const isPaRa = (d1 === 1 && d2 === 1), total = d1 + d2;
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
-    if (isPaRa) { SFX.playPaRa(); setWaitingForPaRa(true); addLog(`PA RA (1,1)! Roll again. པ་ར་བབས་སོང་།`, 'alert'); } 
-    else { if (s.waitingForPaRa) { setPendingMoveValues([2, total]); setWaitingForPaRa(false); } else { setPendingMoveValues([total]); } setPhase(GamePhase.MOVING); }
+    
+    if (isPaRa) { 
+        SFX.playPaRa(); 
+        const newCount = s.paRaCount + 1;
+        if (newCount === 3) {
+            addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly! པ་ར་གསུམ་བརྩེགས་ཀྱི་རྒྱལ་ཁ།`, 'alert');
+            setPhase(GamePhase.GAME_OVER);
+            return;
+        }
+        setPaRaCount(newCount); 
+        addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again. པ་ར་བབས་སོང་།`, 'alert'); 
+    } 
+    else { 
+        const movePool = [...Array(s.paRaCount).fill(2), total];
+        setPendingMoveValues(movePool); 
+        setPaRaCount(0); 
+        setPhase(GamePhase.MOVING); 
+    }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
 
@@ -158,7 +184,7 @@ const App: React.FC = () => {
 
     const nb: BoardState = new Map(s.board); 
     const player = s.players[s.turnIndex]; 
-    let bonusTurn = false; 
+    let localExtraRollInc = 0; 
     let movingStackSize = 0; 
     let newPlayers = [...s.players];
 
@@ -183,13 +209,13 @@ const App: React.FC = () => {
             const eIdx = players.findIndex(p => p.id === target.owner); 
             if (eIdx !== -1) newPlayers[eIdx].coinsInHand += target.stackSize; 
             nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: false }); 
-            bonusTurn = true; 
-            addLog(`${player.name} killed a stack and got a bonus!`, 'alert');
+            localExtraRollInc = 1; 
+            addLog(`${player.name} killed a stack and earned an extra roll! གསོད་རིན་ཤོ་ཐེངས་གཅིག་ཐོབ་སོང་།`, 'alert');
         } else if (move.type === MoveResultType.STACK) { 
             SFX.playStack();
             nb.set(move.targetIndex, { ...target, stackSize: target.stackSize + movingStackSize, owner: player.id, isShoMo: false }); 
-            bonusTurn = false; 
-            addLog(`${player.name} stacked their pieces!`, 'action');
+            localExtraRollInc = 1; 
+            addLog(`${player.name} stacked and earned a bonus turn! བརྩེགས་རིན་ཤོ་ཐེངས་གཅིག་ཐོབ་སོང་།`, 'action');
         } else {
             SFX.playCoinClick();
             nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize === 2) });
@@ -205,10 +231,24 @@ const App: React.FC = () => {
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
 
     const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode);
+    
+    // Stack the extra rolls from kills and stacks
+    if (localExtraRollInc > 0) setExtraRolls(prev => prev + localExtraRollInc);
+
     if (nextMoves.length === 0 || movesLeft.length === 0) {
         setPendingMoveValues([]); 
-        setPhase(GamePhase.ROLLING); 
-        if (!bonusTurn) setTurnIndex((prev) => (prev + 1) % players.length);
+        
+        // Final state check within this update scope using functional updates or tracking the current value
+        const totalExtraRolls = s.extraRolls + localExtraRollInc;
+        
+        if (totalExtraRolls > 0) {
+            setExtraRolls(prev => prev - 1);
+            setPhase(GamePhase.ROLLING);
+            addLog(`${player.name} starts their bonus roll!`, 'info');
+        } else {
+            setPhase(GamePhase.ROLLING); 
+            setTurnIndex((prev) => (prev + 1) % players.length);
+        }
     } else {
         setPendingMoveValues(nextMoves);
     }
@@ -220,7 +260,7 @@ const App: React.FC = () => {
     if (gameMode === GameMode.AI && turnIndex === 1 && phase !== GamePhase.GAME_OVER && !isRolling) {
       const timer = setTimeout(() => {
         const s = gameStateRef.current;
-        if (s.phase === GamePhase.ROLLING || s.waitingForPaRa) {
+        if (s.phase === GamePhase.ROLLING) {
           performRoll();
         } else if (s.phase === GamePhase.MOVING) {
           const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode);
@@ -255,7 +295,7 @@ const App: React.FC = () => {
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [turnIndex, phase, gameMode, isRolling, waitingForPaRa, board, pendingMoveValues, isNinerMode, players, handleSkipTurn]);
+  }, [turnIndex, phase, gameMode, isRolling, paRaCount, extraRolls, board, pendingMoveValues, isNinerMode, players, handleSkipTurn]);
 
   const currentValidMovesList = phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode) : [];
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
@@ -342,7 +382,7 @@ const App: React.FC = () => {
                         </header>
                         <div className="grid grid-cols-2 gap-1.5 md:gap-3">{players.map((p, i) => ( <div key={p.id} className={`p-1.5 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}><div className="flex items-center gap-1.5 mb-1"><div className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden bg-black/40 flex items-center justify-center">{p.avatar?.startsWith('data:') ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-[10px] md:text-xl">{p.avatar}</span>}</div><h3 className="font-bold truncate text-[8px] md:text-xs font-serif" style={{ color: p.colorHex }}>{p.name}</h3></div><div className="flex justify-between text-[7px] md:text-[10px] text-stone-400"><div className="flex flex-col"><span className="uppercase opacity-50 text-[6px] md:text-[8px]">In <span className="font-serif">ལག་ཐོག།</span></span><span className="font-bold text-stone-200">{p.coinsInHand}</span></div><div className="flex flex-col items-end"><span className="uppercase opacity-50 text-[6px] md:text-[8px]">Out <span className="font-serif">གདན་ཐོག</span></span><span className="font-bold text-amber-500">{p.coinsFinished}</span></div></div></div> ))}</div>
                     </div>
-                    <div className="px-2 md:px-4 pb-1.5 flex flex-col gap-1.5 flex-shrink-0 bg-stone-950">{phase === GamePhase.GAME_OVER ? ( <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse"><h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2><button onClick={() => initializeGame()} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">New Game</button></div> ) : ( <div className="flex flex-col gap-1.5"><DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING || waitingForPaRa) && !isRolling && (gameMode !== GameMode.AI || turnIndex === 0)} pendingValues={pendingMoveValues} waitingForPaRa={waitingForPaRa} flexiblePool={null} /><div className="flex gap-1.5"><div onClick={() => { 
+                    <div className="px-2 md:px-4 pb-1.5 flex flex-col gap-1.5 flex-shrink-0 bg-stone-950">{phase === GamePhase.GAME_OVER ? ( <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse"><h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2><button onClick={() => initializeGame()} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">New Game</button></div> ) : ( <div className="flex flex-col gap-1.5"><DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING) && !isRolling && (gameMode !== GameMode.AI || turnIndex === 0)} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} /><div className="flex gap-1.5"><div onClick={() => { 
                       if (phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0)) { 
                         if (players[turnIndex].coinsInHand > 0) {
                           setSelectedSourceIndex(0); 
@@ -354,7 +394,7 @@ const App: React.FC = () => {
                           addLog("There are no more coins (lak-khyi) in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
                         }
                       } 
-                    }} className={`flex-1 p-3 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}><span className={`font-bold tracking-widest uppercase font-cinzel text-xs md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span><span className="text-[8px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span></div>{currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && !waitingForPaRa && (gameMode !== GameMode.AI || turnIndex === 0) && ( <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1.5 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel"><span className="text-[8px] md:text-[10px]">Skip Turn</span><span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span></button> )}</div></div> )}</div>
+                    }} className={`flex-1 p-3 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}><span className={`font-bold tracking-widest uppercase font-cinzel text-xs md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span><span className="text-[8px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span></div>{currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1.5 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel"><span className="text-[8px] md:text-[10px]">Skip Turn</span><span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span></button> )}</div></div> )}</div>
                     <div className="flex-grow bg-black/40 mx-2 md:mx-4 mb-1.5 rounded-lg p-1.5 md:p-3 overflow-y-auto no-scrollbar font-mono text-[7px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">{logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}</div>
                 </div>
                 <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}><div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300"><Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} /></div></div>
