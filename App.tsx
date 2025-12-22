@@ -319,7 +319,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row">
-        {gameMode === GamePhase.SETUP && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">Initializing...</div>}
+        {gameMode === GamePhase.SETUP && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-amber-500 font-cinzel">Initializing...</div>}
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
         <style dangerouslySetInnerHTML={{__html: `
@@ -336,7 +336,7 @@ const App: React.FC = () => {
         `}} />
         {!gameMode && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
-               {/* Title Section - Restored the "ཤོ Sho" combined title */}
+               {/* Title Section */}
                <div className="flex flex-col items-center flex-shrink-0 w-full max-w-sm md:max-w-md">
                    <h1 className="flex items-center gap-6 mb-4 font-cinzel">
                       <span className="text-7xl md:text-9xl text-amber-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">ཤོ</span>
@@ -406,53 +406,83 @@ const App: React.FC = () => {
         )}
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
-                    <div className="p-2 md:p-4 flex flex-col gap-1.5 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
-                        <header className="flex justify-between items-center border-b border-stone-800 pb-1.5 md:pb-4">
+                {/* Optimized sidebar: height reduced to 38vh for portrait, flex-grow removed from logs area to prevent stretching */}
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[38dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
+                    <div className="p-2 md:p-4 flex flex-col gap-1 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
+                        <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
                             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setGameMode(null)}>
-                                <h1 className="text-amber-500 text-lg md:text-2xl font-cinzel">ཤོ Sho</h1>
+                                <h1 className="text-amber-500 text-base md:text-2xl font-cinzel">ཤོ Sho</h1>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center text-xs ${isMusicEnabled ? 'text-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
-                                <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-xs">?</button>
+                                <button onClick={() => setIsMusicEnabled(!isMusicEnabled)} className={`w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 flex items-center justify-center text-[10px] md:text-xs ${isMusicEnabled ? 'text-amber-500 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'text-stone-600'}`}>{isMusicEnabled ? '🎵' : '🔇'}</button>
+                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-1.5 md:gap-2">
+                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-1">
                             {players.map((p, i) => (
-                                <div key={p.id} className={`p-1.5 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
-                                    <div className="flex items-center gap-1.5 mb-1">
-                                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full" style={{ backgroundColor: p.colorHex }}></div>
-                                        <h3 className="font-bold truncate text-[8px] md:text-[10px] font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
+                                <div key={p.id} className={`p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full" style={{ backgroundColor: p.colorHex }}></div>
+                                        <h3 className="font-bold truncate text-[7px] md:text-[10px] font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
-                                    <div className="flex justify-between text-[7px] md:text-[9px] text-stone-400">
+                                    <div className="flex justify-between text-[6px] md:text-[9px] text-stone-400">
                                         <div className="flex flex-col">
-                                            <span className="uppercase opacity-50 text-[6px] md:text-[7px]">In <span className="font-serif">ལག་ཐོག།</span></span>
-                                            <span className="font-bold text-stone-200">{p.coinsInHand}</span>
+                                            <span className="font-bold text-stone-200">{p.coinsInHand} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">In ལག་ཐོག།</span></span>
                                         </div>
                                         <div className="flex flex-col items-end">
-                                            <span className="uppercase opacity-50 text-[6px] md:text-[7px]">Out <span className="font-serif">གདན་ཐོག</span></span>
-                                            <span className="font-bold text-amber-500">{p.coinsFinished}</span>
+                                            <span className="font-bold text-amber-500">{p.coinsFinished} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">Out གདན་ཐོག</span></span>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-                    <div className="px-2 md:px-4 pb-1.5 flex flex-col gap-1.5 flex-shrink-0 bg-stone-950">{phase === GamePhase.GAME_OVER ? ( <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse"><h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2><button onClick={() => initializeGame()} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">New Game</button></div> ) : ( <div className="flex flex-col gap-1.5"><DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING) && !isRolling && (gameMode !== GameMode.AI || turnIndex === 0)} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} /><div className="flex gap-1.5"><div onClick={() => { 
-                      if (phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0)) { 
-                        if (players[turnIndex].coinsInHand > 0) {
-                          setSelectedSourceIndex(0); 
-                        } else {
-                          SFX.playBlocked();
-                          setHandShake(true);
-                          setTimeout(() => setHandShake(false), 400);
-                          addLog("There are no more coins (lak-khyi) in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
-                        }
-                      } 
-                    }} className={`flex-1 p-3 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}><span className={`font-bold tracking-widest uppercase font-cinzel text-xs md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span><span className="text-[8px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span></div>{currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1.5 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel"><span className="text-[8px] md:text-[10px]">Skip Turn</span><span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span></button> )}</div></div> )}</div>
-                    <div className="flex-grow bg-black/40 mx-2 md:mx-4 mb-1.5 rounded-lg p-1.5 md:p-3 overflow-y-auto no-scrollbar font-mono text-[7px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">{logs.map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}</div>
+                    <div className="px-2 md:px-4 pb-1 flex flex-col gap-1 flex-shrink-0 bg-stone-950">
+                        {phase === GamePhase.GAME_OVER ? ( 
+                            <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
+                                <h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
+                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">New Game</button>
+                            </div> 
+                        ) : ( 
+                            <div className="flex flex-col gap-1">
+                                <DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING) && !isRolling && (gameMode !== GameMode.AI || turnIndex === 0)} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
+                                <div className="flex gap-1">
+                                    <div onClick={() => { 
+                                      if (phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0)) { 
+                                        if (players[turnIndex].coinsInHand > 0) {
+                                          setSelectedSourceIndex(0); 
+                                        } else {
+                                          SFX.playBlocked();
+                                          setHandShake(true);
+                                          setTimeout(() => setHandShake(false), 400);
+                                          addLog("There are no more coins (lak-khyi) in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
+                                        }
+                                      } 
+                                    }} className={`flex-1 p-2 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
+                                        <span className={`font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
+                                        <span className="text-[7px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
+                                    </div>
+                                    {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( 
+                                        <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
+                                            <span className="text-[8px] md:text-[10px]">Skip Turn</span>
+                                            <span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span>
+                                        </button> 
+                                    )}
+                                </div>
+                            </div> 
+                        )}
+                    </div>
+                    {/* Logs restricted to very small area to keep UI tight on portrait */}
+                    <div className="h-8 md:flex-grow bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[6px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
+                        {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
+                    </div>
                 </div>
-                <div className="flex-grow relative bg-[#1c1917] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}><div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300"><Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} /></div></div>
+                {/* Board area increased to 62vh for more room to scale up the board visually */}
+                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[62dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
+                    <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
+                        <Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} />
+                    </div>
+                </div>
             </>
         )}
     </div>
