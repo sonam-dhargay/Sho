@@ -276,33 +276,110 @@ const App: React.FC = () => {
         } else if (s.phase === GamePhase.MOVING) {
           const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
           if (aiMoves.length > 0) {
+            // Pre-calculate human player stats for strategy
+            const humPlayer = s.players[0];
+            const aiPlayer = s.players[1];
+            let humLeadIndex = 0;
+            let humMaxStackSize = 0;
+            const humStacks: BoardShell[] = [];
+            
+            s.board.forEach(shell => {
+              if (shell.owner === humPlayer.id) {
+                humStacks.push(shell);
+                if (shell.index > humLeadIndex) humLeadIndex = shell.index;
+                if (shell.stackSize > humMaxStackSize) humMaxStackSize = shell.stackSize;
+              }
+            });
+
             const scoredMoves = aiMoves.map(m => {
-              let score = m.targetIndex; 
-              const aiPlayer = s.players[1]; const humPlayer = s.players[0];
+              let score = 0; 
+              const targetShell = s.board.get(m.targetIndex);
+              
+              // 1. Progress Heuristic
+              const endgameWeight = aiPlayer.coinsFinished > 5 ? 3.0 : 1.0;
+              score += m.targetIndex * 15 * endgameWeight;
+
+              // 2. Moving Unit Size Determination
               let aiSize = 0;
               if (m.sourceIndex === 0) {
                   aiSize = aiPlayer.coinsInHand === COINS_PER_PLAYER ? (s.isOpeningPaRa ? 3 : 2) : 1;
+                  score += 400; // Prefer getting pieces onto the board early
               } else {
                   aiSize = s.board.get(m.sourceIndex)?.stackSize || 1;
               }
-              if (m.type === MoveResultType.KILL) score += 2000 + (s.board.get(m.targetIndex)?.stackSize || 0) * 100;
-              if (m.type === MoveResultType.FINISH) score += 1800;
-              if (m.type === MoveResultType.STACK) {
-                const targetSize = (s.board.get(m.targetIndex)?.stackSize || 0) + aiSize;
-                if (targetSize >= 3 && targetSize <= 5) score += 800; else score += 300;
+
+              // 3. Move Type Evaluation
+              if (m.type === MoveResultType.FINISH) {
+                  score += 6000; // Finishing is top priority
               }
-              Array.from(s.board.values()).forEach((shell: BoardShell) => {
-                if (shell.owner === humPlayer.id) {
+              
+              if (m.type === MoveResultType.KILL) {
+                  const victimSize = targetShell?.stackSize || 0;
+                  const isShoMoKill = targetShell?.isShoMo;
+                  score += 4000 + (victimSize * 300);
+                  if (isShoMoKill) score += 1500;
+                  // Extra bonus for killing lead piece
+                  if (m.targetIndex === humLeadIndex) score += 2000;
+              }
+              
+              if (m.type === MoveResultType.STACK) {
+                const totalSize = (targetShell?.stackSize || 0) + aiSize;
+                // Favor strong middle-sized stacks (4-6) which are very hard to kill
+                if (totalSize >= 4 && totalSize <= 6) score += 2500;
+                else if (totalSize >= 3) score += 1800;
+                else score += 700;
+                
+                // Bonus for extra roll from stacking
+                score += 1000; 
+              }
+
+              // 4. BLOCKING STRATEGY (The Roadblock Heuristic)
+              // If we land just ahead of the human lead piece with a larger stack, we create a massive obstacle.
+              if (m.targetIndex > humLeadIndex && m.targetIndex <= humLeadIndex + 12) {
+                  if (aiSize > humMaxStackSize) {
+                      // High-quality block!
+                      const distanceToLead = m.targetIndex - humLeadIndex;
+                      // Max bonus for landing 2-7 steps ahead (prime blocking range)
+                      const blockQuality = distanceToLead >= 2 && distanceToLead <= 7 ? 3500 : 1500;
+                      score += blockQuality;
+                  } else if (aiSize === humMaxStackSize) {
+                      // Moderate block
+                      score += 800;
+                  }
+              }
+
+              // 5. Vulnerability Assessment (Defense)
+              humStacks.forEach((shell: BoardShell) => {
+                // If the human can kill us
+                if (shell.stackSize > aiSize) {
                     const dist = m.targetIndex - shell.index;
                     if (dist >= 2 && dist <= 12) {
                         const prob = DICE_PROBS[dist] || 0;
-                        if (shell.stackSize > aiSize) score -= prob * 4000;
+                        // Massive penalty for high probability of being killed, scaled by endgame urgency
+                        score -= prob * (15000 * endgameWeight); 
                     }
-                    if (dist > 0 && dist <= 3 && aiSize > shell.stackSize) score += 500;
+                }
+                // Bonus for threatening a human stack from behind
+                if (aiSize >= shell.stackSize) {
+                     const dist = shell.index - m.targetIndex;
+                     if (dist >= 2 && dist <= 12) {
+                         const prob = DICE_PROBS[dist] || 0;
+                         score += prob * 4000;
+                     }
                 }
               });
+
+              // 6. Strategic Placement (Shell Control)
+              // Land on a spot where we likely block human progress
+              if (m.type === MoveResultType.PLACE || m.type === MoveResultType.STACK) {
+                  // If target is in the final 15 shells, blocking is more valuable
+                  if (m.targetIndex > 50) score += 500;
+              }
+
               return { move: m, score };
             }).sort((a, b) => b.score - a.score);
+            
+            // Perform the move with the highest tactical score
             performMove(scoredMoves[0].move.sourceIndex, scoredMoves[0].move.targetIndex);
           } else {
             handleSkipTurn();
@@ -406,7 +483,6 @@ const App: React.FC = () => {
         )}
         {gameMode && (
             <>
-                {/* Optimized sidebar: height reduced to 38vh for portrait, flex-grow removed from logs area to prevent stretching */}
                 <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[38dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
                     <div className="p-2 md:p-4 flex flex-col gap-1 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
@@ -472,12 +548,10 @@ const App: React.FC = () => {
                             </div> 
                         )}
                     </div>
-                    {/* Logs restricted to very small area to keep UI tight on portrait */}
                     <div className="h-8 md:flex-grow bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[6px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
                         {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                     </div>
                 </div>
-                {/* Board area increased to 62vh for more room to scale up the board visually */}
                 <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[62dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} />
