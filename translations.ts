@@ -1,4 +1,3 @@
-
 export const T = {
   common: {
     back: { en: "Back", bo: "ཕྱིར་ལོག།" },
@@ -12,7 +11,6 @@ export const T = {
     verse: { en: "Para Penpa Tashi Zhug. Gyak-khen Trinley Namgyal Re.", bo: "པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།" },
     nameLabel: { en: "Your Name", bo: "ཁྱེད་ཀྱི་མིང་།" },
     colorLabel: { en: "Choose Color", bo: "ཚོས་གཞི་དོམ།" },
-    avatarLabel: { en: "Select Avatar", bo: "གཟུགས་བརྙན་དོམ།" },
     modeLocal: { en: "Local", bo: "རང་ཤག་ཏུ་་རྩེ།" },
     modeAI: { en: "Vs AI", bo: "མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།" },
     tutorial: { en: "Tutorial", bo: "རྩེ་སྟངས་མྱུར་ཁྲིད།" },
@@ -53,8 +51,8 @@ export const T = {
     paraRule2: { en: "The move values of both rolls are added to your available moves.", bo: "ཤོ་རྒྱག་ཐེངས་གཉིས་ཀྱི་མིག་བསྡོམས་ནས་རྡེའུ་གཏོང་ཆོག" },
     instantWinTitle: { en: "Instant Win", bo: "དེ་མ་ཐག་པའི་རྒྱལ་ཁ།" },
     instantWinDesc: { en: "In very rare circumstances, a player may win instantly:", bo: "ཆེས་དཀོན་པའི་གནས་སྟངས་འོག་དེ་མ་ཐག་རྒྱལ་ཁ་ཐོབ་སྲིད།" },
-    triplePara: { en: "Triple Pa Ra: If a player rolls a Pa Ra (1,1) three times in a row, they are declared the winner immediately.", bo: "པ་ར་གསུམ་བརྩེགས། གལ་ཏེ་པ་ར་ཐེངས་གསུམ་བསྟུད་མར་བབས་ན་དེ་མ་ཐག་རྒྱལ་ཁ་ཐོབ།" },
-    stackedDice: { en: "Stacked Dice: If the dice physically land stacked on top of each other during a roll, the player wins on the spot.", bo: "ཤོ་བརྩེགས་བབས་པ། གལ་ཏེ་ཤོ་གཅིག་གི་སྟེང་དུ་གཅིག་བརྩེགས་ནས་བབས་ན་རྒྱལ་ཁ་ཐོབ།" },
+    triplePara: { en: "Triple Pa Ra: If a player rolls a Pa Ra (1,1) three times in a row, they are declared the winner immediately.", bo: "པ་ར་གསུམ་བརྩེགས། གལ་ཏེ་པ་ར་ཐེངས་གསུམ་བསྟུད་མར་བབས་ན་དེ་མ་ཐག་རྒྱལ་ཁ་ཐོབ་སྲིད།" },
+    stackedDice: { en: "Stacked Dice: If the dice physically land stacked on top of each other during a roll, the player wins on the spot.", bo: "ཤོ་བརྩེགས་བབས་པ། གལ་ཏེ་ཤོ་གཅིག་གི་སྟེང་དུ་གཅིག་བརྩེགས་ནས་བབས་ན་རྒྱལ་ཁ་ཐོབ་སྲིད།" },
     tacticsTitle: { en: "Tactics", bo: "ཐབས་ཇུས།" },
     stackingTitle: { en: "Stacking", bo: "བརྩེགས་སྟངས།" },
     stackingDesc: { en: "If you land on your own piece, they stack together. Stacks move as a single unit.", bo: "གལ་ཏེ་རང་གི་ལག་ཁྱི་ཐོག་ཏུ་ཤོ་བབས་ན་དེའི་སྟེང་བརྩེགས་ནས་མཉམ་དུ་འགྲོ་ཐུབ།" },
@@ -62,7 +60,7 @@ export const T = {
     killingDesc: { en: "If you land on an opponent's stack that is equal to or smaller than yours, you 'kill' it. They return to hand, and you get a Bonus Roll!", bo: "གལ་ཏེ་ཁ་གཏད་ཀྱི་ལག་ཁྱི་ཁྱེད་ལས་ཉུང་བའམ་མཉམ་པ་ཡོད་ན། དེ་བསད་ནས་ལག་པར་སློག་ཆོག ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་རྒྱག་རྒྱུའི་ཁེ་ཕན་ཐོབ།" },
     finishingTitle: { en: "Finishing", bo: "རྩེད་མོ་མཇུག་སྒྲིལ་སྟངས།" },
     finishingRule1: { en: "You must roll a number that takes your piece past the 64th shell.", bo: "ལག་ཁྱི་རྣམས་རྡེའུ་ ༦༤ ལས་བརྒལ་བར་བྱེད་པའི་ཤོ་མིག་ཞིག་བབས་དགོས།" },
-    finishingRule2: { en: "The first player to move all 9 coins off the board wins!", bo: "ལག་ཁྱི་ ༩ ཆར་ལ་བརྒལ་མཁན་དེ་ལ་རྒྱལ་ཁ་ཐོབ་པ་ཡིན།" },
+    finishingRule2: { en: "The first player to move all 9 coins off the board wins!", bo: "ལག་ཁྱི་་ ༩ ཆར་ཚང་མ་ལ་བརྒལ་མཁན་དེ་ལ་རྒྱལ་ཁ་ཐོབ་པ་ཡིན།" },
   },
   tutorial: {
     steps: [
@@ -95,7 +93,7 @@ export const T = {
       {
         title: { en: "The Pa Ra Rule", bo: "པ་རའི་སྒྲིག་གཞི།" },
         text: { en: "If you roll a 1 and 1, it's called 'Pa Ra'. You get a bonus roll immediately!", bo: "གལ་ཏེ་ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་'པ་ར་'ཟེར། ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་བསྐྱར་དུ་རྒྱག་རྒྱུའི་གོ་སྐབས་ཐོབ།" },
-        action: { en: "Finish Tutorial", bo: "མྱུར་ཁྲིད་མཇུག་བསྡུ་བའོ།" }
+        action: { en: "Finish Tutorial", bo: "མྱུར་ཁྲིད་ mཇུག་བསྡུ་བའོ།" }
       }
     ]
   }

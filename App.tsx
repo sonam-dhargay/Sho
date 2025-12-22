@@ -10,25 +10,22 @@ import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 
 const generatePlayers = (
-    p1Settings: { name: string, color: string, avatar?: string },
-    p2Settings: { name: string, color: string, avatar?: string }
+    p1Settings: { name: string, color: string },
+    p2Settings: { name: string, color: string }
 ): Player[] => {
     return [
-        { id: PlayerColor.Red, name: p1Settings.name || 'Player 1', colorHex: p1Settings.color || COLOR_PALETTE[0].hex, coinsInHand: COINS_PER_PLAYER, coinsFinished: 0, avatar: p1Settings.avatar || AVATAR_PRESETS[0] },
-        { id: PlayerColor.Blue, name: p2Settings.name || 'Player 2', colorHex: p2Settings.color || COLOR_PALETTE[1].hex, coinsInHand: COINS_PER_PLAYER, coinsFinished: 0, avatar: p2Settings.avatar || AVATAR_PRESETS[1] }
+        { id: PlayerColor.Red, name: p1Settings.name || 'Player 1', colorHex: p1Settings.color || COLOR_PALETTE[0].hex, coinsInHand: COINS_PER_PLAYER, coinsFinished: 0 },
+        { id: PlayerColor.Blue, name: p2Settings.name || 'Player 2', colorHex: p2Settings.color || COLOR_PALETTE[1].hex, coinsInHand: COINS_PER_PLAYER, coinsFinished: 0 }
     ];
 };
 
 const SFX = {
   ctx: null as AudioContext | null,
-  musicNodes: [] as AudioNode[],
-  musicIntervals: [] as number[],
-  masterMusicGain: null as GainNode | null,
   getContext: () => { if (!SFX.ctx) { SFX.ctx = new (window.AudioContext || (window as any).webkitAudioContext)(); } if (SFX.ctx.state === 'suspended') SFX.ctx.resume(); return SFX.ctx; },
   createNoiseBuffer: (ctx: AudioContext) => { const bufferSize = ctx.sampleRate * 2; const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate); const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; } return buffer; },
   playShake: () => { const ctx = SFX.getContext(); const t = ctx.currentTime; const noise = ctx.createBufferSource(); noise.buffer = SFX.createNoiseBuffer(ctx); const noiseFilter = ctx.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = 1000; const noiseGain = ctx.createGain(); noiseGain.gain.setValueAtTime(0, t); noiseGain.gain.linearRampToValueAtTime(0.3, t + 0.05); noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(ctx.destination); noise.start(t); noise.stop(t + 0.35); },
   playLand: () => { const ctx = SFX.getContext(); const t = ctx.currentTime; const osc = ctx.createOscillator(); const thudGain = ctx.createGain(); osc.frequency.setValueAtTime(120, t); osc.frequency.exponentialRampToValueAtTime(30, t + 0.15); thudGain.gain.setValueAtTime(0.8, t); thudGain.gain.exponentialRampToValueAtTime(0.01, t + 0.2); osc.connect(thudGain); thudGain.connect(ctx.destination); osc.start(t); osc.stop(t + 0.2); },
-  playCoinClick: (timeOffset = 0, pitch = 1.0) => { const ctx = SFX.getContext(); const t = ctx.currentTime + timeOffset; const carrier = ctx.createOscillator(); carrier.type = 'sine'; carrier.frequency.setValueAtTime(2000 * pitch, t); const modulator = ctx.createOscillator(); modulator.type = 'square'; modulator.frequency.setValueAtTime(320 * pitch, t); const modGain = ctx.createGain(); modGain.gain.setValueAtTime(800, t); modGain.gain.exponentialRampToValueAtTime(1, t + 0.1); modulator.connect(modGain); modGain.connect(carrier.frequency); const mainGain = ctx.createGain(); mainGain.gain.setValueAtTime(0, t); mainGain.gain.linearRampToValueAtTime(0.2, t + 0.01); mainGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3); carrier.connect(mainGain); mainGain.connect(ctx.destination); carrier.start(t); carrier.stop(t + 0.3); modulator.start(t); modulator.stop(t + 0.3); },
+  playCoinClick: (timeOffset = 0, pitch = 1.0) => { const ctx = SFX.getContext(); const t = ctx.currentTime + timeOffset; const carrier = ctx.createOscillator(); carrier.type = 'sine'; carrier.frequency.setValueAtTime(2000 * pitch, t); const modulator = ctx.createOscillator(); modulator.type = 'square'; modulator.frequency.setValueAtTime(320 * pitch, t); const modGain = ctx.createGain(); modGain.gain.setValueAtTime(800, t); modGain.gain.exponentialRampToValueAtTime(1, t + 0.1); modulator.connect(modGain); modulator.connect(carrier.frequency); const mainGain = ctx.createGain(); mainGain.gain.setValueAtTime(0, t); mainGain.gain.linearRampToValueAtTime(0.2, t + 0.01); mainGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3); carrier.connect(mainGain); mainGain.connect(ctx.destination); carrier.start(t); carrier.stop(t + 0.3); modulator.start(t); modulator.stop(t + 0.3); },
   playStack: () => { SFX.playCoinClick(0, 1.0); SFX.playCoinClick(0.08, 1.1); },
   playKill: () => { SFX.playCoinClick(0, 0.8); SFX.playCoinClick(0.1, 0.9); SFX.playCoinClick(0.25, 0.85); },
   playFinish: () => { SFX.playCoinClick(0, 1.2); SFX.playCoinClick(0.1, 1.5); SFX.playCoinClick(0.2, 2.0); },
@@ -92,7 +89,7 @@ const App: React.FC = () => {
   const [pendingMoveValues, setPendingMoveValues] = useState<number[]>([]);
   const [paRaCount, setPaRaCount] = useState(0); 
   const [extraRolls, setExtraRolls] = useState(0); 
-  const [isOpeningPaRa, setIsOpeningPaRa] = useState(false); // New state to track if current moves come from an opening Pa Ra
+  const [isOpeningPaRa, setIsOpeningPaRa] = useState(false);
   const [logs, setLogs] = useState<GameLog[]>([]);
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [lastMove, setLastMove] = useState<MoveOption | null>(null);
@@ -101,7 +98,6 @@ const App: React.FC = () => {
   const [tutorialStep, setTutorialStep] = useState(0);
   const [playerName, setPlayerName] = useState('Player');
   const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0].hex);
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(AVATAR_PRESETS[0]);
   const [showRules, setShowRules] = useState(false);
   const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const [boardScale, setBoardScale] = useState(0.8);
@@ -123,13 +119,13 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const initializeGame = useCallback((p2Config?: { name: string, color: string, avatar?: string }, isTutorial = false) => {
+  const initializeGame = useCallback((p2Config?: { name: string, color: string }, isTutorial = false) => {
     const newBoard = new Map<number, BoardShell>(); for (let i = 1; i <= TOTAL_SHELLS; i++) newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false });
     setBoard(newBoard);
-    const initialPlayers = generatePlayers({ name: playerName, color: selectedColor, avatar: selectedAvatar }, p2Config || { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6', avatar: AVATAR_PRESETS[1] });
+    const initialPlayers = generatePlayers({ name: playerName, color: selectedColor }, p2Config || { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6' });
     setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setPaRaCount(0); setExtraRolls(0); setIsOpeningPaRa(false); setLastMove(null); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
     addLog("New game started! ཤོ་འགོ་ཚུགས་སོང་།", 'info');
-  }, [playerName, selectedColor, selectedAvatar, addLog]);
+  }, [playerName, selectedColor, addLog]);
 
   useEffect(() => {
     const handleResize = () => { if (boardContainerRef.current) { const { width, height } = boardContainerRef.current.getBoundingClientRect(); setBoardScale(Math.max(Math.min((width - 20) / 800, (height - 20) / 800, 1), 0.3)); } };
@@ -356,7 +352,6 @@ const App: React.FC = () => {
                <div className="mb-6 md:mb-8 w-full max-w-md bg-stone-900/50 p-6 rounded-xl border border-stone-800 backdrop-blur-md">
                   <div className="mb-4"><label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between"><span>Your Name</span><span className="opacity-50 font-serif">ཁྱེད་ཀྱི་མིང་།</span></label><input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/50 border border-stone-700 rounded p-3 text-stone-200 outline-none focus:border-amber-500" maxLength={15} /></div>
                   <div className="mb-4"><label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between"><span>Choose Color</span><span className="opacity-50 font-serif">ཚོས་གཞི་དོམ།</span></label><div className="flex gap-2">{COLOR_PALETTE.map((c) => ( <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 rounded-full border-2 ${selectedColor === c.hex ? 'border-white shadow-[0_0_8px_white]' : 'border-transparent opacity-70'}`} style={{ backgroundColor: c.hex }} /> ))}</div></div>
-                  <div className="mb-4"><label className="text-stone-400 text-[10px] uppercase block mb-2 tracking-widest flex justify-between"><span>Select Avatar</span><span className="opacity-50 font-serif">གཟུགས་བརྙན་དོམ།</span></label><div className="flex gap-2">{AVATAR_PRESETS.map((av) => ( <button key={av} onClick={() => setSelectedAvatar(av)} className={`w-8 h-8 flex items-center justify-center rounded-lg border border-stone-700 ${selectedAvatar === av ? 'border-amber-500 bg-stone-800' : ''}`}>{av}</button> ))}</div></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 w-full max-w-md mb-6 px-2">
@@ -404,7 +399,26 @@ const App: React.FC = () => {
                                 <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-xs">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-1.5 md:gap-3">{players.map((p, i) => ( <div key={p.id} className={`p-1.5 md:p-3 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}><div className="flex items-center gap-1.5 mb-1"><div className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden bg-black/40 flex items-center justify-center">{p.avatar?.startsWith('data:') ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-[10px] md:text-xl">{p.avatar}</span>}</div><h3 className="font-bold truncate text-[8px] md:text-xs font-serif" style={{ color: p.colorHex }}>{p.name}</h3></div><div className="flex justify-between text-[7px] md:text-[10px] text-stone-400"><div className="flex flex-col"><span className="uppercase opacity-50 text-[6px] md:text-[8px]">In <span className="font-serif">ལག་ཐོག།</span></span><span className="font-bold text-stone-200">{p.coinsInHand}</span></div><div className="flex flex-col items-end"><span className="uppercase opacity-50 text-[6px] md:text-[8px]">Out <span className="font-serif">གདན་ཐོག</span></span><span className="font-bold text-amber-500">{p.coinsFinished}</span></div></div></div> ))}</div>
+                        <div className="grid grid-cols-2 gap-1.5 md:gap-2">
+                            {players.map((p, i) => (
+                                <div key={p.id} className={`p-1.5 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full" style={{ backgroundColor: p.colorHex }}></div>
+                                        <h3 className="font-bold truncate text-[8px] md:text-[10px] font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
+                                    </div>
+                                    <div className="flex justify-between text-[7px] md:text-[9px] text-stone-400">
+                                        <div className="flex flex-col">
+                                            <span className="uppercase opacity-50 text-[6px] md:text-[7px]">In <span className="font-serif">ལག་ཐོག།</span></span>
+                                            <span className="font-bold text-stone-200">{p.coinsInHand}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="uppercase opacity-50 text-[6px] md:text-[7px]">Out <span className="font-serif">གདན་ཐོག</span></span>
+                                            <span className="font-bold text-amber-500">{p.coinsFinished}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                     <div className="px-2 md:px-4 pb-1.5 flex flex-col gap-1.5 flex-shrink-0 bg-stone-950">{phase === GamePhase.GAME_OVER ? ( <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse"><h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2><button onClick={() => initializeGame()} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">New Game</button></div> ) : ( <div className="flex flex-col gap-1.5"><DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING) && !isRolling && (gameMode !== GameMode.AI || turnIndex === 0)} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} /><div className="flex gap-1.5"><div onClick={() => { 
                       if (phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0)) { 
