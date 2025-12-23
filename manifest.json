@@ -9,12 +9,12 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/tibetdev/sho-assets/main/sho_cup_dice.png",
+      "src": "https://github.com/sonam-dhargay/Sho/blob/main/assets/sho-game-icons-1-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://raw.githubusercontent.com/tibetdev/sho-assets/main/sho_cup_dice.png",
+      "src": "https://github.com/sonam-dhargay/Sho/blob/main/assets/sho-game-icons-2-512x512.pngg",
       "sizes": "512x512",
       "type": "image/png"
     }
