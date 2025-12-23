@@ -19,6 +19,56 @@ interface BoardProps {
   isNinerMode?: boolean; 
 }
 
+// Localized Synthesizer for Blocked Feedback
+const playBlockedSFX = (() => {
+  let ctx: AudioContext | null = null;
+  return () => {
+    try {
+      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+      if (!AudioContextClass) return;
+      if (!ctx) ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') ctx.resume();
+      
+      const t = ctx.currentTime;
+      
+      // Primary "Thud" Oscillator
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(160, t);
+      osc1.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+      
+      gain1.gain.setValueAtTime(0.6, t);
+      gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      
+      osc1.start(t);
+      osc1.stop(t + 0.2);
+
+      // Deep resonance "Donk" Oscillator
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(100, t + 0.04);
+      osc2.frequency.exponentialRampToValueAtTime(20, t + 0.25);
+      
+      gain2.gain.setValueAtTime(0, t);
+      gain2.gain.linearRampToValueAtTime(0.4, t + 0.05);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      
+      osc2.start(t + 0.04);
+      osc2.stop(t + 0.35);
+    } catch (e) {
+      console.warn("Audio blocked or unavailable", e);
+    }
+  };
+})();
+
 const CowrieShell: React.FC<{ angle: number; isTarget: boolean; isBlocked?: boolean }> = ({ angle, isTarget, isBlocked }) => {
   const rotation = (angle * 180 / Math.PI) + 90;
   return (
@@ -151,26 +201,47 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
   const triggerBlockedFeedback = (targetId: number, sourceIdx: number | null) => {
     const targetShell = boardState.get(targetId);
     let msg = "";
+    let playBlocked = false;
     const currentPlayerObj = players.find(p => p.id === currentPlayer);
     
     if (sourceIdx === null) {
         if (targetShell?.owner && targetShell.owner !== currentPlayer) {
             msg = "BLOCKED: SELECT PIECE ལག་ཁྱི་འདོམ།";
+            playBlocked = true;
         } else return;
     } else {
         let moverSize = sourceIdx === 0 ? (currentPlayerObj?.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (boardState.get(sourceIdx)?.stackSize || 1);
         if (targetShell) {
             if (targetShell.owner && targetShell.owner !== currentPlayer) {
-                if (targetShell.stackSize > moverSize) msg = "BLOCKED: TOO LARGE བཀག།"; else msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+                if (targetShell.stackSize > moverSize) {
+                    msg = "BLOCKED: TOO LARGE བཀག།";
+                    playBlocked = true;
+                } else {
+                    msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+                }
             } else if (targetShell.owner === currentPlayer) {
-                if (!isNinerMode && targetShell.stackSize + moverSize === 9) msg = "BLOCKED: 9 LIMIT དགུ་བརྩེགས་མི་ཆོག།"; else msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
-            } else { msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།"; }
+                if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
+                    msg = "BLOCKED: 9 LIMIT དགུ་བརྩེགས་མི་ཆོག།";
+                    playBlocked = true;
+                } else {
+                    msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+                }
+            } else {
+                msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+            }
         }
     }
     
     if (msg) {
-        setShakeShellId(targetId); setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
-        setTimeout(() => setShakeShellId(null), 500); setTimeout(() => setBlockedFeedback(null), 1800);
+        setShakeShellId(targetId); 
+        setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
+        
+        if (playBlocked) {
+            playBlockedSFX();
+        }
+
+        setTimeout(() => setShakeShellId(null), 500); 
+        setTimeout(() => setBlockedFeedback(null), 1800);
         onInvalidMoveAttempt?.(sourceIdx || 0, targetId);
     }
   };

@@ -1,7 +1,7 @@
 {
-  "name": "Sho - Tibetan Dice Game",
+  "name": "Sho - Traditional Tibetan Dice Game",
   "short_name": "Sho",
-  "description": "Play the traditional Tibetan game of Sho.",
+  "description": "Play the traditional Tibetan game of Sho. Race through 64 shells, stack your coins, and roll Pa Ra for bonus turns.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1a1a1a",
@@ -9,14 +9,14 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "https://api.iconify.design/noto:game-die.svg",
+      "src": "https://raw.githubusercontent.com/tibetdev/sho-assets/main/sho_cup_dice.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png"
     },
     {
-      "src": "https://api.iconify.design/noto:game-die.svg",
+      "src": "https://raw.githubusercontent.com/tibetdev/sho-assets/main/sho_cup_dice.png",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/png"
     }
   ]
 }
