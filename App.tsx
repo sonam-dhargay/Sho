@@ -8,7 +8,6 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
-import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -100,7 +99,6 @@ const App: React.FC = () => {
   const [playerName, setPlayerName] = useState('Player');
   const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0].hex);
   const [showRules, setShowRules] = useState(false);
-  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const [boardScale, setBoardScale] = useState(0.8);
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
@@ -267,7 +265,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Enhanced AI Strategic Loop
+  // AI Strategic Loop
   useEffect(() => {
     if (gameMode === GameMode.AI && turnIndex === 1 && phase !== GamePhase.GAME_OVER && !isRolling) {
       const timer = setTimeout(() => {
@@ -277,7 +275,6 @@ const App: React.FC = () => {
         } else if (s.phase === GamePhase.MOVING) {
           const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
           if (aiMoves.length > 0) {
-            // Pre-calculate human player stats for strategy
             const humPlayer = s.players[0];
             const aiPlayer = s.players[1];
             let humLeadIndex = 0;
@@ -295,72 +292,47 @@ const App: React.FC = () => {
             const scoredMoves = aiMoves.map(m => {
               let score = 0; 
               const targetShell = s.board.get(m.targetIndex);
-              
-              // 1. Progress Heuristic
               const endgameWeight = aiPlayer.coinsFinished > 5 ? 3.0 : 1.0;
               score += m.targetIndex * 15 * endgameWeight;
-
-              // 2. Moving Unit Size Determination
               let aiSize = 0;
               if (m.sourceIndex === 0) {
                   aiSize = aiPlayer.coinsInHand === COINS_PER_PLAYER ? (s.isOpeningPaRa ? 3 : 2) : 1;
-                  score += 400; // Prefer getting pieces onto the board early
+                  score += 400;
               } else {
                   aiSize = s.board.get(m.sourceIndex)?.stackSize || 1;
               }
-
-              // 3. Move Type Evaluation
-              if (m.type === MoveResultType.FINISH) {
-                  score += 6000; // Finishing is top priority
-              }
-              
+              if (m.type === MoveResultType.FINISH) score += 6000;
               if (m.type === MoveResultType.KILL) {
                   const victimSize = targetShell?.stackSize || 0;
                   const isShoMoKill = targetShell?.isShoMo;
                   score += 4000 + (victimSize * 300);
                   if (isShoMoKill) score += 1500;
-                  // Extra bonus for killing lead piece
                   if (m.targetIndex === humLeadIndex) score += 2000;
               }
-              
               if (m.type === MoveResultType.STACK) {
                 const totalSize = (targetShell?.stackSize || 0) + aiSize;
-                // Favor strong middle-sized stacks (4-6) which are very hard to kill
                 if (totalSize >= 4 && totalSize <= 6) score += 2500;
                 else if (totalSize >= 3) score += 1800;
                 else score += 700;
-                
-                // Bonus for extra roll from stacking
                 score += 1000; 
               }
-
-              // 4. BLOCKING STRATEGY (The Roadblock Heuristic)
-              // If we land just ahead of the human lead piece with a larger stack, we create a massive obstacle.
               if (m.targetIndex > humLeadIndex && m.targetIndex <= humLeadIndex + 12) {
                   if (aiSize > humMaxStackSize) {
-                      // High-quality block!
                       const distanceToLead = m.targetIndex - humLeadIndex;
-                      // Max bonus for landing 2-7 steps ahead (prime blocking range)
                       const blockQuality = distanceToLead >= 2 && distanceToLead <= 7 ? 3500 : 1500;
                       score += blockQuality;
                   } else if (aiSize === humMaxStackSize) {
-                      // Moderate block
                       score += 800;
                   }
               }
-
-              // 5. Vulnerability Assessment (Defense)
               humStacks.forEach((shell: BoardShell) => {
-                // If the human can kill us
                 if (shell.stackSize > aiSize) {
                     const dist = m.targetIndex - shell.index;
                     if (dist >= 2 && dist <= 12) {
                         const prob = DICE_PROBS[dist] || 0;
-                        // Massive penalty for high probability of being killed, scaled by endgame urgency
                         score -= prob * (15000 * endgameWeight); 
                     }
                 }
-                // Bonus for threatening a human stack from behind
                 if (aiSize >= shell.stackSize) {
                      const dist = shell.index - m.targetIndex;
                      if (dist >= 2 && dist <= 12) {
@@ -369,18 +341,11 @@ const App: React.FC = () => {
                      }
                 }
               });
-
-              // 6. Strategic Placement (Shell Control)
-              // Land on a spot where we likely block human progress
               if (m.type === MoveResultType.PLACE || m.type === MoveResultType.STACK) {
-                  // If target is in the final 15 shells, blocking is more valuable
                   if (m.targetIndex > 50) score += 500;
               }
-
               return { move: m, score };
             }).sort((a, b) => b.score - a.score);
-            
-            // Perform the move with the highest tactical score
             performMove(scoredMoves[0].move.sourceIndex, scoredMoves[0].move.targetIndex);
           } else {
             handleSkipTurn();
@@ -414,7 +379,6 @@ const App: React.FC = () => {
         `}} />
         {!gameMode && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
-               {/* Title Section */}
                <div className="flex flex-col items-center flex-shrink-0 w-full max-w-sm md:max-w-md">
                    <h1 className="flex items-center gap-6 mb-4 font-cinzel">
                       <span className="text-7xl md:text-9xl text-amber-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">ཤོ</span>
@@ -424,8 +388,6 @@ const App: React.FC = () => {
                    <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
                    <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
                </div>
-               
-               {/* Body Section (Configuration + Modes) */}
                <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-8 md:gap-14">
                   <div className="w-full bg-stone-900/30 p-8 rounded-[3rem] border border-stone-800/50 backdrop-blur-2xl shadow-2xl">
                       <div className="mb-10">
@@ -445,7 +407,6 @@ const App: React.FC = () => {
                         </div>
                       </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-6 w-full px-2">
                       <button className="bg-stone-900/40 border-2 border-stone-800/80 p-8 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
                           <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🏔️</span>
@@ -459,8 +420,6 @@ const App: React.FC = () => {
                       </button>
                   </div>
                </div>
-
-               {/* Footer Section */}
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex gap-16">
                       <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors group">
@@ -472,7 +431,6 @@ const App: React.FC = () => {
                           <span className="text-[10px] font-serif mt-1 opacity-60">ཤོ་ཡི་སྒྲིག་གཞི།</span>
                       </button>
                   </div>
-
                   <div className="flex flex-col items-center">
                       <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">Games Commenced</span>
                       <span className={`text-amber-700/80 font-bold text-4xl tabular-nums transition-all duration-700 mt-2 ${isCounterPulsing ? 'scale-110 text-amber-500 brightness-125' : ''}`}>
@@ -494,9 +452,6 @@ const App: React.FC = () => {
                                 <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
-                        
-                        <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
-
                         <div className="grid grid-cols-2 gap-1 md:gap-2 mt-1">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
