@@ -475,9 +475,9 @@ const App: React.FC = () => {
                                         <div className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full ${turnIndex === i ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
                                         <h3 className={`font-bold truncate text-[8px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
-                                    <div className="flex justify-between text-[6px] md:text-[9px] text-stone-400">
-                                        <span className="font-bold text-stone-200">{p.coinsInHand} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">In</span></span>
-                                        <span className="font-bold text-amber-500">{p.coinsFinished} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">Out</span></span>
+                                    <div className="flex justify-between text-[6px] md:text-[8px] text-stone-400 font-bold uppercase tracking-tighter">
+                                        <span>{p.coinsInHand} <span className="opacity-60 text-[5px] md:text-[7px]">In ལག་ཐོག།</span></span>
+                                        <span className="text-amber-500">{p.coinsFinished} <span className="opacity-60 text-[5px] md:text-[7px]">Out གདན་ཐོག</span></span>
                                     </div>
                                 </div>
                             ))}
@@ -504,9 +504,9 @@ const App: React.FC = () => {
                                           addLog("No coins in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
                                         }
                                       } 
-                                    }} className={`flex-1 p-2 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
+                                    }} className={`flex-1 p-2 md:p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
                                         <span className={`font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
-                                        <span className="text-[7px] md:text-xs text-stone-500 font-serif">({players[turnIndex].coinsInHand}) ལག་ཁྱི།</span>
+                                        <span className="text-[7px] md:text-xs text-stone-500 font-serif">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
                                     </div>
                                     {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( 
                                         <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">

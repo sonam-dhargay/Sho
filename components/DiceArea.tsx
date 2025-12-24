@@ -66,12 +66,10 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
                 ${waitingForPaRa ? 'animate-bounce border border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : ''}
             `}
         >
-            {waitingForPaRa 
-                ? "ROLL BONUS!" 
-                : canRoll 
-                    ? "ROLL DICE ཤོ" 
-                    : pendingValues.length > 0 ? "SELECT MOVE" : "WAITING..."
-            }
+            <div className="flex items-center gap-2">
+              <span>{waitingForPaRa ? "ROLL BONUS!" : canRoll ? "ROLL DICE" : "WAITING"}</span>
+              <span className="text-amber-400 text-lg md:text-2xl font-serif">ཤོ་རྒྱོབ།</span>
+            </div>
         </button>
     </div>
   );
