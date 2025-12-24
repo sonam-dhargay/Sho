@@ -359,20 +359,35 @@ const App: React.FC = () => {
       switch (packet.type) {
         case 'SYNC':
           if (isHost) {
-            const guestInfo = { name: packet.payload.playerName, color: packet.payload.color };
+            let guestColor = packet.payload.color;
+            // ENSURE DISTINCT COLORS: If both chose same color, force Guest to a different one
+            if (guestColor === selectedColor) {
+               guestColor = COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6';
+            }
+
+            const guestInfo = { name: packet.payload.playerName, color: guestColor };
             const hostInfo = { name: playerName, color: selectedColor };
             setGameMode(GameMode.ONLINE_HOST);
             setOnlineLobbyStatus('CONNECTED');
-            // Host is ALWAYS P1 (Red), Guest is P2 (Blue)
+            
+            // Host is ALWAYS P1 (Red ID), Guest is P2 (Blue ID)
             initializeGame(hostInfo, guestInfo);
-            conn.send({ type: 'SYNC', payload: { playerName, color: selectedColor, isNinerMode } });
+            
+            // Send back assigned configuration to Guest
+            conn.send({ 
+              type: 'SYNC', 
+              payload: { 
+                hostInfo, 
+                guestInfo, 
+                isNinerMode 
+              } 
+            });
           } else {
-            setIsNinerMode(packet.payload.isNinerMode);
-            const hostInfo = { name: packet.payload.playerName, color: packet.payload.color };
-            const guestInfo = { name: playerName, color: selectedColor };
+            // Guest receives final assignments from Host
+            const { hostInfo, guestInfo, isNinerMode: serverNiner } = packet.payload;
+            setIsNinerMode(serverNiner);
             setGameMode(GameMode.ONLINE_GUEST);
             setOnlineLobbyStatus('CONNECTED');
-            // Host is ALWAYS P1 (Red), Guest is P2 (Blue)
             initializeGame(hostInfo, guestInfo);
           }
           break;
@@ -491,22 +506,22 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room</h3>
-                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent.</p>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཁང་པ་བཟོ།</h3>
+                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་འདི་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
                                 <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
-                                    {myPeerId ? `ROOM CODE: ${myPeerId} 📋` : 'Generate Room Code'}
+                                    {myPeerId ? `ROOM CODE: ${myPeerId} 📋` : 'Generate Room Code ཨང་གྲངས་ལེན།'}
                                 </button>
                                 <div className="h-px w-full bg-stone-800" />
                                 <div className="flex flex-col gap-2">
-                                  <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
+                                  <input type="text" placeholder="ENTER ROOM CODE ཨང་གྲངས་བྲིས།" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
                                   <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
-                                      {isPeerConnecting ? 'Connecting...' : 'Join Room'}
+                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room མཉམ་དུ་རྩེ།'}
                                   </button>
                                 </div>
                              </div>
-                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel</button>
+                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel རྩིས་མེད་གཏོང་།</button>
                           </div>
                         )}
                     </div>
@@ -547,7 +562,7 @@ const App: React.FC = () => {
                                 {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && (
                                     <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                        <span className="text-[8px] uppercase font-bold text-green-400">Online</span>
+                                        <span className="text-[8px] uppercase font-bold text-green-400">Online དྲ་ཐོག</span>
                                     </div>
                                 )}
                                 <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
@@ -571,12 +586,12 @@ const App: React.FC = () => {
                                             <h3 className={`font-bold truncate text-[9px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                         </div>
                                         <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold font-cinzel">
-                                            <div className="flex flex-col"><span className="text-[7px] text-stone-500">Hand</span><span>{p.coinsInHand}</span></div>
-                                            <div className="flex flex-col items-end"><span className="text-[7px] text-stone-500">Done</span><span className="text-amber-500">{p.coinsFinished}</span></div>
+                                            <div className="flex flex-col"><span className="text-[7px] text-stone-500">Hand ལག་པ།</span><span>{p.coinsInHand}</span></div>
+                                            <div className="flex flex-col items-end"><span className="text-[7px] text-stone-500">Done ཕུད་གྲངས།</span><span className="text-amber-500">{p.coinsFinished}</span></div>
                                         </div>
                                         {isActive && (
                                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-600 px-1.5 py-0.5 rounded-md shadow-lg border border-amber-400/30 whitespace-nowrap">
-                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN" : "WAITING..."}</span>
+                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN ཁྱེད་ཀྱི་ཐེངས།" : "WAITING... སྒུག"}</span>
                                             </div>
                                         )}
                                     </div>
@@ -589,7 +604,7 @@ const App: React.FC = () => {
                         {phase === GamePhase.GAME_OVER ? ( 
                             <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
                                 <h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
-                                <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">Exit Game</button>
+                                <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">Exit Game ཕྱིར་དོན།</button>
                             </div> 
                         ) : ( 
                             <div className="flex flex-col gap-1">
@@ -607,7 +622,7 @@ const App: React.FC = () => {
                                     )}
                                 </div>
                                 {!isLocalTurn && phase !== GamePhase.GAME_OVER && (
-                                    <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move...</span></div>
+                                    <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས།</span></div>
                                 )}
                             </div> 
                         )}
