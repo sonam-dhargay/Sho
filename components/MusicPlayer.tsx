@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 interface Track {
   id: string;
   title: string;
-  tibetanTitle: string;
   url: string;
+  tibetanTitle: string;
 }
 
 const TRACKS: Track[] = [
@@ -53,7 +53,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
       if (playPromise !== undefined) {
         playPromise.catch(() => {
           // Auto-play might be blocked by browser
-          onToggle(); 
+          if (isEnabled) onToggle(); 
         });
       }
     } else {
@@ -85,38 +85,38 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
   const prevTrack = () => setCurrentTrackIndex((prev) => (prev - 1 + TRACKS.length) % TRACKS.length);
 
   return (
-    <div className="bg-stone-900/80 border border-stone-800 rounded-xl p-2 md:p-3 flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 overflow-hidden">
+    <div className="bg-stone-900/90 border border-stone-800 rounded-xl p-1.5 md:p-3 flex flex-col gap-1.5 shadow-2xl backdrop-blur-md">
+      {/* Top Bar: Play Toggle and Title */}
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5 overflow-hidden flex-grow">
           <button 
             onClick={onToggle}
-            className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isEnabled ? 'bg-amber-600 text-white animate-pulse' : 'bg-stone-800 text-stone-500'}`}
+            className={`flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all ${isEnabled ? 'bg-amber-600 text-white animate-pulse shadow-[0_0_10px_rgba(217,119,6,0.5)]' : 'bg-stone-800 text-stone-500'}`}
           >
             {isEnabled ? '⏸' : '▶'}
           </button>
           <div className="flex flex-col truncate">
-            <span className="text-[9px] md:text-[11px] font-bold text-amber-500 truncate">{TRACKS[currentTrackIndex].title}</span>
-            <span className="text-[7px] md:text-[9px] text-stone-500 font-serif truncate">{TRACKS[currentTrackIndex].tibetanTitle}</span>
+            <span className="text-[8px] md:text-[11px] font-bold text-amber-500 truncate leading-tight">{TRACKS[currentTrackIndex].title}</span>
+            <span className="text-[6px] md:text-[9px] text-stone-500 font-serif truncate leading-tight">{TRACKS[currentTrackIndex].tibetanTitle}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={() => setShowTracklist(!showTracklist)}
-            className="w-6 h-6 rounded flex items-center justify-center text-stone-400 hover:text-amber-500 text-xs transition-colors"
-          >
-            ☰
-          </button>
-        </div>
+        <button 
+          onClick={() => setShowTracklist(!showTracklist)}
+          className={`w-5 h-5 rounded flex items-center justify-center text-[10px] transition-colors ${showTracklist ? 'bg-amber-800/30 text-amber-500' : 'text-stone-500 hover:text-amber-500'}`}
+        >
+          ☰
+        </button>
       </div>
 
+      {/* Tracklist Popover-style content */}
       {showTracklist && (
-        <div className="flex flex-col gap-1 border-t border-stone-800 pt-2 max-h-24 overflow-y-auto no-scrollbar">
+        <div className="flex flex-col gap-1 border-t border-stone-800 pt-1.5 max-h-20 overflow-y-auto no-scrollbar">
           {TRACKS.map((track, idx) => (
             <button
               key={track.id}
               onClick={() => { setCurrentTrackIndex(idx); setShowTracklist(false); if(!isEnabled) onToggle(); }}
-              className={`text-left px-2 py-1 rounded text-[8px] md:text-[10px] transition-all ${currentTrackIndex === idx ? 'bg-amber-900/30 text-amber-400' : 'text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`}
+              className={`text-left px-2 py-0.5 rounded text-[7px] md:text-[10px] transition-all truncate ${currentTrackIndex === idx ? 'bg-amber-900/30 text-amber-400' : 'text-stone-600 hover:bg-stone-800 hover:text-stone-300'}`}
             >
               {idx + 1}. {track.title}
             </button>
@@ -124,23 +124,26 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
         </div>
       )}
 
-      <div className="flex items-center gap-2 px-1">
-        <span className="text-[8px] text-stone-600">🔈</span>
-        <input 
-          type="range" 
-          min="0" 
-          max="1" 
-          step="0.05" 
-          value={volume} 
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
-          className="flex-grow h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer accent-amber-600"
-        />
-        <span className="text-[8px] text-stone-600">🔊</span>
-      </div>
-
-      <div className="flex justify-between items-center px-1">
-        <button onClick={prevTrack} className="text-[10px] text-stone-500 hover:text-amber-500">⏮</button>
-        <button onClick={nextTrack} className="text-[10px] text-stone-500 hover:text-amber-500">⏭</button>
+      {/* Combined Controls & Volume Bar */}
+      <div className="flex items-center gap-2 border-t border-stone-800/50 pt-1.5">
+        <div className="flex items-center gap-1.5">
+          <button onClick={prevTrack} className="text-[9px] md:text-[12px] text-stone-600 hover:text-amber-500 active:scale-90 transition-all">⏮</button>
+          <button onClick={nextTrack} className="text-[9px] md:text-[12px] text-stone-600 hover:text-amber-500 active:scale-90 transition-all">⏭</button>
+        </div>
+        
+        <div className="flex items-center gap-1.5 flex-grow">
+          <span className="text-[7px] text-stone-700">🔈</span>
+          <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.05" 
+            value={volume} 
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="flex-grow h-0.5 md:h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer accent-amber-600"
+          />
+          <span className="text-[7px] text-stone-700">🔊</span>
+        </div>
       </div>
     </div>
   );

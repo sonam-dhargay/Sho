@@ -452,7 +452,7 @@ const App: React.FC = () => {
         )}
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[38dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[42dvh] md:h-full order-1 overflow-y-auto no-scrollbar flex-shrink-0 mobile-landscape-sidebar">
                     <div className="p-2 md:p-4 flex flex-col gap-1 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
                             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setGameMode(null)}>
@@ -523,14 +523,14 @@ const App: React.FC = () => {
                             </div> 
                         )}
                     </div>
-                    <div className="h-8 md:flex-grow bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[6px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
+                    <div className="h-8 bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[6px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
                         {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                     </div>
-                    <div className="p-2 md:p-4 bg-stone-950 mt-auto">
+                    <div className="p-2 md:p-4 bg-stone-950 mt-auto flex-shrink-0">
                         <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
                     </div>
                 </div>
-                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[62dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
+                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[58dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} />
                     </div>
