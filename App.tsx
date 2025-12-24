@@ -8,6 +8,7 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
+import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -103,6 +104,7 @@ const App: React.FC = () => {
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
   const [handShake, setHandShake] = useState(false);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
@@ -255,7 +257,7 @@ const App: React.FC = () => {
         if (totalExtraRolls > 0) {
             setExtraRolls(prev => prev - 1);
             setPhase(GamePhase.ROLLING);
-            addLog(`${player.name} starts their bonus roll!`, 'info');
+            addLog(`${player.name} used an extra roll!`, 'info');
         } else {
             setPhase(GamePhase.ROLLING); 
             setTurnIndex((prev) => (prev + 1) % players.length);
@@ -376,6 +378,13 @@ const App: React.FC = () => {
             border-color: #ef4444 !important;
             background-color: rgba(127, 29, 29, 0.4) !important;
           }
+          @keyframes turnIndicator {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
+            50% { transform: translateY(-4px) scale(1.15); opacity: 1; }
+          }
+          .animate-turn-indicator {
+            animation: turnIndicator 1.5s ease-in-out infinite;
+          }
         `}} />
         {!gameMode && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
@@ -453,12 +462,19 @@ const App: React.FC = () => {
                                 <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-1">
+                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-4 relative">
                             {players.map((p, i) => (
-                                <div key={p.id} className={`p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                <div key={p.id} className={`relative p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md scale-[1.02] z-10' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
+                                    {/* Turn Indicator Arrow */}
+                                    {turnIndex === i && (
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator">
+                                             <div className="w-1.5 h-1 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                                             <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[3px] border-t-amber-500" />
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-1.5 mb-0.5">
-                                        <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full" style={{ backgroundColor: p.colorHex }}></div>
-                                        <h3 className="font-bold truncate text-[7px] md:text-[10px] font-serif" style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <div className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full ${turnIndex === i ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
+                                        <h3 className={`font-bold truncate text-[7px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
                                     <div className="flex justify-between text-[6px] md:text-[9px] text-stone-400">
                                         <div className="flex flex-col">
@@ -509,6 +525,9 @@ const App: React.FC = () => {
                     </div>
                     <div className="h-8 md:flex-grow bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[6px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
                         {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
+                    </div>
+                    <div className="p-2 md:p-4 bg-stone-950 mt-auto">
+                        <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
                     </div>
                 </div>
                 <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[62dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
