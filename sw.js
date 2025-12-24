@@ -1,3 +1,4 @@
+
 const CACHE_NAME = 'sho-v1';
 const ASSETS = [
   './index.html',
@@ -5,7 +6,8 @@ const ASSETS = [
   './App.tsx',
   './types.ts',
   './constants.ts',
-  './manifest.json'
+  './manifest.json',
+  './sho_logo.png'
 ];
 
 self.addEventListener('install', (event) => {
