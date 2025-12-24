@@ -9,7 +9,6 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
-import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -105,7 +104,6 @@ const App: React.FC = () => {
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
   const [handShake, setHandShake] = useState(false);
-  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Online Multiplayer State
@@ -500,7 +498,7 @@ const App: React.FC = () => {
                         <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
                             <span className="text-2xl">🌐</span>
                             <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Online</h3>
-                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">དྲ་ཐོག་རྩེད་མོ།</span>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">དྲ་ཐོག་རྩེ།</span>
                         </button>
                     </div>
                   ) : (
@@ -508,18 +506,18 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཁང་པ་བཟོ།</h3>
-                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་འདི་ཁ་གཏད་ལ་གཏོང་།</p>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཁང་མིག་བཟོས།</h3>
+                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་གྲངས་དེ་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
                                 <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
-                                    {myPeerId ? `ROOM CODE: ${myPeerId} 📋` : 'Generate Room Code ཨང་གྲངས་ལེན།'}
+                                    {myPeerId ? `ROOM CODE: ${myPeerId} 📋` : 'Generate Room Code ཁང་མིག་ཨང་གྲངས་སྐྲུན།'}
                                 </button>
                                 <div className="h-px w-full bg-stone-800" />
                                 <div className="flex flex-col gap-2">
-                                  <input type="text" placeholder="ENTER ROOM CODE ཨང་གྲངས་བྲིས།" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
+                                  <input type="text" placeholder="ENTER ROOM CODE ཁང་མིག་ཨང་གྲངས་བྲིས།" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
                                   <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
-                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room མཉམ་དུ་རྩེ།'}
+                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room ཁང་པའི་ནང་མཉམ་འཛོམས།'}
                                   </button>
                                 </div>
                              </div>
@@ -531,9 +529,6 @@ const App: React.FC = () => {
                </div>
 
                <div className="w-full flex flex-col items-center gap-10 mt-10">
-                  <div className="max-w-xs w-full">
-                     <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
-                  </div>
                   <div className="flex gap-16">
                       <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                           <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
@@ -541,7 +536,7 @@ const App: React.FC = () => {
                       </button>
                       <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                           <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
-                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོ་ཡི་སྒྲིག་གཞི།</span>
+                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་སྒྲིག་གཞི།</span>
                       </button>
                   </div>
                   <div className="flex flex-col items-center">
@@ -632,12 +627,8 @@ const App: React.FC = () => {
                             </div> 
                         )}
                     </div>
-
-                    <div className="mt-auto px-4 pb-4">
-                        <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
-                    </div>
                     
-                    <div className="p-2 md:p-6 bg-stone-950 flex-shrink-0 text-center opacity-40">
+                    <div className="p-2 md:p-6 bg-stone-950 flex-shrink-0 text-center opacity-40 mt-auto">
                          <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
                     </div>
                 </div>

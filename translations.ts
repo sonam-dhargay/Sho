@@ -7,14 +7,14 @@ export const T = {
   },
   lobby: {
     title: { en: "Sho", bo: "ཤོ" },
-    subtitle: { en: "Traditional Tibetan Dice Game", bo: "བོད་ཀྱི་སྲོལ་རྒྱུན་གྱི་ཤོ་རྩེད།" },
+    subtitle: { en: "Traditional Tibetan Dice Game", bo: "བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།" },
     verse: { en: "Para Penpa Tashi Zhug. Gyak-khen Trinley Namgyal Re.", bo: "པ་ར་སྤེན་པ་བཀྲ་ཤིས་ཞུགས། རྒྱག་མཁན་འཕྲིན་ལས་རྣམ་རྒྱལ་རེད།" },
     nameLabel: { en: "Your Name", bo: "ཁྱེད་ཀྱི་མིང་།" },
     colorLabel: { en: "Choose Color", bo: "ཚོས་གཞི་དོམ།" },
     modeLocal: { en: "Local", bo: "རང་ཤག་ཏུ་་རྩེ།" },
     modeAI: { en: "Vs AI", bo: "མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།" },
     tutorial: { en: "Tutorial", bo: "རྩེ་སྟངས་མྱུར་ཁྲིད།" },
-    rules: { en: "Rules", bo: "ཤོ་ཡི་སྒྲིག་གཞི།" },
+    rules: { en: "Rules", bo: "ཤོའི་་སྒྲིག་གཞི།" },
     totalPlayed: { en: "Total Games Played", bo: "འཛམ་གླིང་ཁྱོན་ཡོངས་སུ་རྩེད་གྲངས།" },
   },
   game: {
@@ -26,7 +26,7 @@ export const T = {
     newGame: { en: "New Game", bo: "རྩེད་མོ་གསར་དུ་འགོ་ཚུགས།" },
     wonMsg: { en: "won!", bo: "ལ་རྒྱལ་ཁ་ཐོབ་སོང་།" },
     movesAvailable: { en: "Available Moves", bo: "ཤོ་མིག་གྲངས།" },
-    flexiblePool: { en: "Flexible Pa Ra Pool", bo: "པ་ར་བབས་པ།" },
+    flexiblePool: { en: "Flexible Pa Ra Pool", bo: "པ་ར་བབས་ཞུགས།" },
     readyToRoll: { en: "Ready to roll...", bo: "ཤོ་རྒྱག་ཆོག་རེད།" },
     waiting: { en: "Waiting...", bo: "སྒུག་བཞུགས།" },
     rollDice: { en: "ROLL DICE", bo: "ཤོ་རྒྱོབ།" },
@@ -34,12 +34,12 @@ export const T = {
     selectMove: { en: "SELECT MOVE", bo: "ག་རེ་གནང་ག།" },
   },
   rules: {
-    title: { en: "Rules of Sho", bo: "ཤོ་ཡི་སྒྲིག་གཞི།" },
+    title: { en: "Rules of Sho", bo: "ཤོའི་་སྒྲིག་གཞི།" },
     variant: { en: "Game Variant", bo: "རྩེད་མོ་འདམ་ག།" },
     ninerMode: { en: "Niner Mode", bo: "དགུ་མ།" },
     noNinerMode: { en: "No-Niner Mode", bo: "དགུ་མ་མིན་པ།" },
-    ninerDesc: { en: "In Niner mode, players are allowed to build a stack of nine coins and charge forward.", bo: "དགུ་མའི་ནང་དུ་ཤོ་རྡོག་དགུ་བརྩེགས་ནས་མདུན་དུ་བསྐྱོད་ཆོག" },
-    noNinerDesc: { en: "In this variant, it is forbidden to build a stack of all nine coins.", bo: "འདིའི་ནང་དུ་ཤོ་རྡོག་དགུ་བརྩེགས་རྒྱག་མི་ཆོག" },
+    ninerDesc: { en: "In Niner mode, players are allowed to build a stack of nine coins and charge forward.", bo: "དགུ་མའི་རྩེ་ན་ལག་ཁྱི་་དགུ་བརྩེགས་ནས་མདུན་དུ་བསྐྱོད་ཆོག" },
+    noNinerDesc: { en: "In this variant, it is forbidden to build a stack of all nine coins.", bo: "འདིའི་རྩེ་དུས་ལག་ཁྱི་དགུ་བརྩེགས་་མི་ཆོག" },
     objectiveTitle: { en: "Objective", bo: "དམིགས་ཡུལ།" },
     objectiveDesc: { en: "Sho is a race game played on a spiral of 64 shells. Each player has 9 coins. The goal is to move all your coins from your hand (start) to the end of the spiral.", bo: "ཤོ་ནི་འགྲན་བསྡུར་གྱི་རྩེད་མོ་ཞིག་ཡིན་ཞིང་། དུང་དཀར་ ༦༤ ཡི་ཐོག་ཏུ་རྩེ་དགོས། རྩེད་མོ་བ་རེར་ཤོ་རྡོག་ ༩ རེ་ཡོད། དམིགས་ཡུལ་ནི་ཤོ་རྡོག་ཚང་མ་མཇུག་བསྡུ་སར་བསྐྱོད་རྒྱུ་དེ་ཡིན།" },
     shomoTitle: { en: "The 'Sho-mo'", bo: "ཤོ་མོ།" },
@@ -93,7 +93,7 @@ export const T = {
       {
         title: { en: "The Pa Ra Rule", bo: "པ་རའི་སྒྲིག་གཞི།" },
         text: { en: "If you roll a 1 and 1, it's called 'Pa Ra'. You get a bonus roll immediately!", bo: "གལ་ཏེ་ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་'པ་ར་'ཟེར། ཁྱེད་ལ་ཤོ་ཐེངས་གཅིག་བསྐྱར་དུ་རྒྱག་རྒྱུའི་གོ་སྐབས་ཐོབ།" },
-        action: { en: "Finish Tutorial", bo: "མྱུར་ཁྲིད་ mཇུག་བསྡུ་བའོ།" }
+        action: { en: "Finish Tutorial", bo: "མྱུར་ཁྲིད་ མཇུག་བསྡུ་བའོ།" }
       }
     ]
   }
