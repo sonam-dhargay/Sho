@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Peer, { DataConnection } from 'peerjs';
 import { 
   Player, PlayerColor, BoardState, GamePhase, 
-  DiceRoll, MoveResultType, MoveOption, GameLog, BoardShell, GameMode
+  DiceRoll, MoveResultType, MoveOption, GameLog, BoardShell, GameMode, NetworkPacket
 } from './types';
 import { TOTAL_SHELLS, COINS_PER_PLAYER, PLAYERS_CONFIG, COLOR_PALETTE } from './constants';
 import { Board } from './components/Board';
@@ -105,12 +106,27 @@ const App: React.FC = () => {
   const [handShake, setHandShake] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
+  // Online Multiplayer State
+  const [peer, setPeer] = useState<Peer | null>(null);
+  const [connection, setConnection] = useState<DataConnection | null>(null);
+  const [myPeerId, setMyPeerId] = useState<string>('');
+  const [targetPeerId, setTargetPeerId] = useState<string>('');
+  const [isPeerConnecting, setIsPeerConnecting] = useState(false);
+  const [onlineLobbyStatus, setOnlineLobbyStatus] = useState<'IDLE' | 'WAITING' | 'CONNECTED'>('IDLE');
+
   const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
   useEffect(() => { 
     gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
   }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa]);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
+
+  // Sync state over P2P
+  const broadcastPacket = useCallback((packet: NetworkPacket) => {
+    if (connection && connection.open) {
+      connection.send(packet);
+    }
+  }, [connection]);
 
   useEffect(() => { 
     const growth = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 15)); setGlobalPlayCount(prev => prev + growth); 
@@ -131,10 +147,15 @@ const App: React.FC = () => {
     window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize);
   }, [gameMode]);
 
-  const handleSkipTurn = useCallback(() => {
+  const handleSkipTurn = useCallback((isRemote = false) => {
     const s = gameStateRef.current;
     setPendingMoveValues([]);
     setIsOpeningPaRa(false);
+    
+    if (!isRemote && gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) {
+      broadcastPacket({ type: 'SKIP_REQ' });
+    }
+
     if (s.extraRolls > 0) {
         setExtraRolls(prev => prev - 1);
         setPhase(GamePhase.ROLLING);
@@ -144,24 +165,42 @@ const App: React.FC = () => {
         setTurnIndex((prev) => (prev + 1) % players.length);
         addLog(`${players[turnIndex].name} skipped their turn.`, 'info');
     }
-  }, [players, turnIndex, addLog]);
+  }, [players, turnIndex, addLog, gameMode, broadcastPacket]);
 
-  const performRoll = async () => {
+  const performRoll = async (forcedRoll?: DiceRoll) => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING) return;
     setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 800)); 
-    let d1 = Math.floor(Math.random() * 6) + 1, d2 = Math.floor(Math.random() * 6) + 1;
+    
+    let d1, d2;
+    if (forcedRoll) {
+        d1 = forcedRoll.die1;
+        d2 = forcedRoll.die2;
+    } else {
+        d1 = Math.floor(Math.random() * 6) + 1;
+        d2 = Math.floor(Math.random() * 6) + 1;
+    }
+
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) { d1 = 2; d2 = 6; }
     
-    const pos1 = getRandomDicePos();
-    let pos2 = getRandomDicePos();
-    let attempts = 0;
-    while (Math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2) < 45 && attempts < 15) {
-        pos2 = getRandomDicePos();
-        attempts++;
+    const pos1 = forcedRoll?.visuals ? { x: forcedRoll.visuals.d1x, y: forcedRoll.visuals.d1y, r: forcedRoll.visuals.d1r } : getRandomDicePos();
+    let pos2 = forcedRoll?.visuals ? { x: forcedRoll.visuals.d2x, y: forcedRoll.visuals.d2y, r: forcedRoll.visuals.d2r } : getRandomDicePos();
+    
+    if (!forcedRoll) {
+        let attempts = 0;
+        while (Math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2) < 45 && attempts < 15) {
+            pos2 = getRandomDicePos();
+            attempts++;
+        }
     }
 
     const isPaRa = (d1 === 1 && d2 === 1), total = d1 + d2;
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
+    
+    // Broadcast if online and local roll
+    if (!forcedRoll && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) {
+        broadcastPacket({ type: 'ROLL_REQ', payload: newRoll });
+    }
+
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
     
     if (isPaRa) { 
@@ -189,11 +228,15 @@ const App: React.FC = () => {
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
 
-  const performMove = (sourceIdx: number, targetIdx: number) => {
+  const performMove = (sourceIdx: number, targetIdx: number, isRemote = false) => {
     const s = gameStateRef.current;
     const currentMovesList = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
     const move = currentMovesList.find(m => m.sourceIndex === sourceIdx && m.targetIndex === targetIdx);
     if (!move) return;
+
+    if (!isRemote && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) {
+        broadcastPacket({ type: 'MOVE_REQ', payload: { sourceIdx, targetIdx } });
+    }
 
     const nb: BoardState = new Map(s.board); 
     const player = s.players[s.turnIndex]; 
@@ -263,6 +306,95 @@ const App: React.FC = () => {
     } else {
         setPendingMoveValues(nextMoves);
     }
+  };
+
+  // PeerJS Online Setup Logic
+  const startOnlineHost = () => {
+    setGameMode(GameMode.ONLINE_HOST);
+    setOnlineLobbyStatus('WAITING');
+    const newPeer = new Peer({
+      // We rely on PeerJS default signaling server
+      config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+    });
+    
+    newPeer.on('open', (id) => {
+      setMyPeerId(id.slice(0, 6).toUpperCase()); // Show short version of ID
+    });
+
+    newPeer.on('connection', (conn) => {
+      setConnection(conn);
+      setOnlineLobbyStatus('CONNECTED');
+      setupPeerEvents(conn, true);
+    });
+
+    setPeer(newPeer);
+  };
+
+  const joinOnlineGame = (roomId: string) => {
+    setGameMode(GameMode.ONLINE_GUEST);
+    setIsPeerConnecting(true);
+    const newPeer = new Peer();
+    
+    newPeer.on('open', (id) => {
+      const conn = newPeer.connect(roomId.toLowerCase());
+      conn.on('open', () => {
+        setConnection(conn);
+        setOnlineLobbyStatus('CONNECTED');
+        setIsPeerConnecting(false);
+        setupPeerEvents(conn, false);
+      });
+      conn.on('error', (err) => {
+        addLog("Failed to connect to room. ནོར་འཛོལ།", 'alert');
+        setIsPeerConnecting(false);
+        setGameMode(null);
+      });
+    });
+
+    setPeer(newPeer);
+  };
+
+  const setupPeerEvents = (conn: DataConnection, isHost: boolean) => {
+    // Initial sync
+    if (isHost) {
+        conn.send({ 
+            type: 'SYNC', 
+            payload: { playerName, color: selectedColor, isNinerMode } 
+        });
+    }
+
+    conn.on('data', (data: any) => {
+      const packet = data as NetworkPacket;
+      switch (packet.type) {
+        case 'SYNC':
+          // Guest receiving Host's settings
+          if (!isHost) {
+            setIsNinerMode(packet.payload.isNinerMode);
+            // Initialize game board for guest
+            const p2Config = { name: packet.payload.playerName, color: packet.payload.color };
+            initializeGame(p2Config);
+          } else {
+            // Host receiving Guest's info
+            const p2Config = { name: packet.payload.playerName, color: packet.payload.color };
+            initializeGame(p2Config);
+          }
+          break;
+        case 'ROLL_REQ':
+          performRoll(packet.payload);
+          break;
+        case 'MOVE_REQ':
+          performMove(packet.payload.sourceIdx, packet.payload.targetIdx, true);
+          break;
+        case 'SKIP_REQ':
+          handleSkipTurn(true);
+          break;
+      }
+    });
+
+    conn.on('close', () => {
+      addLog("Connection closed. མཐུད་ལམ་ཆད་སོང་།", 'alert');
+      setOnlineLobbyStatus('IDLE');
+      setGameMode(null);
+    });
   };
 
   // AI Strategic Loop
@@ -360,6 +492,14 @@ const App: React.FC = () => {
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const shouldHighlightHand = phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0) && players[turnIndex].coinsInHand > 0;
 
+  // Determine if it's the local user's turn in online play
+  const isLocalTurn = (() => {
+    if (gameMode === GameMode.ONLINE_HOST) return turnIndex === 0;
+    if (gameMode === GameMode.ONLINE_GUEST) return turnIndex === 1;
+    if (gameMode === GameMode.AI) return turnIndex === 0;
+    return true; // Local play
+  })();
+
   return (
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row">
         {phase === GamePhase.SETUP && gameMode !== null && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-amber-500 font-cinzel">Initializing...</div>}
@@ -384,6 +524,8 @@ const App: React.FC = () => {
             animation: turnIndicator 1.5s ease-in-out infinite;
           }
         `}} />
+        
+        {/* Main Menu */}
         {!gameMode && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
                {/* Title Section */}
@@ -396,38 +538,76 @@ const App: React.FC = () => {
                    <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
                    <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
                </div>
-               <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-8 md:gap-14">
-                  <div className="w-full bg-stone-900/30 p-8 rounded-[3rem] border border-stone-800/50 backdrop-blur-2xl shadow-2xl">
-                      <div className="mb-10">
+               
+               <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-4 md:gap-10">
+                  <div className="w-full bg-stone-900/30 p-6 md:p-8 rounded-[3rem] border border-stone-800/50 backdrop-blur-2xl shadow-2xl">
+                      <div className="mb-6">
                         <label className="text-stone-500 text-[10px] uppercase block mb-3 tracking-widest flex justify-between font-bold px-1">
                           <span>Identity ཁྱེད་ཀྱི་མིང་།</span>
                         </label>
-                        <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-4 text-stone-100 outline-none transition-all text-center text-2xl font-cinzel tracking-wider" placeholder="NAME" maxLength={15} />
+                        <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-3 md:p-4 text-stone-100 outline-none transition-all text-center text-xl md:text-2xl font-cinzel tracking-wider" placeholder="NAME" maxLength={15} />
                       </div>
                       <div>
-                        <label className="text-stone-500 text-[10px] uppercase block mb-5 tracking-widest flex justify-between font-bold px-1">
+                        <label className="text-stone-500 text-[10px] uppercase block mb-4 tracking-widest flex justify-between font-bold px-1">
                           <span>Banner ཚོས་གཞི་དོམ།</span>
                         </label>
-                        <div className="flex justify-between px-2 gap-4">
+                        <div className="flex justify-between px-2 gap-2">
                           {COLOR_PALETTE.map((c) => ( 
-                            <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-12 h-12 rounded-2xl transition-all rotate-45 ${selectedColor === c.hex ? 'border-2 border-white scale-110 shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: c.hex }} /> 
+                            <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 md:w-10 md:h-10 rounded-xl transition-all rotate-45 ${selectedColor === c.hex ? 'border-2 border-white scale-110 shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: c.hex }} /> 
                           ))}
                         </div>
                       </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-6 w-full px-2">
-                      <button className="bg-stone-900/40 border-2 border-stone-800/80 p-8 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
-                          <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🏔️</span>
-                          <h3 className="text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">Local</h3>
-                          <span className="text-[10px] text-stone-500 font-serif">རང་ཤག་ཏུ་རྩེ།</span>
-                      </button>
-                      <button className="bg-stone-900/40 border-2 border-stone-800/80 p-8 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
-                          <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🤖</span>
-                          <h3 className="text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">AI</h3>
-                          <span className="text-[10px] text-stone-500 font-serif">མི་བཟོས་རིག་ནུས།</span>
-                      </button>
-                  </div>
+
+                  {onlineLobbyStatus === 'IDLE' ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 w-full px-2">
+                        <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
+                            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🏔️</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Local</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">རང་ཤག་ཏུ་རྩེ།</span>
+                        </button>
+                        <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
+                            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🤖</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">AI</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">མི་བཟོས་རིག་ནུས།</span>
+                        </button>
+                        <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
+                            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🌐</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Online</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">དྲ་ཐོག་རྩེད་མོ།</span>
+                        </button>
+                    </div>
+                  ) : (
+                    <div className="w-full bg-stone-900/50 border-2 border-amber-700/50 p-8 rounded-[3rem] animate-in fade-in zoom-in duration-300">
+                        {onlineLobbyStatus === 'WAITING' ? (
+                          <div className="flex flex-col items-center gap-6">
+                             <div className="text-center">
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room</h3>
+                                <p className="text-stone-400 text-xs font-serif">Create a room and share the code.</p>
+                             </div>
+                             
+                             <div className="flex flex-col gap-4 w-full">
+                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors" onClick={startOnlineHost}>
+                                    {myPeerId ? `ROOM CODE: ${myPeerId}` : 'Generate Room Code'}
+                                </button>
+                                
+                                <div className="h-px w-full bg-stone-800" />
+                                
+                                <div className="flex flex-col gap-2">
+                                  <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600 transition-colors" />
+                                  <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
+                                      {isPeerConnecting ? 'Connecting...' : 'Join Room'}
+                                  </button>
+                                </div>
+                             </div>
+
+                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold mt-2" onClick={() => setOnlineLobbyStatus('IDLE')}>Cancel</button>
+                          </div>
+                        ) : null}
+                    </div>
+                  )}
                </div>
+
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex gap-16">
                       <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors group">
@@ -448,18 +628,27 @@ const App: React.FC = () => {
                </div>
           </div>
         )}
+
+        {/* Game UI */}
         {gameMode && (
             <>
                 <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
                     <div className="p-1.5 md:p-4 flex flex-col gap-0 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
-                            <div className="flex items-center gap-1 cursor-pointer" onClick={() => setGameMode(null)}>
+                            <div className="flex items-center gap-1 cursor-pointer" onClick={() => { if (peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }}>
                                 <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel">ཤོ Sho</h1>
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex items-center gap-2">
+                                {gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST ? (
+                                    <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        <span className="text-[8px] uppercase font-bold text-green-400">Online</span>
+                                    </div>
+                                ) : null}
                                 <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
+                        
                         <div className="grid grid-cols-2 gap-1 md:gap-2 mt-2 md:mt-4 relative">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`relative p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md scale-[1.02] z-10' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
@@ -471,7 +660,7 @@ const App: React.FC = () => {
                                     )}
                                     <div className="flex items-center gap-1 mb-0.5">
                                         <div className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full ${turnIndex === i ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
-                                        <h3 className={`font-bold truncate text-[8px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <h3 className={`font-bold truncate text-[8px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name} {((gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1)) ? "(You)" : ""}</h3>
                                     </div>
                                     <div className="flex justify-between text-[11px] md:text-[13px] text-stone-400 font-bold uppercase tracking-tight">
                                         <span>{p.coinsInHand} <span className="opacity-80 text-[9px] md:text-[11px] ml-0.5 font-serif">ལག་ཐོག</span></span>
@@ -481,6 +670,7 @@ const App: React.FC = () => {
                             ))}
                         </div>
                     </div>
+                    
                     <div className="px-2 md:px-4 pb-1 flex flex-col gap-1 flex-shrink-0 bg-stone-950">
                         {phase === GamePhase.GAME_OVER ? ( 
                             <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
@@ -489,10 +679,11 @@ const App: React.FC = () => {
                             </div> 
                         ) : ( 
                             <div className="flex flex-col gap-1">
-                                <DiceArea currentRoll={lastRoll} onRoll={performRoll} canRoll={(phase === GamePhase.ROLLING) && !isRolling && (gameMode !== GameMode.AI || turnIndex === 0)} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
+                                <DiceArea currentRoll={lastRoll} onRoll={() => performRoll()} canRoll={(phase === GamePhase.ROLLING) && !isRolling && isLocalTurn} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
+                                
                                 <div className="flex gap-1">
                                     <div onClick={() => { 
-                                      if (phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0)) { 
+                                      if (phase === GamePhase.MOVING && isLocalTurn) { 
                                         if (players[turnIndex].coinsInHand > 0) {
                                           setSelectedSourceIndex(0); 
                                         } else {
@@ -502,31 +693,54 @@ const App: React.FC = () => {
                                           addLog("No coins in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
                                         }
                                       } 
-                                    }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
-                                        <span className={`font-bold tracking-widest uppercase font-cinzel text-[11px] md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
+                                    }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
+                                        <span className={`font-bold tracking-widest uppercase font-cinzel text-[11px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
                                         <span className="text-[11px] md:text-[16px] text-stone-200 font-serif mt-1 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
                                     </div>
-                                    {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( 
-                                        <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
+                                    
+                                    {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && isLocalTurn && ( 
+                                        <button onClick={() => handleSkipTurn()} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
                                             <span className="text-[9px] md:text-[11px]">Skip Turn</span>
                                             <span className="text-[11px] md:text-[14px] font-serif">སྐྱུར།</span>
                                         </button> 
                                     )}
                                 </div>
+                                
+                                {!isLocalTurn && phase !== GamePhase.GAME_OVER && (
+                                    <div className="text-center py-2 animate-pulse">
+                                        <span className="text-amber-600 text-[10px] uppercase font-bold tracking-widest">Waiting for opponent...</span>
+                                    </div>
+                                )}
                             </div> 
                         )}
                     </div>
+                    
                     <div className="hidden md:block h-8 bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
                         {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                     </div>
-                    {/* Replaced Music Player with a subtle decorative footer */}
+                    
                     <div className="p-2 md:p-6 bg-stone-950 mt-auto flex-shrink-0 text-center opacity-40">
                          <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
                     </div>
                 </div>
+                
                 <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
-                        <Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} />
+                        <Board 
+                            boardState={board} 
+                            players={players} 
+                            validMoves={visualizedMoves} 
+                            onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
+                            currentPlayer={players[turnIndex].id} 
+                            turnPhase={phase} 
+                            onShellClick={(i) => { if (isLocalTurn) { board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null) } }} 
+                            selectedSource={selectedSourceIndex} 
+                            lastMove={lastMove} 
+                            currentRoll={lastRoll} 
+                            isRolling={isRolling} 
+                            isNinerMode={isNinerMode} 
+                            onInvalidMoveAttempt={() => SFX.playBlocked()} 
+                        />
                     </div>
                 </div>
             </>
