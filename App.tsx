@@ -9,6 +9,7 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
+import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -104,6 +105,7 @@ const App: React.FC = () => {
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
   const [handShake, setHandShake] = useState(false);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Online Multiplayer State
@@ -529,6 +531,9 @@ const App: React.FC = () => {
                </div>
 
                <div className="w-full flex flex-col items-center gap-10 mt-10">
+                  <div className="max-w-xs w-full">
+                     <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
+                  </div>
                   <div className="flex gap-16">
                       <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                           <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
@@ -626,6 +631,14 @@ const App: React.FC = () => {
                                 )}
                             </div> 
                         )}
+                    </div>
+
+                    <div className="mt-auto px-4 pb-4">
+                        <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
+                    </div>
+                    
+                    <div className="p-2 md:p-6 bg-stone-950 flex-shrink-0 text-center opacity-40">
+                         <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
                     </div>
                 </div>
                 
