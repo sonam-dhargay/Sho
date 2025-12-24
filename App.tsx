@@ -554,10 +554,17 @@ const App: React.FC = () => {
           }
           @keyframes turnIndicator {
             0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
-            50% { transform: translateY(-4px) scale(1.1); opacity: 1; }
+            50% { transform: translateY(-8px) scale(1.4); opacity: 1; }
           }
           .animate-turn-indicator {
             animation: turnIndicator 1.5s ease-in-out infinite;
+          }
+          @keyframes activePulse {
+            0%, 100% { box-shadow: 0 0 0 0px rgba(245, 158, 11, 0); }
+            50% { box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.3); }
+          }
+          .animate-active-pulse {
+            animation: activePulse 2s ease-in-out infinite;
           }
         `}} />
         
@@ -685,25 +692,46 @@ const App: React.FC = () => {
                             </div>
                         </header>
                         
-                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-2 md:mt-4 relative">
-                            {players.map((p, i) => (
-                                <div key={p.id} className={`relative p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md scale-[1.02] z-10' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
-                                    {turnIndex === i && (
-                                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator">
-                                             <div className="w-1.5 h-1 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-                                             <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[3px] border-t-amber-500" />
+                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-4 md:mt-8 relative px-1">
+                            {players.map((p, i) => {
+                                const isActive = turnIndex === i;
+                                const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
+                                
+                                return (
+                                    <div key={p.id} className={`relative p-1.5 md:p-3 rounded-xl border transition-all duration-300 ${isActive ? 'bg-stone-800 border-amber-500/50 scale-[1.05] z-10 animate-active-pulse shadow-xl' : 'border-stone-800 opacity-50'}`}>
+                                        {isActive && (
+                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator z-20">
+                                                 <div className="w-3 h-3 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,1)] border border-white/20" />
+                                                 <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-amber-500 mt-[-2px]" />
+                                            </div>
+                                        )}
+                                        
+                                        <div className="flex items-center gap-1.5 mb-1.5 overflow-hidden">
+                                            <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse shadow-[0_0_8px_currentColor]' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
+                                            <h3 className={`font-bold truncate text-[9px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                         </div>
-                                    )}
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <div className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full ${turnIndex === i ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
-                                        <h3 className={`font-bold truncate text-[8px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name} {((gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1)) ? "(You)" : ""}</h3>
+
+                                        <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold uppercase tracking-tight font-cinzel">
+                                            <div className="flex flex-col">
+                                                <span className="text-[7px] md:text-[8px] text-stone-500 leading-none mb-0.5">Hand</span>
+                                                <span className="leading-none">{p.coinsInHand}</span>
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[7px] md:text-[8px] text-stone-500 leading-none mb-0.5">Done</span>
+                                                <span className="leading-none text-amber-500">{p.coinsFinished}</span>
+                                            </div>
+                                        </div>
+
+                                        {isActive && (
+                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-600 px-1.5 py-0.5 rounded-md shadow-lg border border-amber-400/30 whitespace-nowrap">
+                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">
+                                                    {isMe ? "YOUR TURN" : (gameMode === GameMode.AI && i === 1) ? "THINKING..." : "WAITING..."}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex justify-between text-[11px] md:text-[13px] text-stone-400 font-bold uppercase tracking-tight">
-                                        <span>{p.coinsInHand} <span className="opacity-80 text-[9px] md:text-[11px] ml-0.5 font-serif">ལག་ཐོག</span></span>
-                                        <span className="text-amber-500">{p.coinsFinished} <span className="opacity-80 text-[9px] md:text-[11px] ml-0.5 font-serif">གདན་ཐོག</span></span>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                     
@@ -744,7 +772,7 @@ const App: React.FC = () => {
                                 
                                 {!isLocalTurn && phase !== GamePhase.GAME_OVER && (
                                     <div className="text-center py-2 animate-pulse">
-                                        <span className="text-amber-600 text-[10px] uppercase font-bold tracking-widest">Waiting for opponent...</span>
+                                        <span className="text-amber-600 text-[10px] uppercase font-bold tracking-widest">Opponent Thinking...</span>
                                     </div>
                                 )}
                             </div> 
