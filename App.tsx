@@ -8,7 +8,6 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
-import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -104,7 +103,6 @@ const App: React.FC = () => {
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
   const [handShake, setHandShake] = useState(false);
-  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
@@ -475,9 +473,9 @@ const App: React.FC = () => {
                                         <div className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full ${turnIndex === i ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
                                         <h3 className={`font-bold truncate text-[8px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
-                                    <div className="flex justify-between text-[6px] md:text-[8px] text-stone-400 font-bold uppercase tracking-tighter">
-                                        <span>{p.coinsInHand} <span className="opacity-60 text-[5px] md:text-[7px]">In ལག་ཐོག།</span></span>
-                                        <span className="text-amber-500">{p.coinsFinished} <span className="opacity-60 text-[5px] md:text-[7px]">Out གདན་ཐོག</span></span>
+                                    <div className="flex justify-between text-[11px] md:text-[13px] text-stone-400 font-bold uppercase tracking-tight">
+                                        <span>{p.coinsInHand} <span className="opacity-80 text-[9px] md:text-[11px] ml-0.5 font-serif">ལག་ཐོག</span></span>
+                                        <span className="text-amber-500">{p.coinsFinished} <span className="opacity-80 text-[9px] md:text-[11px] ml-0.5 font-serif">གདན་ཐོག</span></span>
                                     </div>
                                 </div>
                             ))}
@@ -504,14 +502,14 @@ const App: React.FC = () => {
                                           addLog("No coins in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
                                         }
                                       } 
-                                    }} className={`flex-1 p-2 md:p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
-                                        <span className={`font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
-                                        <span className="text-[7px] md:text-xs text-stone-500 font-serif">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
+                                    }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
+                                        <span className={`font-bold tracking-widest uppercase font-cinzel text-[11px] md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
+                                        <span className="text-[11px] md:text-[16px] text-stone-200 font-serif mt-1 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
                                     </div>
                                     {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( 
                                         <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
-                                            <span className="text-[8px] md:text-[10px]">Skip Turn</span>
-                                            <span className="text-[7px] md:text-[9px] font-serif">སྐྱུར།</span>
+                                            <span className="text-[9px] md:text-[11px]">Skip Turn</span>
+                                            <span className="text-[11px] md:text-[14px] font-serif">སྐྱུར།</span>
                                         </button> 
                                     )}
                                 </div>
@@ -521,8 +519,9 @@ const App: React.FC = () => {
                     <div className="hidden md:block h-8 bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
                         {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                     </div>
-                    <div className="p-1 md:p-4 bg-stone-950 mt-auto flex-shrink-0">
-                        <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
+                    {/* Replaced Music Player with a subtle decorative footer */}
+                    <div className="p-2 md:p-6 bg-stone-950 mt-auto flex-shrink-0 text-center opacity-40">
+                         <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
                     </div>
                 </div>
                 <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
