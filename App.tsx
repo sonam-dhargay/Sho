@@ -449,6 +449,7 @@ const App: React.FC = () => {
                    </h1>
                    <div className="h-px w-32 bg-amber-900/40 mb-4" />
                    <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
+                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
                </div>
                
                <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-4 md:gap-10">
@@ -471,15 +472,18 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 w-full px-2">
                         <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Opponent', color: COLOR_PALETTE[1].hex}); }}>
                             <span className="text-2xl">🏔️</span>
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">Local</h3>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Local</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">རང་ཤག་ཏུ་་རྩེ།</span>
                         </button>
                         <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame({name: playerName, color: selectedColor}, {name: 'Sho Bot', color: '#999'}); }}>
                             <span className="text-2xl">🤖</span>
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">AI</h3>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">AI</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།</span>
                         </button>
                         <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
                             <span className="text-2xl">🌐</span>
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">Online</h3>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Online</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">དྲ་ཐོག་རྩེད་མོ།</span>
                         </button>
                     </div>
                   ) : (
@@ -511,15 +515,18 @@ const App: React.FC = () => {
 
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex gap-16">
-                      <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group">
+                      <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                           <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
+                          <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
                       </button>
-                      <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group">
+                      <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                           <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
+                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོ་ཡི་སྒྲིག་གཞི།</span>
                       </button>
                   </div>
                   <div className="flex flex-col items-center">
                       <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">Games Commenced</span>
+                      <span className="text-stone-600 text-[9px] font-serif uppercase tracking-widest mt-0.5">འཛམ་གླིང་ཁྱོན་ཡོངས་སུ་རྩེད་གྲངས།</span>
                       <span className={`text-amber-700/80 font-bold text-4xl tabular-nums transition-all duration-700 mt-2 ${isCounterPulsing ? 'scale-110 text-amber-500 brightness-125' : ''}`}>
                         {globalPlayCount.toLocaleString()}
                       </span>
