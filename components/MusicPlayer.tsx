@@ -12,19 +12,19 @@ const TRACKS: Track[] = [
     id: '1', 
     title: 'Himalayan Morning', 
     tibetanTitle: 'ཧི་མ་ལ་ཡའི་ཞོགས་པ།', 
-    url: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808d30d8a.mp3' 
+    url: 'https://cdn.pixabay.com/audio/2022/10/16/audio_10681127d1.mp3' 
   },
   { 
     id: '2', 
     title: 'Spirit of Tibet', 
     tibetanTitle: 'བོད་ཀྱི་བླ་སྲོག', 
-    url: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3' 
+    url: 'https://cdn.pixabay.com/audio/2023/11/21/audio_404787a276.mp3' 
   },
   { 
     id: '3', 
     title: 'Temple Bells', 
     tibetanTitle: 'ལྷ་ཁང་གི་དྲིལ་བུ།', 
-    url: 'https://cdn.pixabay.com/audio/2021/11/25/audio_91b32e02f9.mp3' 
+    url: 'https://cdn.pixabay.com/audio/2022/01/21/audio_31743c58bc.mp3' 
   }
 ];
 
@@ -37,6 +37,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [volume, setVolume] = useState(0.5);
   const [showTracklist, setShowTracklist] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -48,10 +49,20 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
     const audio = audioRef.current;
     audio.volume = volume;
 
+    const handleError = () => {
+      console.error("Audio playback error");
+      setError("Failed to load audio");
+      if (isEnabled) onToggle();
+    };
+
+    audio.addEventListener('error', handleError);
+
     if (isEnabled) {
+      setError(null);
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
+        playPromise.catch((err) => {
+          console.warn("Autoplay/Play blocked or failed:", err);
           if (isEnabled) onToggle(); 
         });
       }
@@ -60,6 +71,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
     }
 
     return () => {
+      audio.removeEventListener('error', handleError);
       audio.pause();
     };
   }, [isEnabled]);
@@ -68,8 +80,11 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
     if (audioRef.current) {
       audioRef.current.src = TRACKS[currentTrackIndex].url;
       audioRef.current.load();
+      setError(null);
       if (isEnabled) {
-        audioRef.current.play().catch(console.error);
+        audioRef.current.play().catch(err => {
+          console.error("Error switching track:", err);
+        });
       }
     }
   }, [currentTrackIndex]);
@@ -94,8 +109,12 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
             {isEnabled ? '⏸' : '▶'}
           </button>
           <div className="flex flex-col truncate">
-            <span className="text-[7px] md:text-[11px] font-bold text-amber-500 truncate leading-none">{TRACKS[currentTrackIndex].title}</span>
-            <span className="hidden md:block text-[9px] text-stone-500 font-serif truncate">{TRACKS[currentTrackIndex].tibetanTitle}</span>
+            <span className={`text-[7px] md:text-[11px] font-bold truncate leading-none ${error ? 'text-red-500' : 'text-amber-500'}`}>
+              {error ? 'Error' : TRACKS[currentTrackIndex].title}
+            </span>
+            <span className="hidden md:block text-[9px] text-stone-500 font-serif truncate">
+              {error ? 'Could not play track' : TRACKS[currentTrackIndex].tibetanTitle}
+            </span>
           </div>
         </div>
 
