@@ -152,7 +152,7 @@ const App: React.FC = () => {
     setPendingMoveValues([]);
     setIsOpeningPaRa(false);
     
-    if (!isRemote && gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) {
+    if (!isRemote && (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST)) {
       broadcastPacket({ type: 'SKIP_REQ' });
     }
 
@@ -310,20 +310,19 @@ const App: React.FC = () => {
 
   // PeerJS Online Setup Logic
   const startOnlineHost = () => {
-    setGameMode(GameMode.ONLINE_HOST);
+    // We stay in menu until a guest connects
     setOnlineLobbyStatus('WAITING');
     const newPeer = new Peer({
-      // We rely on PeerJS default signaling server
       config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
     });
     
     newPeer.on('open', (id) => {
-      setMyPeerId(id.slice(0, 6).toUpperCase()); // Show short version of ID
+      setMyPeerId(id.slice(0, 6).toUpperCase());
     });
 
     newPeer.on('connection', (conn) => {
       setConnection(conn);
-      setOnlineLobbyStatus('CONNECTED');
+      // Host stays on menu until Sync exchange finishes
       setupPeerEvents(conn, true);
     });
 
@@ -331,7 +330,6 @@ const App: React.FC = () => {
   };
 
   const joinOnlineGame = (roomId: string) => {
-    setGameMode(GameMode.ONLINE_GUEST);
     setIsPeerConnecting(true);
     const newPeer = new Peer();
     
@@ -339,14 +337,12 @@ const App: React.FC = () => {
       const conn = newPeer.connect(roomId.toLowerCase());
       conn.on('open', () => {
         setConnection(conn);
-        setOnlineLobbyStatus('CONNECTED');
         setIsPeerConnecting(false);
         setupPeerEvents(conn, false);
       });
       conn.on('error', (err) => {
         addLog("Failed to connect to room. ནོར་འཛོལ།", 'alert');
         setIsPeerConnecting(false);
-        setGameMode(null);
       });
     });
 
@@ -354,27 +350,36 @@ const App: React.FC = () => {
   };
 
   const setupPeerEvents = (conn: DataConnection, isHost: boolean) => {
-    // Initial sync
-    if (isHost) {
-        conn.send({ 
-            type: 'SYNC', 
-            payload: { playerName, color: selectedColor, isNinerMode } 
-        });
+    // Guest initiates the handshake by sending their identity to the Host
+    if (!isHost) {
+      conn.send({ 
+          type: 'SYNC', 
+          payload: { playerName, color: selectedColor } 
+      });
     }
 
     conn.on('data', (data: any) => {
       const packet = data as NetworkPacket;
       switch (packet.type) {
         case 'SYNC':
-          // Guest receiving Host's settings
-          if (!isHost) {
-            setIsNinerMode(packet.payload.isNinerMode);
-            // Initialize game board for guest
+          if (isHost) {
+            // Host receives Guest info
             const p2Config = { name: packet.payload.playerName, color: packet.payload.color };
+            setGameMode(GameMode.ONLINE_HOST);
+            setOnlineLobbyStatus('CONNECTED');
             initializeGame(p2Config);
+            
+            // Host sends their config and identity back to Guest
+            conn.send({
+              type: 'SYNC',
+              payload: { playerName, color: selectedColor, isNinerMode }
+            });
           } else {
-            // Host receiving Guest's info
+            // Guest receives Host config and identity
+            setIsNinerMode(packet.payload.isNinerMode);
             const p2Config = { name: packet.payload.playerName, color: packet.payload.color };
+            setGameMode(GameMode.ONLINE_GUEST);
+            setOnlineLobbyStatus('CONNECTED');
             initializeGame(p2Config);
           }
           break;
@@ -601,7 +606,7 @@ const App: React.FC = () => {
                                 </div>
                              </div>
 
-                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold mt-2" onClick={() => setOnlineLobbyStatus('IDLE')}>Cancel</button>
+                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold mt-2" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel</button>
                           </div>
                         ) : null}
                     </div>
