@@ -380,7 +380,7 @@ const App: React.FC = () => {
           }
           @keyframes turnIndicator {
             0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
-            50% { transform: translateY(-4px) scale(1.15); opacity: 1; }
+            50% { transform: translateY(-4px) scale(1.1); opacity: 1; }
           }
           .animate-turn-indicator {
             animation: turnIndicator 1.5s ease-in-out infinite;
@@ -452,37 +452,32 @@ const App: React.FC = () => {
         )}
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[42dvh] md:h-full order-1 overflow-y-auto no-scrollbar flex-shrink-0 mobile-landscape-sidebar">
-                    <div className="p-2 md:p-4 flex flex-col gap-1 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
+                    <div className="p-1.5 md:p-4 flex flex-col gap-0 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setGameMode(null)}>
-                                <h1 className="text-amber-500 text-base md:text-2xl font-cinzel">ཤོ Sho</h1>
+                            <div className="flex items-center gap-1 cursor-pointer" onClick={() => setGameMode(null)}>
+                                <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel">ཤོ Sho</h1>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                                 <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
-                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-4 relative">
+                        <div className="grid grid-cols-2 gap-1 md:gap-2 mt-2 md:mt-4 relative">
                             {players.map((p, i) => (
                                 <div key={p.id} className={`relative p-1 md:p-2 rounded-lg border transition-all ${turnIndex === i ? 'bg-stone-800 border-white/20 shadow-md scale-[1.02] z-10' : 'border-stone-800 opacity-60'}`} style={{ borderColor: turnIndex === i ? p.colorHex : 'transparent' }}>
-                                    {/* Turn Indicator Arrow */}
                                     {turnIndex === i && (
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator">
+                                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator">
                                              <div className="w-1.5 h-1 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
                                              <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[3px] border-t-amber-500" />
                                         </div>
                                     )}
-                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                    <div className="flex items-center gap-1 mb-0.5">
                                         <div className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full ${turnIndex === i ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
-                                        <h3 className={`font-bold truncate text-[7px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
+                                        <h3 className={`font-bold truncate text-[8px] md:text-[10px] font-serif ${turnIndex === i ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                     </div>
                                     <div className="flex justify-between text-[6px] md:text-[9px] text-stone-400">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-stone-200">{p.coinsInHand} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">In ལག་ཐོག།</span></span>
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="font-bold text-amber-500">{p.coinsFinished} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">Out གདན་ཐོག</span></span>
-                                        </div>
+                                        <span className="font-bold text-stone-200">{p.coinsInHand} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">In</span></span>
+                                        <span className="font-bold text-amber-500">{p.coinsFinished} <span className="uppercase opacity-50 text-[5px] md:text-[7px]">Out</span></span>
                                     </div>
                                 </div>
                             ))}
@@ -506,31 +501,31 @@ const App: React.FC = () => {
                                           SFX.playBlocked();
                                           setHandShake(true);
                                           setTimeout(() => setHandShake(false), 400);
-                                          addLog("There are no more coins (lak-khyi) in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
+                                          addLog("No coins in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
                                         }
                                       } 
                                     }} className={`flex-1 p-2 md:p-6 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : shouldHighlightHand ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'}`}>
                                         <span className={`font-bold tracking-widest uppercase font-cinzel text-[10px] md:text-lg ${shouldHighlightHand ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
-                                        <span className="text-[7px] md:text-xs text-stone-500 font-serif">ལག་ཁྱི་བཙུགས། ({players[turnIndex].coinsInHand})</span>
+                                        <span className="text-[7px] md:text-xs text-stone-500 font-serif">({players[turnIndex].coinsInHand}) ལག་ཁྱི།</span>
                                     </div>
                                     {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && (gameMode !== GameMode.AI || turnIndex === 0) && ( 
                                         <button onClick={handleSkipTurn} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
                                             <span className="text-[8px] md:text-[10px]">Skip Turn</span>
-                                            <span className="text-[7px] md:text-[9px] font-serif">སྐོར་ཐེངས་འདི་སྐྱུར།</span>
+                                            <span className="text-[7px] md:text-[9px] font-serif">སྐྱུར།</span>
                                         </button> 
                                     )}
                                 </div>
                             </div> 
                         )}
                     </div>
-                    <div className="h-8 bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[6px] md:text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
+                    <div className="hidden md:block h-8 bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
                         {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
                     </div>
-                    <div className="p-2 md:p-4 bg-stone-950 mt-auto flex-shrink-0">
+                    <div className="p-1 md:p-4 bg-stone-950 mt-auto flex-shrink-0">
                         <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
                     </div>
                 </div>
-                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[58dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
+                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => performMove(m.sourceIndex, m.targetIndex)} currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null)} selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} />
                     </div>
