@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll } from '../types';
-import { CENTER_X, CENTER_Y, TOTAL_SHELLS, COINS_PER_PLAYER } from '../constants';
+import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll, GamePhase } from '../types';
+import { CENTER_X, CENTER_Y, TOTAL_SHELLS } from '../constants';
 import * as d3 from 'd3';
 
 interface BoardProps {
@@ -9,7 +9,7 @@ interface BoardProps {
   validMoves: MoveOption[];
   onSelectMove: (move: MoveOption) => void;
   currentPlayer: PlayerColor;
-  turnPhase: string;
+  turnPhase: GamePhase;
   onShellClick?: (index: number) => void;
   selectedSource?: number | null;
   lastMove: MoveOption | null;
@@ -99,7 +99,7 @@ const AncientCoin: React.FC<{ color: string; isSelected: boolean }> = ({ color, 
   return (
     <div 
       className={`relative w-16 h-16 rounded-full shadow-[4px_6px_10px_rgba(0,0,0,0.8),inset_0px_2px_4px_rgba(255,255,255,0.2)] border border-white/20 flex items-center justify-center ${isSelected ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-stone-900 z-50' : ''}`}
-      style={{ background: `radial-gradient(circle at 35% 35%, ${color}, #000000)` }}
+      style={{ background: `radial-gradient(circle at 35% 35%, ${color}, #000000)`, touchAction: 'none' }}
     >
       <div className="w-11 h-11 rounded-full border-2 border-dashed border-white/30 opacity-60"></div>
       <div className="absolute w-6 h-6 bg-[#1c1917] border border-white/10 shadow-inner transform rotate-45"></div>
@@ -210,7 +210,8 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             playBlocked = true;
         } else return;
     } else {
-        let moverSize = sourceIdx === 0 ? (currentPlayerObj?.coinsInHand === COINS_PER_PLAYER ? 2 : 1) : (boardState.get(sourceIdx)?.stackSize || 1);
+        const p1 = players.find(p => p.id === currentPlayer);
+        let moverSize = sourceIdx === 0 ? (p1?.coinsInHand === 9 ? 2 : 1) : (boardState.get(sourceIdx)?.stackSize || 1);
         if (targetShell) {
             if (targetShell.owner && targetShell.owner !== currentPlayer) {
                 if (targetShell.stackSize > moverSize) {
@@ -246,47 +247,70 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, index: number) => {
-      if (turnPhase !== 'MOVING' || validMoves.some(m => m.targetIndex === index) || boardState.get(index)?.owner !== currentPlayer) return;
-      e.preventDefault(); 
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-      setDragState({ isDragging: true, sourceIndex: index, x: clientX, y: clientY });
+  // Pointer API Implementation for superior touch/mouse unified handling
+  const handlePointerDown = (e: React.PointerEvent, index: number) => {
+      const shell = boardState.get(index);
+      if (turnPhase !== GamePhase.MOVING || shell?.owner !== currentPlayer) return;
+      
+      // Capture pointer so move/up are caught even if finger/mouse slides away
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      
+      setDragState({ 
+        isDragging: true, 
+        sourceIndex: index, 
+        x: e.clientX, 
+        y: e.clientY 
+      });
+      
       if (onShellClick) onShellClick(index);
   };
 
   useEffect(() => {
-      const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      const handlePointerMove = (e: PointerEvent) => {
           if (!dragState.isDragging) return;
-          const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-          const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-          setDragState(prev => ({ ...prev, x: clientX, y: clientY }));
+          setDragState(prev => ({ ...prev, x: e.clientX, y: e.clientY }));
       };
-      const handleMouseUp = (e: MouseEvent | TouchEvent) => {
+      
+      const handlePointerUp = (e: PointerEvent) => {
           if (!dragState.isDragging) return;
-          const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
-          const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
-          const draggedEl = document.getElementById('dragged-ghost'); if (draggedEl) draggedEl.style.display = 'none';
-          const shellDiv = document.elementFromPoint(clientX, clientY)?.closest('[data-shell-id]');
-          if (draggedEl) draggedEl.style.display = 'block';
+          
+          const ghost = document.getElementById('dragged-ghost');
+          if (ghost) ghost.style.display = 'none';
+          
+          const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+          const shellDiv = targetEl?.closest('[data-shell-id]');
+          
+          if (ghost) ghost.style.display = 'block';
+          
           if (shellDiv) {
               const targetId = parseInt(shellDiv.getAttribute('data-shell-id') || '0');
               const move = validMoves.find(m => m.sourceIndex === dragState.sourceIndex && m.targetIndex === targetId);
-              if (move) onSelectMove(move); else if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) triggerBlockedFeedback(targetId, dragState.sourceIndex);
+              if (move) {
+                  onSelectMove(move);
+              } else if (dragState.sourceIndex !== null && targetId !== dragState.sourceIndex) {
+                  triggerBlockedFeedback(targetId, dragState.sourceIndex);
+              }
           }
+          
           setDragState({ isDragging: false, sourceIndex: null, x: 0, y: 0 });
       };
+
       if (dragState.isDragging) {
-          window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp);
-          window.addEventListener('touchmove', handleMouseMove, { passive: false }); window.addEventListener('touchend', handleMouseUp);
+          window.addEventListener('pointermove', handlePointerMove);
+          window.addEventListener('pointerup', handlePointerUp);
+          window.addEventListener('pointercancel', handlePointerUp);
       }
-      return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); window.removeEventListener('touchmove', handleMouseMove); window.removeEventListener('touchend', handleMouseUp); };
-  }, [dragState, validMoves, onSelectMove]);
+      return () => {
+          window.removeEventListener('pointermove', handlePointerMove);
+          window.removeEventListener('pointerup', handlePointerUp);
+          window.removeEventListener('pointercancel', handlePointerUp);
+      };
+  }, [dragState.isDragging, dragState.sourceIndex, validMoves, onSelectMove]);
 
   const hasFinishMove = validMoves.some(m => m.type === MoveResultType.FINISH);
 
   return (
-    <div className="relative mx-auto select-none" style={{ width: 800, height: 800 }} ref={boardRef}>
+    <div className="relative mx-auto select-none" style={{ width: 800, height: 800, touchAction: 'none' }} ref={boardRef}>
         <style dangerouslySetInnerHTML={{__html: `@keyframes shake { 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); } 15% { transform: translate(-65%, -50%) rotate(-12deg); } 30% { transform: translate(-35%, -50%) rotate(12deg); } 45% { transform: translate(-65%, -50%) rotate(-12deg); } 60% { transform: translate(-35%, -50%) rotate(12deg); } 75% { transform: translate(-55%, -50%) rotate(-6deg); } } @keyframes blockedFadeUp { 0% { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; transform: translate(-50%, -35px); } 85% { opacity: 1; transform: translate(-50%, -45px); } 100% { opacity: 0; transform: translate(-50%, -60px); } } @keyframes xMarkFlash { 0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 30% { opacity: 1; transform: translate(-50%, -50%) scale(1.6); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); } } @keyframes blockedOutlinePulse { 0% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 1); } 50% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0); } } .animate-shake-target { animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; } .animate-blocked-label { animation: blockedFadeUp 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; } .animate-x-mark { animation: xMarkFlash 0.5s ease-out forwards; } .animate-blocked-outline { animation: blockedOutlinePulse 0.5s ease-out; }`}} />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none"><div className="w-[16rem] h-[16rem] bg-[#3f2e26] rounded-full blur-md opacity-80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div><div className="relative w-56 h-56 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)] border-4 border-[#271c19] overflow-hidden flex items-center justify-center bg-[#291d1a]"><div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] mix-blend-overlay"></div><div className="flex flex-col items-center opacity-40 mix-blend-screen pointer-events-none"><span className="font-serif text-[#8b5e3c] text-5xl mb-1">ཤོ</span><span className="font-cinzel text-[#8b5e3c] text-6xl font-bold tracking-widest drop-shadow-lg">SHO</span></div>{(isRolling || currentRoll) && ( <div className="absolute inset-0 z-20">{isRolling ? ( <><div className="absolute left-1/2 top-1/2 -ml-[15px] -mt-[30px]"><BoardDie value={1} x={0} y={0} rotation={0} isRolling={true} /></div><div className="absolute left-1/2 top-1/2 ml-[15px] mt-[10px]"><BoardDie value={6} x={0} y={0} rotation={0} isRolling={true} /></div></> ) : ( currentRoll && currentRoll.visuals && ( <><BoardDie value={currentRoll.die1} x={currentRoll.visuals.d1x} y={currentRoll.visuals.d1y} rotation={currentRoll.visuals.d1r} isRolling={false} /><BoardDie value={currentRoll.die2} x={currentRoll.visuals.d2x} y={currentRoll.visuals.d2y} rotation={currentRoll.visuals.d2r} isRolling={false} /></> ) )}</div> )}</div></div>
         <svg width="100%" height="100%" className="absolute inset-0 z-0 pointer-events-none"><path d={d3.line().curve(d3.curveCatmullRom.alpha(0.6))(shells.map(s => [s.x, s.y])) || ""} fill="none" stroke="#44403c" strokeWidth="12" strokeLinecap="round" className="opacity-20 blur-sm transition-all duration-500" /></svg>
@@ -298,7 +322,7 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             const shellOffX = Math.cos(shell.angle) * -12 + Math.cos(shell.angle + Math.PI / 2) * -10; const shellOffY = Math.sin(shell.angle) * -12 + Math.sin(shell.angle + Math.PI / 2) * -10;
             const stackOffX = Math.cos(shell.angle) * 28 + Math.cos(shell.angle + Math.PI / 2) * -10; const stackOffY = Math.sin(shell.angle) * 28 + Math.sin(shell.angle + Math.PI / 2) * -10;
             return (
-                <div key={shell.id} data-shell-id={shell.id} className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'} ${isShaking ? 'animate-blocked-outline rounded-full' : ''}`} style={{ left: shell.x, top: shell.y, width: 40, height: 40, transform: 'translate(-50%, -50%)' }}
+                <div key={shell.id} data-shell-id={shell.id} className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'} ${isShaking ? 'animate-blocked-outline rounded-full' : ''}`} style={{ left: shell.x, top: shell.y, width: 40, height: 40, transform: 'translate(-50%, -50%)', touchAction: 'none' }}
                     onClick={(e) => { e.stopPropagation(); if (!dragState.isDragging) { if (isTarget && moveTarget) { onSelectMove(moveTarget); } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) { if (owner === currentPlayer) { onShellClick?.(shell.id); } else { triggerBlockedFeedback(shell.id, selectedSource); } } else { triggerBlockedFeedback(shell.id, selectedSource || null); onShellClick?.(shell.id); } } }}
                 >
                     <div style={{ transform: `translate(${shellOffX}px, ${shellOffY}px)` }}><CowrieShell angle={shell.angle} isTarget={isTarget} isBlocked={isShaking} /></div>
@@ -307,7 +331,7 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
                     {isShaking && ( <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] pointer-events-none"><div className="w-20 h-20 rounded-full border-4 border-red-600/60 animate-shake-target flex items-center justify-center"><svg viewBox="0 0 24 24" className="w-16 h-16 text-red-600 animate-x-mark" fill="none" stroke="currentColor" strokeWidth="4"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" /></svg></div></div> )}
                     {hasBlockedMsg && ( <div className="absolute bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap z-[70] pointer-events-none"><span className="bg-red-700 text-white font-cinzel font-bold px-4 py-2 rounded-lg text-[10px] md:text-sm shadow-2xl border-2 border-red-500/50 animate-blocked-label block text-center shadow-[0_0_20px_rgba(0,0,0,0.8)]">{blockedFeedback?.message}</span></div> )}
                     {stackSize > 0 && owner && !isBeingDragged && (
-                        <div className={`absolute z-30 ${owner === currentPlayer && turnPhase === 'MOVING' ? 'cursor-grab active:cursor-grabbing' : ''}`} style={{ transform: `translate(${stackOffX}px, ${stackOffY}px)` }} onMouseDown={(e) => handleMouseDown(e, shell.id)} onTouchStart={(e) => handleMouseDown(e, shell.id)}>
+                        <div className={`absolute z-30 ${owner === currentPlayer && turnPhase === GamePhase.MOVING ? 'cursor-grab active:cursor-grabbing' : ''}`} style={{ transform: `translate(${stackOffX}px, ${stackOffY}px)`, touchAction: 'none' }} onPointerDown={(e) => handlePointerDown(e, shell.id)}>
                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => ( <div key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500" style={{ top: `${-(i * 6)}px`, left: `${Math.sin(i * 0.8) * 3}px`, zIndex: i, transform: `translate(-50%, -50%) rotate(${Math.sin(i * 1.5 + shell.id) * 12}deg)` }}><AncientCoin color={getPlayerColor(owner)} isSelected={false} /></div> ))}
                            <div className="absolute left-1/2 -translate-x-1/2 bg-stone-900/90 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-xl backdrop-blur-md whitespace-nowrap pointer-events-none flex items-center justify-center" style={{ top: `${-42 - (Math.min(stackSize, 9) * 6)}px`, zIndex: 100, transform: 'translate(-50%, 0)', minWidth: '24px' }}>{stackSize}</div>
                         </div>
