@@ -310,40 +310,64 @@ const App: React.FC = () => {
 
   // PeerJS Online Setup Logic
   const startOnlineHost = () => {
-    // We stay in menu until a guest connects
     setOnlineLobbyStatus('WAITING');
-    const newPeer = new Peer({
+    // Generate a shorter, stable room code to use as the actual Peer ID
+    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const newPeer = new Peer(roomCode, {
       config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
     });
     
     newPeer.on('open', (id) => {
-      setMyPeerId(id.slice(0, 6).toUpperCase());
+      setMyPeerId(id);
     });
 
     newPeer.on('connection', (conn) => {
       setConnection(conn);
-      // Host stays on menu until Sync exchange finishes
       setupPeerEvents(conn, true);
+    });
+
+    newPeer.on('error', (err) => {
+      console.error("PeerJS Host Error:", err);
+      if (err.type === 'unavailable-id') {
+          // If collision, try once more with a different ID
+          startOnlineHost();
+      } else {
+          addLog("Network Error: " + err.type, 'alert');
+          setOnlineLobbyStatus('IDLE');
+      }
     });
 
     setPeer(newPeer);
   };
 
   const joinOnlineGame = (roomId: string) => {
+    if (!roomId) return;
     setIsPeerConnecting(true);
     const newPeer = new Peer();
     
     newPeer.on('open', (id) => {
-      const conn = newPeer.connect(roomId.toLowerCase());
+      const conn = newPeer.connect(roomId.toUpperCase().trim(), {
+          reliable: true
+      });
+      
       conn.on('open', () => {
         setConnection(conn);
         setIsPeerConnecting(false);
         setupPeerEvents(conn, false);
       });
+      
       conn.on('error', (err) => {
-        addLog("Failed to connect to room. ནོར་འཛོལ།", 'alert');
+        console.error("PeerJS Conn Error:", err);
+        addLog("Failed to join room. ནོར་འཛོལ།", 'alert');
         setIsPeerConnecting(false);
+        newPeer.destroy();
       });
+    });
+
+    newPeer.on('error', (err) => {
+        console.error("PeerJS Guest Error:", err);
+        setIsPeerConnecting(false);
     });
 
     setPeer(newPeer);
@@ -401,6 +425,13 @@ const App: React.FC = () => {
       setGameMode(null);
     });
   };
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (peer) peer.destroy();
+    };
+  }, [peer]);
 
   // AI Strategic Loop
   useEffect(() => {
@@ -592,7 +623,7 @@ const App: React.FC = () => {
                              </div>
                              
                              <div className="flex flex-col gap-4 w-full">
-                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors" onClick={startOnlineHost}>
+                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg shadow-amber-900/20" onClick={startOnlineHost}>
                                     {myPeerId ? `ROOM CODE: ${myPeerId}` : 'Generate Room Code'}
                                 </button>
                                 
@@ -600,7 +631,7 @@ const App: React.FC = () => {
                                 
                                 <div className="flex flex-col gap-2">
                                   <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600 transition-colors" />
-                                  <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
+                                  <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
                                       {isPeerConnecting ? 'Connecting...' : 'Join Room'}
                                   </button>
                                 </div>
