@@ -134,13 +134,13 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const initializeGame = useCallback((p2Config?: { name: string, color: string }, isTutorial = false) => {
+  const initializeGame = useCallback((p1Config: { name: string, color: string }, p2Config: { name: string, color: string }, isTutorial = false) => {
     const newBoard = new Map<number, BoardShell>(); for (let i = 1; i <= TOTAL_SHELLS; i++) newBoard.set(i, { index: i, stackSize: 0, owner: null, isShoMo: false });
     setBoard(newBoard);
-    const initialPlayers = generatePlayers({ name: playerName, color: selectedColor }, p2Config || { name: 'Opponent', color: COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6' });
+    const initialPlayers = generatePlayers(p1Config, p2Config);
     setPlayers(initialPlayers); setTurnIndex(0); setPhase(GamePhase.ROLLING); setLastRoll(null); setIsRolling(false); setPendingMoveValues([]); setPaRaCount(0); setExtraRolls(0); setIsOpeningPaRa(false); setLastMove(null); setTutorialStep(isTutorial ? 1 : 0); setSelectedSourceIndex(null);
     addLog("New game started! ཤོ་འགོ་ཚུགས་སོང་།", 'info');
-  }, [playerName, selectedColor, addLog]);
+  }, [addLog]);
 
   useEffect(() => {
     const handleResize = () => { if (boardContainerRef.current) { const { width, height } = boardContainerRef.current.getBoundingClientRect(); setBoardScale(Math.max(Math.min((width - 20) / 800, (height - 20) / 800, 1), 0.3)); } };
@@ -311,33 +311,20 @@ const App: React.FC = () => {
   // PeerJS Online Setup Logic
   const startOnlineHost = () => {
     setOnlineLobbyStatus('WAITING');
-    // Generate a shorter, stable room code to use as the actual Peer ID
     const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
     const newPeer = new Peer(roomCode, {
       config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
     });
     
-    newPeer.on('open', (id) => {
-      setMyPeerId(id);
-    });
-
+    newPeer.on('open', (id) => setMyPeerId(id));
     newPeer.on('connection', (conn) => {
       setConnection(conn);
       setupPeerEvents(conn, true);
     });
-
     newPeer.on('error', (err) => {
-      console.error("PeerJS Host Error:", err);
-      if (err.type === 'unavailable-id') {
-          // If collision, try once more with a different ID
-          startOnlineHost();
-      } else {
-          addLog("Network Error: " + err.type, 'alert');
-          setOnlineLobbyStatus('IDLE');
-      }
+      if (err.type === 'unavailable-id') startOnlineHost();
+      else { addLog("Network Error: " + err.type, 'alert'); setOnlineLobbyStatus('IDLE'); }
     });
-
     setPeer(newPeer);
   };
 
@@ -345,41 +332,26 @@ const App: React.FC = () => {
     if (!roomId) return;
     setIsPeerConnecting(true);
     const newPeer = new Peer();
-    
     newPeer.on('open', (id) => {
-      const conn = newPeer.connect(roomId.toUpperCase().trim(), {
-          reliable: true
-      });
-      
+      const conn = newPeer.connect(roomId.toUpperCase().trim(), { reliable: true });
       conn.on('open', () => {
         setConnection(conn);
         setIsPeerConnecting(false);
         setupPeerEvents(conn, false);
       });
-      
-      conn.on('error', (err) => {
-        console.error("PeerJS Conn Error:", err);
+      conn.on('error', () => {
         addLog("Failed to join room. ནོར་འཛོལ།", 'alert');
         setIsPeerConnecting(false);
         newPeer.destroy();
       });
     });
-
-    newPeer.on('error', (err) => {
-        console.error("PeerJS Guest Error:", err);
-        setIsPeerConnecting(false);
-    });
-
+    newPeer.on('error', () => setIsPeerConnecting(false));
     setPeer(newPeer);
   };
 
   const setupPeerEvents = (conn: DataConnection, isHost: boolean) => {
-    // Guest initiates the handshake by sending their identity to the Host
     if (!isHost) {
-      conn.send({ 
-          type: 'SYNC', 
-          payload: { playerName, color: selectedColor } 
-      });
+      conn.send({ type: 'SYNC', payload: { playerName, color: selectedColor } });
     }
 
     conn.on('data', (data: any) => {
@@ -387,35 +359,26 @@ const App: React.FC = () => {
       switch (packet.type) {
         case 'SYNC':
           if (isHost) {
-            // Host receives Guest info
-            const p2Config = { name: packet.payload.playerName, color: packet.payload.color };
+            const guestInfo = { name: packet.payload.playerName, color: packet.payload.color };
+            const hostInfo = { name: playerName, color: selectedColor };
             setGameMode(GameMode.ONLINE_HOST);
             setOnlineLobbyStatus('CONNECTED');
-            initializeGame(p2Config);
-            
-            // Host sends their config and identity back to Guest
-            conn.send({
-              type: 'SYNC',
-              payload: { playerName, color: selectedColor, isNinerMode }
-            });
+            // Host is ALWAYS P1 (Red), Guest is P2 (Blue)
+            initializeGame(hostInfo, guestInfo);
+            conn.send({ type: 'SYNC', payload: { playerName, color: selectedColor, isNinerMode } });
           } else {
-            // Guest receives Host config and identity
             setIsNinerMode(packet.payload.isNinerMode);
-            const p2Config = { name: packet.payload.playerName, color: packet.payload.color };
+            const hostInfo = { name: packet.payload.playerName, color: packet.payload.color };
+            const guestInfo = { name: playerName, color: selectedColor };
             setGameMode(GameMode.ONLINE_GUEST);
             setOnlineLobbyStatus('CONNECTED');
-            initializeGame(p2Config);
+            // Host is ALWAYS P1 (Red), Guest is P2 (Blue)
+            initializeGame(hostInfo, guestInfo);
           }
           break;
-        case 'ROLL_REQ':
-          performRoll(packet.payload);
-          break;
-        case 'MOVE_REQ':
-          performMove(packet.payload.sourceIdx, packet.payload.targetIdx, true);
-          break;
-        case 'SKIP_REQ':
-          handleSkipTurn(true);
-          break;
+        case 'ROLL_REQ': performRoll(packet.payload); break;
+        case 'MOVE_REQ': performMove(packet.payload.sourceIdx, packet.payload.targetIdx, true); break;
+        case 'SKIP_REQ': handleSkipTurn(true); break;
       }
     });
 
@@ -426,98 +389,26 @@ const App: React.FC = () => {
     });
   };
 
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      if (peer) peer.destroy();
-    };
-  }, [peer]);
+  useEffect(() => { return () => { if (peer) peer.destroy(); }; }, [peer]);
 
   // AI Strategic Loop
   useEffect(() => {
     if (gameMode === GameMode.AI && turnIndex === 1 && phase !== GamePhase.GAME_OVER && !isRolling) {
       const timer = setTimeout(() => {
         const s = gameStateRef.current;
-        if (s.phase === GamePhase.ROLLING) {
-          performRoll();
-        } else if (s.phase === GamePhase.MOVING) {
+        if (s.phase === GamePhase.ROLLING) performRoll();
+        else if (s.phase === GamePhase.MOVING) {
           const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
           if (aiMoves.length > 0) {
-            const humPlayer = s.players[0];
-            const aiPlayer = s.players[1];
-            let humLeadIndex = 0;
-            let humMaxStackSize = 0;
-            const humStacks: BoardShell[] = [];
-            
-            s.board.forEach(shell => {
-              if (shell.owner === humPlayer.id) {
-                humStacks.push(shell);
-                if (shell.index > humLeadIndex) humLeadIndex = shell.index;
-                if (shell.stackSize > humMaxStackSize) humMaxStackSize = shell.stackSize;
-              }
-            });
-
-            const scoredMoves = aiMoves.map(m => {
-              let score = 0; 
-              const targetShell = s.board.get(m.targetIndex);
-              const endgameWeight = aiPlayer.coinsFinished > 5 ? 3.0 : 1.0;
-              score += m.targetIndex * 15 * endgameWeight;
-              let aiSize = 0;
-              if (m.sourceIndex === 0) {
-                  aiSize = aiPlayer.coinsInHand === COINS_PER_PLAYER ? (s.isOpeningPaRa ? 3 : 2) : 1;
-                  score += 400;
-              } else {
-                  aiSize = s.board.get(m.sourceIndex)?.stackSize || 1;
-              }
-              if (m.type === MoveResultType.FINISH) score += 6000;
-              if (m.type === MoveResultType.KILL) {
-                  const victimSize = targetShell?.stackSize || 0;
-                  const isShoMoKill = targetShell?.isShoMo;
-                  score += 4000 + (victimSize * 300);
-                  if (isShoMoKill) score += 1500;
-                  if (m.targetIndex === humLeadIndex) score += 2000;
-              }
-              if (m.type === MoveResultType.STACK) {
-                const totalSize = (targetShell?.stackSize || 0) + aiSize;
-                if (totalSize >= 4 && totalSize <= 6) score += 2500;
-                else if (totalSize >= 3) score += 1800;
-                else score += 700;
-                score += 1000; 
-              }
-              if (m.targetIndex > humLeadIndex && m.targetIndex <= humLeadIndex + 12) {
-                  if (aiSize > humMaxStackSize) {
-                      const distanceToLead = m.targetIndex - humLeadIndex;
-                      const blockQuality = distanceToLead >= 2 && distanceToLead <= 7 ? 3500 : 1500;
-                      score += blockQuality;
-                  } else if (aiSize === humMaxStackSize) {
-                      score += 800;
-                  }
-              }
-              humStacks.forEach((shell: BoardShell) => {
-                if (shell.stackSize > aiSize) {
-                    const dist = m.targetIndex - shell.index;
-                    if (dist >= 2 && dist <= 12) {
-                        const prob = DICE_PROBS[dist] || 0;
-                        score -= prob * (15000 * endgameWeight); 
-                    }
-                }
-                if (aiSize >= shell.stackSize) {
-                     const dist = shell.index - m.targetIndex;
-                     if (dist >= 2 && dist <= 12) {
-                         const prob = DICE_PROBS[dist] || 0;
-                         score += prob * 4000;
-                     }
-                }
-              });
-              if (m.type === MoveResultType.PLACE || m.type === MoveResultType.STACK) {
-                  if (m.targetIndex > 50) score += 500;
-              }
-              return { move: m, score };
+            const scores = aiMoves.map(m => {
+                let score = m.targetIndex * 10;
+                if (m.type === MoveResultType.FINISH) score += 5000;
+                if (m.type === MoveResultType.KILL) score += 3000;
+                if (m.type === MoveResultType.STACK) score += 500;
+                return { move: m, score };
             }).sort((a, b) => b.score - a.score);
-            performMove(scoredMoves[0].move.sourceIndex, scoredMoves[0].move.targetIndex);
-          } else {
-            handleSkipTurn();
-          }
+            performMove(scores[0].move.sourceIndex, scores[0].move.targetIndex);
+          } else handleSkipTurn();
         }
       }, 1200);
       return () => clearTimeout(timer);
@@ -528,12 +419,11 @@ const App: React.FC = () => {
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const shouldHighlightHand = phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0) && players[turnIndex].coinsInHand > 0;
 
-  // Determine if it's the local user's turn in online play
   const isLocalTurn = (() => {
     if (gameMode === GameMode.ONLINE_HOST) return turnIndex === 0;
     if (gameMode === GameMode.ONLINE_GUEST) return turnIndex === 1;
     if (gameMode === GameMode.AI) return turnIndex === 0;
-    return true; // Local play
+    return true;
   })();
 
   return (
@@ -542,36 +432,16 @@ const App: React.FC = () => {
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
         <style dangerouslySetInnerHTML={{__html: `
-          @keyframes handBlockedShake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-4px); }
-            40%, 80% { transform: translateX(4px); }
-          }
-          .animate-hand-blocked {
-            animation: handBlockedShake 0.4s ease-in-out;
-            border-color: #ef4444 !important;
-            background-color: rgba(127, 29, 29, 0.4) !important;
-          }
-          @keyframes turnIndicator {
-            0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
-            50% { transform: translateY(-8px) scale(1.4); opacity: 1; }
-          }
-          .animate-turn-indicator {
-            animation: turnIndicator 1.5s ease-in-out infinite;
-          }
-          @keyframes activePulse {
-            0%, 100% { box-shadow: 0 0 0 0px rgba(245, 158, 11, 0); }
-            50% { box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.3); }
-          }
-          .animate-active-pulse {
-            animation: activePulse 2s ease-in-out infinite;
-          }
+          @keyframes handBlockedShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+          .animate-hand-blocked { animation: handBlockedShake 0.4s ease-in-out; border-color: #ef4444 !important; background-color: rgba(127, 29, 29, 0.4) !important; }
+          @keyframes turnIndicator { 0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; } 50% { transform: translateY(-8px) scale(1.4); opacity: 1; } }
+          .animate-turn-indicator { animation: turnIndicator 1.5s ease-in-out infinite; }
+          @keyframes activePulse { 0%, 100% { box-shadow: 0 0 0 0px rgba(245, 158, 11, 0); } 50% { box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.3); } }
+          .animate-active-pulse { animation: activePulse 2s ease-in-out infinite; }
         `}} />
         
-        {/* Main Menu */}
         {!gameMode && (
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
-               {/* Title Section */}
                <div className="flex flex-col items-center flex-shrink-0 w-full max-w-sm md:max-w-md">
                    <h1 className="flex items-center gap-6 mb-4 font-cinzel">
                       <span className="text-7xl md:text-9xl text-amber-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">ཤོ</span>
@@ -579,21 +449,16 @@ const App: React.FC = () => {
                    </h1>
                    <div className="h-px w-32 bg-amber-900/40 mb-4" />
                    <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
-                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
                </div>
                
                <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-4 md:gap-10">
                   <div className="w-full bg-stone-900/30 p-6 md:p-8 rounded-[3rem] border border-stone-800/50 backdrop-blur-2xl shadow-2xl">
                       <div className="mb-6">
-                        <label className="text-stone-500 text-[10px] uppercase block mb-3 tracking-widest flex justify-between font-bold px-1">
-                          <span>Identity ཁྱེད་ཀྱི་མིང་།</span>
-                        </label>
-                        <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-3 md:p-4 text-stone-100 outline-none transition-all text-center text-xl md:text-2xl font-cinzel tracking-wider" placeholder="NAME" maxLength={15} />
+                        <label className="text-stone-500 text-[10px] uppercase block mb-3 tracking-widest font-bold px-1">Identity ཁྱེད་ཀྱི་མིང་།</label>
+                        <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-3 md:p-4 text-stone-100 outline-none text-center text-xl md:text-2xl font-cinzel tracking-wider" maxLength={15} />
                       </div>
                       <div>
-                        <label className="text-stone-500 text-[10px] uppercase block mb-4 tracking-widest flex justify-between font-bold px-1">
-                          <span>Banner ཚོས་གཞི་དོམ།</span>
-                        </label>
+                        <label className="text-stone-500 text-[10px] uppercase block mb-4 tracking-widest font-bold px-1">Banner ཚོས་གཞི་དོམ།</label>
                         <div className="flex justify-between px-2 gap-2">
                           {COLOR_PALETTE.map((c) => ( 
                             <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 md:w-10 md:h-10 rounded-xl transition-all rotate-45 ${selectedColor === c.hex ? 'border-2 border-white scale-110 shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: c.hex }} /> 
@@ -604,62 +469,53 @@ const App: React.FC = () => {
 
                   {onlineLobbyStatus === 'IDLE' ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 w-full px-2">
-                        <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame(); }}>
-                            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🏔️</span>
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Local</h3>
-                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">རང་ཤག་ཏུ་རྩེ།</span>
+                        <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Opponent', color: COLOR_PALETTE[1].hex}); }}>
+                            <span className="text-2xl">🏔️</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">Local</h3>
                         </button>
-                        <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame(); }}>
-                            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🤖</span>
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">AI</h3>
-                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">མི་བཟོས་རིག་ནུས།</span>
+                        <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame({name: playerName, color: selectedColor}, {name: 'Sho Bot', color: '#999'}); }}>
+                            <span className="text-2xl">🤖</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">AI</h3>
                         </button>
-                        <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 cursor-pointer text-center group transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
-                            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🌐</span>
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Online</h3>
-                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">དྲ་ཐོག་རྩེད་མོ།</span>
+                        <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
+                            <span className="text-2xl">🌐</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100">Online</h3>
                         </button>
                     </div>
                   ) : (
                     <div className="w-full bg-stone-900/50 border-2 border-amber-700/50 p-8 rounded-[3rem] animate-in fade-in zoom-in duration-300">
-                        {onlineLobbyStatus === 'WAITING' ? (
+                        {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
                                 <h3 className="text-xl font-cinzel mb-2">Host Online Room</h3>
-                                <p className="text-stone-400 text-xs font-serif">Create a room and share the code.</p>
+                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent.</p>
                              </div>
-                             
                              <div className="flex flex-col gap-4 w-full">
-                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg shadow-amber-900/20" onClick={startOnlineHost}>
-                                    {myPeerId ? `ROOM CODE: ${myPeerId}` : 'Generate Room Code'}
+                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
+                                    {myPeerId ? `ROOM CODE: ${myPeerId} 📋` : 'Generate Room Code'}
                                 </button>
-                                
                                 <div className="h-px w-full bg-stone-800" />
-                                
                                 <div className="flex flex-col gap-2">
-                                  <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600 transition-colors" />
-                                  <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
+                                  <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
+                                  <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
                                       {isPeerConnecting ? 'Connecting...' : 'Join Room'}
                                   </button>
                                 </div>
                              </div>
-
-                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold mt-2" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel</button>
+                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel</button>
                           </div>
-                        ) : null}
+                        )}
                     </div>
                   )}
                </div>
 
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex gap-16">
-                      <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame(undefined, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors group">
-                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel group-hover:tracking-[0.2em] transition-all">Tutorial</span>
-                          <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
+                      <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group">
+                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
                       </button>
-                      <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center transition-colors group">
-                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel group-hover:tracking-[0.2em] transition-all">Rules</span>
-                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོ་ཡི་སྒྲིག་གཞི།</span>
+                      <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group">
+                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
                       </button>
                   </div>
                   <div className="flex flex-col items-center">
@@ -672,7 +528,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Game UI */}
         {gameMode && (
             <>
                 <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
@@ -682,13 +537,13 @@ const App: React.FC = () => {
                                 <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel">ཤོ Sho</h1>
                             </div>
                             <div className="flex items-center gap-2">
-                                {gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST ? (
+                                {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && (
                                     <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                                         <span className="text-[8px] uppercase font-bold text-green-400">Online</span>
                                     </div>
-                                ) : null}
-                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 hover:text-amber-500 flex items-center justify-center text-[10px] md:text-xs">?</button>
+                                )}
+                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
                         
@@ -696,7 +551,6 @@ const App: React.FC = () => {
                             {players.map((p, i) => {
                                 const isActive = turnIndex === i;
                                 const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
-                                
                                 return (
                                     <div key={p.id} className={`relative p-1.5 md:p-3 rounded-xl border transition-all duration-300 ${isActive ? 'bg-stone-800 border-amber-500/50 scale-[1.05] z-10 animate-active-pulse shadow-xl' : 'border-stone-800 opacity-50'}`}>
                                         {isActive && (
@@ -705,28 +559,17 @@ const App: React.FC = () => {
                                                  <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-amber-500 mt-[-2px]" />
                                             </div>
                                         )}
-                                        
-                                        <div className="flex items-center gap-1.5 mb-1.5 overflow-hidden">
-                                            <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse shadow-[0_0_8px_currentColor]' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
+                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                            <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
                                             <h3 className={`font-bold truncate text-[9px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                         </div>
-
-                                        <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold uppercase tracking-tight font-cinzel">
-                                            <div className="flex flex-col">
-                                                <span className="text-[7px] md:text-[8px] text-stone-500 leading-none mb-0.5">Hand</span>
-                                                <span className="leading-none">{p.coinsInHand}</span>
-                                            </div>
-                                            <div className="flex flex-col items-end">
-                                                <span className="text-[7px] md:text-[8px] text-stone-500 leading-none mb-0.5">Done</span>
-                                                <span className="leading-none text-amber-500">{p.coinsFinished}</span>
-                                            </div>
+                                        <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold font-cinzel">
+                                            <div className="flex flex-col"><span className="text-[7px] text-stone-500">Hand</span><span>{p.coinsInHand}</span></div>
+                                            <div className="flex flex-col items-end"><span className="text-[7px] text-stone-500">Done</span><span className="text-amber-500">{p.coinsFinished}</span></div>
                                         </div>
-
                                         {isActive && (
                                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-600 px-1.5 py-0.5 rounded-md shadow-lg border border-amber-400/30 whitespace-nowrap">
-                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">
-                                                    {isMe ? "YOUR TURN" : (gameMode === GameMode.AI && i === 1) ? "THINKING..." : "WAITING..."}
-                                                </span>
+                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN" : "WAITING..."}</span>
                                             </div>
                                         )}
                                     </div>
@@ -739,71 +582,37 @@ const App: React.FC = () => {
                         {phase === GamePhase.GAME_OVER ? ( 
                             <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
                                 <h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
-                                <button onClick={() => initializeGame()} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">New Game</button>
+                                <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">Exit Game</button>
                             </div> 
                         ) : ( 
                             <div className="flex flex-col gap-1">
                                 <DiceArea currentRoll={lastRoll} onRoll={() => performRoll()} canRoll={(phase === GamePhase.ROLLING) && !isRolling && isLocalTurn} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
-                                
                                 <div className="flex gap-1">
-                                    <div onClick={() => { 
-                                      if (phase === GamePhase.MOVING && isLocalTurn) { 
-                                        if (players[turnIndex].coinsInHand > 0) {
-                                          setSelectedSourceIndex(0); 
-                                        } else {
-                                          SFX.playBlocked();
-                                          setHandShake(true);
-                                          setTimeout(() => setHandShake(false), 400);
-                                          addLog("No coins in hand. ལག་ཁྱི་ཚར་སོང་།", 'alert');
-                                        }
-                                      } 
-                                    }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
-                                        <span className={`font-bold tracking-widest uppercase font-cinzel text-[11px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : handShake ? 'text-red-400' : ''}`}>From Hand</span>
+                                    <div onClick={() => { if (phase === GamePhase.MOVING && isLocalTurn) { if (players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); else { SFX.playBlocked(); setHandShake(true); setTimeout(() => setHandShake(false), 400); } } }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
+                                        <span className={`font-bold uppercase font-cinzel text-[11px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>From Hand</span>
                                         <span className="text-[11px] md:text-[16px] text-stone-200 font-serif mt-1 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
                                     </div>
-                                    
                                     {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && isLocalTurn && ( 
                                         <button onClick={() => handleSkipTurn()} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
-                                            <span className="text-[9px] md:text-[11px]">Skip Turn</span>
+                                            <span className="text-[9px] md:text-[11px]">Skip</span>
                                             <span className="text-[11px] md:text-[14px] font-serif">སྐྱུར།</span>
                                         </button> 
                                     )}
                                 </div>
-                                
                                 {!isLocalTurn && phase !== GamePhase.GAME_OVER && (
-                                    <div className="text-center py-2 animate-pulse">
-                                        <span className="text-amber-600 text-[10px] uppercase font-bold tracking-widest">Opponent Thinking...</span>
-                                    </div>
+                                    <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move...</span></div>
                                 )}
                             </div> 
                         )}
-                    </div>
-                    
-                    <div className="hidden md:block h-8 bg-black/40 mx-2 md:mx-4 mb-1 rounded-lg p-1 md:p-3 overflow-y-auto no-scrollbar font-mono text-[9px] text-stone-500 border border-stone-800 mobile-landscape-hide-logs">
-                        {logs.slice(0, 1).map(log => <div key={log.id} className={log.type === 'alert' ? 'text-amber-400' : ''}>{log.message}</div>)}
-                    </div>
-                    
-                    <div className="p-2 md:p-6 bg-stone-950 mt-auto flex-shrink-0 text-center opacity-40">
-                         <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
                     </div>
                 </div>
                 
                 <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
-                            boardState={board} 
-                            players={players} 
-                            validMoves={visualizedMoves} 
-                            onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
-                            currentPlayer={players[turnIndex].id} 
-                            turnPhase={phase} 
-                            onShellClick={(i) => { if (isLocalTurn) { board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null) } }} 
-                            selectedSource={selectedSourceIndex} 
-                            lastMove={lastMove} 
-                            currentRoll={lastRoll} 
-                            isRolling={isRolling} 
-                            isNinerMode={isNinerMode} 
-                            onInvalidMoveAttempt={() => SFX.playBlocked()} 
+                            boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
+                            currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => { if (isLocalTurn) { board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null) } }} 
+                            selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} 
                         />
                     </div>
                 </div>
