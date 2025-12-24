@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Peer, { DataConnection } from 'peerjs';
+import Peer, { DataConnection, MediaConnection } from 'peerjs';
+import { GoogleGenAI } from "@google/genai";
 import { 
   Player, PlayerColor, BoardState, GamePhase, 
   DiceRoll, MoveResultType, MoveOption, GameLog, BoardShell, GameMode, NetworkPacket
@@ -18,6 +20,91 @@ const generatePlayers = (
         { id: PlayerColor.Red, name: p1Settings.name || 'Player 1', colorHex: p1Settings.color || COLOR_PALETTE[0].hex, coinsInHand: COINS_PER_PLAYER, coinsFinished: 0 },
         { id: PlayerColor.Blue, name: p2Settings.name || 'Player 2', colorHex: p2Settings.color || COLOR_PALETTE[1].hex, coinsInHand: COINS_PER_PLAYER, coinsFinished: 0 }
     ];
+};
+
+// Internal helper for move validation logic
+const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, moverStackSize: number, isNinerMode: boolean): MoveResultType => {
+  if (!target) return MoveResultType.INVALID;
+  if (!target.owner) return MoveResultType.PLACE;
+  if (target.owner === myId) {
+    if (!isNinerMode && target.stackSize + moverStackSize > 9) return MoveResultType.INVALID;
+    return MoveResultType.STACK;
+  } else {
+    if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
+    return MoveResultType.KILL;
+  }
+};
+
+// Main function to calculate all valid moves based on Sho rules
+const getAvailableMoves = (
+  playerIndex: number,
+  board: BoardState,
+  players: Player[],
+  pendingValues: number[],
+  isNinerMode: boolean,
+  isOpeningPaRa: boolean
+): MoveOption[] => {
+  if (pendingValues.length === 0) return [];
+
+  const moves: MoveOption[] = [];
+  const player = players[playerIndex];
+  const myId = player.id;
+
+  const getSubsets = (arr: number[]) => {
+    let results = [[] as number[]];
+    for (const value of arr) {
+      const copy = [...results];
+      for (const prefix of copy) {
+        results.push([...prefix, value]);
+      }
+    }
+    return results.filter(s => s.length > 0);
+  };
+
+  const subsets = getSubsets(pendingValues);
+  const possibleMoveValues = new Map<number, number[]>();
+  for (const s of subsets) {
+    const sum = s.reduce((a, b) => a + b, 0);
+    if (!possibleMoveValues.has(sum)) {
+      possibleMoveValues.set(sum, s);
+    }
+  }
+
+  // 1. From Hand
+  if (player.coinsInHand > 0) {
+    const isOpening = player.coinsInHand === COINS_PER_PLAYER;
+    const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
+    
+    for (const [dist, consumed] of possibleMoveValues.entries()) {
+      if (dist >= 1 && dist <= TOTAL_SHELLS) {
+        const target = board.get(dist);
+        const resultType = getMoveResultType(myId, target, movingSize, isNinerMode);
+        if (resultType !== MoveResultType.INVALID) {
+          moves.push({ sourceIndex: 0, targetIndex: dist, consumedValues: consumed, type: resultType });
+        }
+      }
+    }
+  }
+
+  // 2. From Board
+  for (const [idx, shell] of board.entries()) {
+    if (shell.owner === myId && shell.stackSize > 0) {
+      for (const [dist, consumed] of possibleMoveValues.entries()) {
+        const targetIdx = idx + dist;
+        if (targetIdx <= TOTAL_SHELLS) {
+          const target = board.get(targetIdx);
+          const resultType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
+          if (resultType !== MoveResultType.INVALID) {
+            moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resultType });
+          }
+        } else {
+          moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
+        }
+      }
+    }
+  }
+
+  return moves;
 };
 
 const SFX = {
@@ -44,40 +131,16 @@ const SFX = {
 
 const getRandomDicePos = () => { const r = 35 + Math.random() * 45; const theta = Math.random() * Math.PI * 2; return { x: r * Math.cos(theta), y: r * Math.sin(theta), r: Math.random() * 360 }; };
 
-const DICE_PROBS: Record<number, number> = { 2: 1/36, 3: 2/36, 4: 3/36, 5: 4/36, 6: 5/36, 7: 6/36, 8: 5/36, 9: 4/36, 10: 3/36, 11: 2/36, 12: 1/36 };
-
-const calculatePotentialMoves = (sourceIdx: number, moveVals: number[], currentBoard: BoardState, player: Player, isNinerMode: boolean, isOpeningPaRa: boolean): MoveOption[] => {
-  const options: MoveOption[] = [];
-  const evaluateTarget = (dist: number, consumed: number[]): MoveOption | null => {
-    const targetIdx = sourceIdx + dist;
-    if (targetIdx > TOTAL_SHELLS) { return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.FINISH }; }
-    const targetShell = currentBoard.get(targetIdx); if (!targetShell) return null;
-    
-    let movingStackSize = 0;
-    if (sourceIdx === 0) {
-        if (player.coinsInHand === COINS_PER_PLAYER) {
-            movingStackSize = isOpeningPaRa ? 3 : 2;
-        } else {
-            movingStackSize = 1;
-        }
-    } else {
-        movingStackSize = currentBoard.get(sourceIdx)?.stackSize || 0;
-    }
-
-    if (targetShell.owner === player.id) { const rs = targetShell.stackSize + movingStackSize; if (!isNinerMode && rs === 9) return null; return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.STACK }; }
-    if (targetShell.owner && targetShell.owner !== player.id) { if (movingStackSize >= targetShell.stackSize) return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.KILL }; return null; }
-    return { sourceIndex: sourceIdx, targetIndex: targetIdx, consumedValues: consumed, type: MoveResultType.PLACE };
-  };
-  Array.from(new Set(moveVals)).forEach(val => { const opt = evaluateTarget(val, [val]); if (opt) options.push(opt); });
-  if (moveVals.length > 1) { const total = moveVals.reduce((a, b) => a + b, 0); const opt = evaluateTarget(total, moveVals); if (opt && !options.some(o => o.targetIndex === opt.targetIndex)) options.push(opt); }
-  return options;
-};
-
-const getAvailableMoves = (pIndex: number, pBoard: BoardState, pPlayers: Player[], pVals: number[], isNinerMode: boolean, isOpeningPaRa: boolean) => {
-  let moves: MoveOption[] = []; const player = pPlayers[pIndex]; if (!player) return moves;
-  if (player.coinsInHand > 0) { moves = [...moves, ...calculatePotentialMoves(0, pVals, pBoard, player, isNinerMode, isOpeningPaRa)]; }
-  pBoard.forEach((shell) => { if (shell.owner === player.id && shell.stackSize > 0) moves = [...moves, ...calculatePotentialMoves(shell.index, pVals, pBoard, player, isNinerMode, isOpeningPaRa)]; });
-  return moves;
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = (reader.result as string).split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 };
 
 const App: React.FC = () => {
@@ -104,6 +167,8 @@ const App: React.FC = () => {
   const [globalPlayCount, setGlobalPlayCount] = useState<number>(18742);
   const [isCounterPulsing, setIsCounterPulsing] = useState(false);
   const [handShake, setHandShake] = useState(false);
+  const [isMicEnabled, setIsMicEnabled] = useState(false);
+  const [isOpponentSpeaking, setIsOpponentSpeaking] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Online Multiplayer State
@@ -113,13 +178,65 @@ const App: React.FC = () => {
   const [targetPeerId, setTargetPeerId] = useState<string>('');
   const [isPeerConnecting, setIsPeerConnecting] = useState(false);
   const [onlineLobbyStatus, setOnlineLobbyStatus] = useState<'IDLE' | 'WAITING' | 'CONNECTED'>('IDLE');
+  
+  // Audio Streaming State
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [mediaCall, setMediaCall] = useState<MediaConnection | null>(null);
 
-  const gameStateRef = useRef({ board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
+  // Fix GamePhase type inference in useRef
+  const gameStateRef = useRef({ board, players, turnIndex, phase: phase as GamePhase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
   useEffect(() => { 
-    gameStateRef.current = { board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
+    gameStateRef.current = { board, players, turnIndex, phase: phase as GamePhase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
   }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa]);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
+
+  // Gemini "Sho Bshad" Transcription Logic
+  const transcribeInvocation = async (audioBlob: Blob) => {
+    try {
+      const base64Audio = await blobToBase64(audioBlob);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
+          {
+            parts: [
+              { text: "Listen to this short Tibetan invocation for a dice game (Sho). Transcribe the Tibetan chant. If you recognize traditional phrases like 'Para Penpa Tashi Zhug' or similar sho bshad, provide the Tibetan text. Return only the transcription." },
+              { inlineData: { mimeType: audioBlob.type, data: base64Audio } }
+            ]
+          }
+        ]
+      });
+      const text = response.text?.trim();
+      if (text) {
+        addLog(`Invocation: ${text}`, 'info');
+        if (connection && connection.open) {
+          connection.send({ type: 'SYNC', payload: { type: 'CHANT', text } });
+        }
+      }
+    } catch (e) {
+      console.warn("Transcription failed:", e);
+    }
+  };
+
+  const startRecording = async () => {
+    if (!isMicEnabled) return null;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        transcribeInvocation(blob);
+      };
+      mediaRecorder.start();
+      setTimeout(() => mediaRecorder.stop(), 3000);
+    } catch (err) {
+      console.error("Recording error:", err);
+    }
+  };
 
   // Sync state over P2P
   const broadcastPacket = useCallback((packet: NetworkPacket) => {
@@ -169,7 +286,13 @@ const App: React.FC = () => {
 
   const performRoll = async (forcedRoll?: DiceRoll) => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING) return;
-    setIsRolling(true); SFX.playShake(); await new Promise(resolve => setTimeout(resolve, 800)); 
+    setIsRolling(true); SFX.playShake(); 
+    
+    // Start recording for sho bshad if it's our turn
+    const isMe = (gameMode === GameMode.ONLINE_HOST && turnIndex === 0) || (gameMode === GameMode.ONLINE_GUEST && turnIndex === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && turnIndex === 0);
+    if (isMe && !forcedRoll) startRecording();
+
+    await new Promise(resolve => setTimeout(resolve, 800)); 
     
     let d1, d2;
     if (forcedRoll) {
@@ -196,7 +319,6 @@ const App: React.FC = () => {
     const isPaRa = (d1 === 1 && d2 === 1), total = d1 + d2;
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
     
-    // Broadcast if online and local roll
     if (!forcedRoll && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) {
         broadcastPacket({ type: 'ROLL_REQ', payload: newRoll });
     }
@@ -308,6 +430,45 @@ const App: React.FC = () => {
     }
   };
 
+  // P2P Media Stream Management
+  const setupMediaCall = async (targetId: string, peerInstance: Peer) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+      const call = peerInstance.call(targetId, stream);
+      handleCall(call);
+    } catch (err) {
+      console.warn("Could not access microphone for P2P audio:", err);
+    }
+  };
+
+  const handleCall = (call: MediaConnection) => {
+    setMediaCall(call);
+    call.on('stream', (remoteStream) => {
+      if (!remoteAudioRef.current) {
+        remoteAudioRef.current = new Audio();
+      }
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play();
+      
+      // Analyze remote voice activity
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(remoteStream);
+      const analyzer = audioCtx.createAnalyser();
+      analyzer.fftSize = 256;
+      source.connect(analyzer);
+      const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+      
+      const checkActivity = () => {
+        analyzer.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        setIsOpponentSpeaking(average > 30);
+        requestAnimationFrame(checkActivity);
+      };
+      checkActivity();
+    });
+  };
+
   // PeerJS Online Setup Logic
   const startOnlineHost = () => {
     setOnlineLobbyStatus('WAITING');
@@ -320,6 +481,13 @@ const App: React.FC = () => {
     newPeer.on('connection', (conn) => {
       setConnection(conn);
       setupPeerEvents(conn, true);
+    });
+    newPeer.on('call', (incomingCall) => {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            localStreamRef.current = stream;
+            incomingCall.answer(stream);
+            handleCall(incomingCall);
+        });
     });
     newPeer.on('error', (err) => {
       if (err.type === 'unavailable-id') startOnlineHost();
@@ -338,12 +506,20 @@ const App: React.FC = () => {
         setConnection(conn);
         setIsPeerConnecting(false);
         setupPeerEvents(conn, false);
+        setupMediaCall(roomId.toUpperCase().trim(), newPeer);
       });
       conn.on('error', () => {
         addLog("Failed to join room. ནོར་འཛོལ།", 'alert');
         setIsPeerConnecting(false);
         newPeer.destroy();
       });
+    });
+    newPeer.on('call', (incomingCall) => {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            localStreamRef.current = stream;
+            incomingCall.answer(stream);
+            handleCall(incomingCall);
+        });
     });
     newPeer.on('error', () => setIsPeerConnecting(false));
     setPeer(newPeer);
@@ -358,32 +534,22 @@ const App: React.FC = () => {
       const packet = data as NetworkPacket;
       switch (packet.type) {
         case 'SYNC':
+          if (packet.payload?.type === 'CHANT') {
+            addLog(`Opponent Chanted: ${packet.payload.text}`, 'info');
+            return;
+          }
           if (isHost) {
             let guestColor = packet.payload.color;
-            // ENSURE DISTINCT COLORS: If both chose same color, force Guest to a different one
             if (guestColor === selectedColor) {
                guestColor = COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6';
             }
-
             const guestInfo = { name: packet.payload.playerName, color: guestColor };
             const hostInfo = { name: playerName, color: selectedColor };
             setGameMode(GameMode.ONLINE_HOST);
             setOnlineLobbyStatus('CONNECTED');
-            
-            // Host is ALWAYS P1 (Red ID), Guest is P2 (Blue ID)
             initializeGame(hostInfo, guestInfo);
-            
-            // Send back assigned configuration to Guest
-            conn.send({ 
-              type: 'SYNC', 
-              payload: { 
-                hostInfo, 
-                guestInfo, 
-                isNinerMode 
-              } 
-            });
+            conn.send({ type: 'SYNC', payload: { hostInfo, guestInfo, isNinerMode } });
           } else {
-            // Guest receives final assignments from Host
             const { hostInfo, guestInfo, isNinerMode: serverNiner } = packet.payload;
             setIsNinerMode(serverNiner);
             setGameMode(GameMode.ONLINE_GUEST);
@@ -401,10 +567,16 @@ const App: React.FC = () => {
       addLog("Connection closed. མཐུད་ལམ་ཆད་སོང་།", 'alert');
       setOnlineLobbyStatus('IDLE');
       setGameMode(null);
+      if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
     });
   };
 
-  useEffect(() => { return () => { if (peer) peer.destroy(); }; }, [peer]);
+  useEffect(() => { 
+    return () => { 
+        if (peer) peer.destroy(); 
+        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
+    }; 
+  }, [peer]);
 
   // AI Strategic Loop
   useEffect(() => {
@@ -441,6 +613,19 @@ const App: React.FC = () => {
     return true;
   })();
 
+  const toggleMic = async () => {
+    if (!isMicEnabled) {
+        try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            setIsMicEnabled(true);
+        } catch (e) {
+            addLog("Microphone access denied. ཤོ་བཤད་བེད་སྤྱོད་མི་ཐུབ།", 'alert');
+        }
+    } else {
+        setIsMicEnabled(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row">
         {phase === GamePhase.SETUP && gameMode !== null && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-amber-500 font-cinzel">Initializing...</div>}
@@ -453,6 +638,8 @@ const App: React.FC = () => {
           .animate-turn-indicator { animation: turnIndicator 1.5s ease-in-out infinite; }
           @keyframes activePulse { 0%, 100% { box-shadow: 0 0 0 0px rgba(245, 158, 11, 0); } 50% { box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.3); } }
           .animate-active-pulse { animation: activePulse 2s ease-in-out infinite; }
+          @keyframes voiceActive { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
+          .voice-indicator { animation: voiceActive 0.6s ease-in-out infinite; }
         `}} />
         
         {!gameMode && (
@@ -517,7 +704,7 @@ const App: React.FC = () => {
                                 <div className="flex flex-col gap-2">
                                   <input type="text" placeholder="ENTER ROOM CODE ཁང་མིག་ཨང་གྲངས་བྲིས།" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
                                   <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
-                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room ཁང་པའི་ནང་མཉམ་འཛོམས།'}
+                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room ཁང་པའི་ནང་མཉམ་དུ་འཛོམས།'}
                                   </button>
                                 </div>
                              </div>
@@ -559,6 +746,9 @@ const App: React.FC = () => {
                                 <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel">ཤོ Sho</h1>
                             </div>
                             <div className="flex items-center gap-2">
+                                <button onClick={toggleMic} className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${isMicEnabled ? 'bg-amber-600 border-amber-400 text-white' : 'bg-stone-800 border-stone-700 text-stone-500'}`}>
+                                    {isMicEnabled ? '🎙️' : '🔇'}
+                                </button>
                                 {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && (
                                     <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -573,6 +763,7 @@ const App: React.FC = () => {
                             {players.map((p, i) => {
                                 const isActive = turnIndex === i;
                                 const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
+                                const isSpeaking = isMe ? isMicEnabled : isOpponentSpeaking;
                                 return (
                                     <div key={p.id} className={`relative p-1.5 md:p-3 rounded-xl border transition-all duration-300 ${isActive ? 'bg-stone-800 border-amber-500/50 scale-[1.05] z-10 animate-active-pulse shadow-xl' : 'border-stone-800 opacity-50'}`}>
                                         {isActive && (
@@ -581,9 +772,12 @@ const App: React.FC = () => {
                                                  <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-amber-500 mt-[-2px]" />
                                             </div>
                                         )}
-                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                        <div className="flex items-center gap-1.5 mb-1.5 relative">
                                             <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
                                             <h3 className={`font-bold truncate text-[9px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
+                                            {isSpeaking && (
+                                                <div className="absolute -right-1 -top-1 w-2 h-2 bg-amber-500 rounded-full voice-indicator" />
+                                            )}
                                         </div>
                                         <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold font-cinzel">
                                             <div className="flex flex-col"><span className="text-[7px] text-stone-500">Hand ལག་པ།</span><span>{p.coinsInHand}</span></div>
@@ -628,6 +822,14 @@ const App: React.FC = () => {
                         )}
                     </div>
                     
+                    <div className="flex-grow flex flex-col gap-1 p-2 bg-stone-900 overflow-y-auto no-scrollbar mobile-landscape-hide-logs">
+                        {logs.map((log) => (
+                            <div key={log.id} className={`text-[9px] md:text-[10px] p-2 rounded border border-stone-800/50 transition-all ${log.type === 'alert' ? 'bg-red-950/30 text-red-400 border-red-900/30' : log.type === 'action' ? 'bg-amber-950/30 text-amber-300 border-amber-900/30' : 'bg-stone-800/30 text-stone-400'}`}>
+                                <span className="font-serif leading-tight">{log.message}</span>
+                            </div>
+                        ))}
+                    </div>
+
                     <div className="p-2 md:p-6 bg-stone-950 flex-shrink-0 text-center opacity-40 mt-auto">
                          <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
                     </div>
