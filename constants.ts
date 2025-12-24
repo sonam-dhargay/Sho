@@ -1,4 +1,3 @@
-
 import { PlayerColor } from './types';
 
 export const TOTAL_SHELLS = 64;
@@ -37,3 +36,6 @@ export const COLOR_PALETTE = [
 ];
 
 export const AVATAR_PRESETS = ["🐲", "🐯", "🦁", "🦅", "☸️"];
+
+// Point to the fetchable virtual asset handled by sw.js
+export const SHO_LOGO_URI = "sho_logo.png";

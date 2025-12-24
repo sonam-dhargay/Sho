@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const ShoLogo: React.FC<{ className?: string }> = ({ className }) => {
@@ -22,13 +21,9 @@ export const ShoLogo: React.FC<{ className?: string }> = ({ className }) => {
           src="sho_logo.png" 
           alt="Sho Cup and Dice"
           className="w-full h-auto object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.8)]"
-          onError={(e) => {
-            // Fallback: if sho_logo.png isn't available, hide image and show Tibetan character
-            e.currentTarget.style.display = 'none';
-          }}
         />
-        {/* Simple fallback in case of loading issues */}
-        <div className="hidden group-hover:block absolute inset-0 flex items-center justify-center text-amber-500 font-cinzel text-6xl font-bold opacity-20 pointer-events-none">
+        {/* Decorative Tibetan Character Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center text-amber-500 font-cinzel text-6xl font-bold opacity-10 pointer-events-none select-none">
            ཤོ
         </div>
       </div>

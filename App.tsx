@@ -8,7 +8,6 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
-import { ShoLogo } from './components/ShoLogo';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -84,7 +83,7 @@ const App: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>(PLAYERS_CONFIG);
   const [board, setBoard] = useState<BoardState>(new Map());
   const [turnIndex, setTurnIndex] = useState(0); 
-  const [phase, setPhase] = useState<GamePhase>(GamePhase.SETUP);
+  const [phase, setPhase] = useState<GamePhase>(GamePhase.ROLLING);
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [pendingMoveValues, setPendingMoveValues] = useState<number[]>([]);
@@ -382,7 +381,6 @@ const App: React.FC = () => {
           <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
                {/* Title Section */}
                <div className="flex flex-col items-center flex-shrink-0 w-full max-w-sm md:max-w-md">
-                   <ShoLogo className="w-48 md:w-64 mb-6" />
                    <h1 className="flex items-center gap-6 mb-4 font-cinzel">
                       <span className="text-7xl md:text-9xl text-amber-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">ཤོ</span>
                       <span className="text-5xl md:text-7xl text-amber-500 tracking-widest drop-shadow-lg">Sho</span>
