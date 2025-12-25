@@ -28,11 +28,11 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
   
   if (target.owner === myId) {
     // Rule: A player cannot be blocked by his own stack. 
-    // Stacking is always valid if you land on your own piece exactly.
-    if (!isNinerMode && target.stackSize + moverStackSize > 9) return MoveResultType.INVALID;
+    // Stacking is always valid if you land on your own piece.
     return MoveResultType.STACK;
   } else {
     // Kill rule: Can kill if mover stack is >= target stack. 
+    // If opponent's stack is larger, you are blocked.
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -47,12 +47,9 @@ const getAvailableMoves = (
   isOpeningPaRa: boolean
 ): MoveOption[] => {
   if (pendingValues.length === 0) return [];
-  
   const moves: MoveOption[] = [];
   const player = players[playerIndex];
   const myId = player.id;
-
-  // Exact Distance Logic: Generate all possible unique sums of available dice values
   const getSubsets = (arr: number[]) => {
     let results = [[] as number[]];
     for (const value of arr) {
@@ -63,7 +60,6 @@ const getAvailableMoves = (
     }
     return results.filter(s => s.length > 0);
   };
-  
   const subsets = getSubsets(pendingValues);
   const possibleMoveValues = new Map<number, number[]>();
   for (const s of subsets) {
@@ -72,12 +68,9 @@ const getAvailableMoves = (
       possibleMoveValues.set(sum, s);
     }
   }
-
-  // Check moves from hand
   if (player.coinsInHand > 0) {
     const isOpening = player.coinsInHand === COINS_PER_PLAYER;
     const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
-    
     for (const [dist, consumed] of possibleMoveValues.entries()) {
       if (dist >= 1 && dist <= TOTAL_SHELLS) {
         const target = board.get(dist);
@@ -88,8 +81,6 @@ const getAvailableMoves = (
       }
     }
   }
-
-  // Check moves from existing board pieces
   for (const [idx, shell] of board.entries()) {
     if (shell.owner === myId && shell.stackSize > 0) {
       for (const [dist, consumed] of possibleMoveValues.entries()) {
@@ -101,7 +92,6 @@ const getAvailableMoves = (
             moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resultType });
           }
         } else {
-          // Can finish the coin if the sum takes you past the finish line
           moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
         }
       }
@@ -318,7 +308,6 @@ const App: React.FC = () => {
     const move = currentMovesList.find(m => m.sourceIndex === sourceIdx && m.targetIndex === targetIdx);
     if (!move) return;
     if (!isRemote && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) { broadcastPacket({ type: 'MOVE_REQ', payload: { sourceIdx, targetIdx } }); }
-    // Fix: Using GameMode.TUTORIAL instead of GamePhase.SETUP for correct type comparison and tutorial step advancement.
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
     const nb: BoardState = new Map(s.board); 
     const player = s.players[s.turnIndex]; 
@@ -622,7 +611,7 @@ const App: React.FC = () => {
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex flex-col items-center gap-4">
                       {deferredPrompt && (
-                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-bounce mb-2">Install App</button>
+                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-bounce mb-2">Install App</button>
                       )}
                       <div className="flex gap-16">
                           <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
