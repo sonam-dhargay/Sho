@@ -18,7 +18,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
       >
         <div className="sticky top-0 bg-stone-900 border-b border-amber-900/50 p-6 flex justify-between items-center z-10">
           <div className="flex flex-col">
-            <h2 className="text-3xl font-cinzel text-amber-500 font-bold leading-none">Rules of Sho ཤོ་འི་སྒྲིག་གཞི།</h2>
+            <h2 className="text-3xl font-cinzel text-amber-500 font-bold leading-none">Rules of Sho ཤོའི་་སྒྲིག་གཞི།</h2>
           </div>
           <button onClick={onClose} className="text-stone-400 hover:text-white text-2xl font-bold">×</button>
         </div>
@@ -29,8 +29,8 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
                   <h4 className="font-bold text-amber-400 mb-2">Game Variant རྩེད་རིགས་འདམ་ག: {isNinerMode ? "Niner Mode དགུ་མ།" : "No-Niner Mode དགུ་མ་མིན་པ།"}</h4>
                   <p className="text-sm text-stone-400 italic">{isNinerMode ? "In Niner mode, players are allowed to build a stack of nine coins and charge forward. དགུ་མའི་ནང་དུ་རྩེད་མོ་བ་ཚོས་ལག་ཁྱི་དགུ་བརྩེགས་ནས་མདུན་དུ་བསྐྱོད་ཆོག" : "In this variant, it is forbidden to build a stack of all nine coins. འདིའི་ནང་དུ་ལག་ཁྱི་དགུ་བརྩེགས་མི་ཆོག"}</p>
               </div>
-              <button onClick={onToggleNinerMode} className="bg-amber-700 px-6 py-2 rounded-full font-bold text-white text-xs uppercase">
-                  Switch Variant
+              <button onClick={onToggleNinerMode} className="bg-amber-700 px-6 py-2 rounded-full font-bold text-white text-xs uppercase shadow-md hover:bg-amber-600 transition-colors">
+                  Switch Variant བརྗེ་བོ།
               </button>
           </section>
 
@@ -49,10 +49,9 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             <h3 className="text-xl font-cinzel text-amber-400 mb-2">The Pa Ra Rule པ་རའི་སྒྲིག་གཞི།</h3>
             <p className="text-sm mb-2">Rolling a 1 and 1 is called 'Pa Ra'. It is the most powerful roll in the game. ཤོ་མིག་ ༡ དང་ ༡ བབས་ན་'པ་ར་'ཟེར།</p>
             <ul className="list-disc list-inside text-sm space-y-1">
-              <li><strong>Bonus Roll:</strong> You get to roll again immediately. ཤོ་བསྐྱར་དུ་རྒྱག་ཆོག</li>
-              <li><strong>Opening Pa Ra:</strong> If you roll a Pa Ra on your very first turn, you can place 3 coins (lak-khyi) on the board instead of 2. ཤོ་འགོ་འཛུགས་སྐབས་པ་ར་བབས་ན་ལག་ཁྱི་གསུམ་འཇོག་ཆོག</li>
-              <li><strong>Move Stacking:</strong> The move values from the Pa Ra (2) and your bonus roll are both added to your pool. ཤོ་མིག་རྣམས་བསྡོམས་ནས་གཏོང་ཆོག</li>
-              <li><strong>Infinite Chain:</strong> Rolling multiple Pa Ras in a row keeps giving you bonus rolls! པ་ར་མུ་མཐུད་བབས་ན་ཤོ་རྒྱག་ཐེངས་མང་པོ་ཐོབ།</li>
+              <li><strong>Bonus Roll ཤོ་བསྐྱར་དུ་རྒྱག་ཆོག:</strong> You get to roll again immediately. པ་ར་བབས་ཚེ་ཤོ་བསྐྱར་དུ་རྒྱག་ཐེངས་གཅིག་ཐོབ།</li>
+              <li><strong>Opening Pa Ra འགོ་འཛུགས་པ་ར:</strong> If you roll a Pa Ra on your first turn, you can place 3 coins instead of 2. ཤོ་འགོ་འཛུགས་སྐབས་པ་ར་བབས་ན་ལག་ཁྱི་གསུམ་འཇོག་ཆོག</li>
+              <li><strong>Move Stacking ཤོ་མིག་བསྡོམས་པ:</strong> The move values from the Pa Ra (2) and your bonus roll are both added to your pool. པ་རའི་མིག་གཉིས་དང་བསྐྱར་དུ་བབས་པའི་ཤོ་མིག་བསྡོམས་ནས་གཏོང་ཆོག</li>
             </ul>
           </section>
 
@@ -76,42 +75,20 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose, isNiner
             <h3 className="text-xl font-cinzel text-amber-400 mb-2">Instant Win དེ་མ་ཐག་པའི་རྒྱལ་ཁ།</h3>
             <p className="text-sm mb-2">In very rare circumstances, a player may win instantly: ཆེས་དཀོན་པའི་གནས་སྟངས་འོག་དེ་མ་ཐག་རྒྱལ་ཁ་ཐོབ་སྲིད།</p>
             <ul className="list-disc list-inside text-sm space-y-1">
-              <li><strong>Triple Pa Ra:</strong> Roll a Pa Ra (1,1) three times in a row. པ་ར་གསུམ་བརྩེགས།</li>
-              <li><strong>Stacked Dice:</strong> Dice land physically stacked on top of each other. ཤོ་བརྩེགས་བབས་པ།</li>
+              <li><strong>Triple Pa Ra པ་ར་གསུམ་བརྩེགས:</strong> Roll a Pa Ra (1,1) three times in a row. པ་ར་ཐེངས་གསུམ་བསྟུད་མར་བབས་ན་དེ་མ་ཐག་རྒྱལ་ཁ་ཐོབ་སྲིད།</li>
+              <li><strong>Stacked Dice ཤོ་བརྩེགས་བབས་པ:</strong> Dice land physically stacked on top of each other. གལ་ཏེ་ཤོ་གཅིག་གི་སྟེང་དུ་གཅིག་བརྩེགས་ནས་བབས་ན་རྒྱལ་ཁ་ཐོབ་སྲིད།</li>
             </ul>
           </section>
 
           <section>
-            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་མཇུག་སྒྲིལ་སྟངས།.</h3>
+            <h3 className="text-xl font-cinzel text-amber-200 mb-2">Finishing རྩེད་མོ་མཇུག་སྒྲིལ་སྟངས།</h3>
             <p className="text-sm">You must roll a number that takes your piece past the 64th shell. ཁྱེད་རང་གི་ལག་ཁྱི་དེ་དག་རྡེའུ་ ༦༤ བརྒལ་བར་འགྲོ་ཐུབ་པའི་་ཤོ་མིག་ཞིག་བབས་དགོས།</p>
             <p className="text-sm mt-2">The first player to move all 9 coins off the board wins! ལག་ཁྱི་་ ༩ ཆར་ཚང་མ་ལ་བརྒལ་མཁན་དེ་ལ་རྒྱལ་ཁ་ཐོབ་པ་་ཡིན།</p>
-          </section>
-
-          <section className="pt-4 border-t border-stone-800">
-            <h3 className="text-lg font-cinzel text-amber-200 mb-3 uppercase tracking-wider">Learn More ཁ་སྣོན་ཤེས་བྱ།</h3>
-            <div className="flex flex-col gap-2">
-              <a 
-                href="https://en.wikipedia.org/wiki/Sho_(dice_game)" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-amber-500 hover:text-amber-400 underline text-sm transition-colors"
-              >
-                Sho (Dice Game) - English Wikipedia
-              </a>
-              <a 
-                href="https://bo.wikipedia.org/wiki/%E0%BD%A4%E0%BD%BC%E0%BC%8B%E0%BD%A2%E0%BE%A9%E0%BD%BA%E0%BD%91%E0%BC%8B" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-amber-500 hover:text-amber-400 underline text-sm transition-colors font-serif"
-              >
-                ཤོ་རྩེད་ - བོད་ཡིག་གི་ཝེ་ཁེ་རིག་མཛོད། (Tibetan Wikipedia)
-              </a>
-            </div>
           </section>
         </div>
 
         <div className="p-6 text-center">
-          <button onClick={onClose} className="px-8 py-3 bg-amber-700 text-white font-cinzel font-bold rounded-lg uppercase tracking-widest shadow-lg">Close ཁ་རྒྱོབ།</button>
+          <button onClick={onClose} className="px-8 py-3 bg-amber-700 text-white font-cinzel font-bold rounded-lg uppercase tracking-widest shadow-lg hover:bg-amber-600 transition-all">Close ཁ་རྒྱོབ།</button>
         </div>
       </div>
     </div>

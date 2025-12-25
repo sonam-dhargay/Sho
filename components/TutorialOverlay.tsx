@@ -50,7 +50,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
       <div className="bg-stone-900/95 border-2 border-amber-500 rounded-xl p-5 max-w-[320px] md:max-w-sm w-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] pointer-events-auto relative animate-bounce-in backdrop-blur-md">
         <div className="flex justify-between items-start mb-3">
             <h3 className="text-lg font-cinzel font-bold text-amber-400 leading-tight">{current.title}</h3>
-            <button onClick={onClose} className="text-stone-500 hover:text-white font-bold uppercase text-[10px]">Skip</button>
+            <button onClick={onClose} className="text-stone-500 hover:text-white font-bold uppercase text-[10px]">Skip མཆོངས་རྒྱག</button>
         </div>
         <p className="text-stone-300 mb-5 text-xs md:text-sm leading-relaxed">{current.text}</p>
         <div className="flex justify-end">
@@ -64,7 +64,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
             ) : (
                 <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></div>
-                    <span className="text-amber-500/80 text-[10px] font-bold uppercase tracking-widest animate-pulse">Waiting for action...</span>
+                    <span className="text-amber-500/80 text-[10px] font-bold uppercase tracking-widest animate-pulse">Waiting སྒུག་བཞིན་པ།...</span>
                 </div>
             )}
         </div>

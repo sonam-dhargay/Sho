@@ -27,12 +27,10 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
   if (!target.owner) return MoveResultType.PLACE;
   
   if (target.owner === myId) {
-    // Rule: A player cannot be blocked by his own stack. 
-    // Stacking is always valid if you land on your own piece.
+    // Rule: A player cannot be blocked by his own stack. Landing on your own coin is always valid.
     return MoveResultType.STACK;
   } else {
     // Kill rule: Can kill if mover stack is >= target stack. 
-    // If opponent's stack is larger, you are blocked.
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -47,9 +45,11 @@ const getAvailableMoves = (
   isOpeningPaRa: boolean
 ): MoveOption[] => {
   if (pendingValues.length === 0) return [];
+  
   const moves: MoveOption[] = [];
   const player = players[playerIndex];
   const myId = player.id;
+
   const getSubsets = (arr: number[]) => {
     let results = [[] as number[]];
     for (const value of arr) {
@@ -60,39 +60,61 @@ const getAvailableMoves = (
     }
     return results.filter(s => s.length > 0);
   };
-  const subsets = getSubsets(pendingValues);
-  const possibleMoveValues = new Map<number, number[]>();
-  for (const s of subsets) {
-    const sum = s.reduce((a, b) => a + b, 0);
-    if (!possibleMoveValues.has(sum)) {
-      possibleMoveValues.set(sum, s);
+  
+  const allSubsets = getSubsets(pendingValues).map(s => ({
+    sum: s.reduce((a, b) => a + b, 0),
+    values: s
+  })).sort((a, b) => a.sum - b.sum);
+
+  const totalSum = pendingValues.reduce((a, b) => a + b, 0);
+
+  const findConsumption = (dist: number, isFlexible: boolean) => {
+    const exact = allSubsets.find(s => s.sum === dist);
+    if (exact) return exact.values;
+    if (isFlexible) {
+      const over = allSubsets.find(s => s.sum > dist);
+      if (over) return over.values;
     }
-  }
+    return null;
+  };
+
   if (player.coinsInHand > 0) {
     const isOpening = player.coinsInHand === COINS_PER_PLAYER;
     const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
-    for (const [dist, consumed] of possibleMoveValues.entries()) {
-      if (dist >= 1 && dist <= TOTAL_SHELLS) {
-        const target = board.get(dist);
-        const resultType = getMoveResultType(myId, target, movingSize, isNinerMode);
-        if (resultType !== MoveResultType.INVALID) {
-          moves.push({ sourceIndex: 0, targetIndex: dist, consumedValues: consumed, type: resultType });
-        }
+    for (let targetIdx = 1; targetIdx <= TOTAL_SHELLS; targetIdx++) {
+      const target = board.get(targetIdx);
+      const resType = getMoveResultType(myId, target, movingSize, isNinerMode);
+      if (resType === MoveResultType.INVALID) continue;
+      
+      // Traditional Sho: Stacking on own pieces MUST be an exact landing, but never blocked.
+      const consumed = findConsumption(targetIdx, false); // Strict exact for hand placement
+      if (consumed) {
+        moves.push({ sourceIndex: 0, targetIndex: targetIdx, consumedValues: consumed, type: resType });
       }
     }
   }
+
   for (const [idx, shell] of board.entries()) {
     if (shell.owner === myId && shell.stackSize > 0) {
-      for (const [dist, consumed] of possibleMoveValues.entries()) {
-        const targetIdx = idx + dist;
-        if (targetIdx <= TOTAL_SHELLS) {
-          const target = board.get(targetIdx);
-          const resultType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
-          if (resultType !== MoveResultType.INVALID) {
-            moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resultType });
+      for (let targetIdx = idx + 1; targetIdx <= TOTAL_SHELLS + 1; targetIdx++) {
+        const dist = targetIdx - idx;
+        if (targetIdx > TOTAL_SHELLS) {
+          if (dist <= totalSum) {
+            const consumed = findConsumption(dist, true);
+            if (consumed) {
+                moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
+            }
           }
-        } else {
-          moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
+          continue;
+        }
+        const target = board.get(targetIdx);
+        const resType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
+        if (resType === MoveResultType.INVALID) continue;
+        
+        // Stacking or Killing on board requires exact distance
+        const consumed = findConsumption(dist, false);
+        if (consumed) {
+          moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resType });
         }
       }
     }
@@ -281,18 +303,20 @@ const App: React.FC = () => {
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
     if (!forcedRoll && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) { broadcastPacket({ type: 'ROLL_REQ', payload: newRoll }); }
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
+    
     if (isPaRa) { 
         SFX.playPaRa(); 
         const newCount = s.paRaCount + 1;
         if (newCount === 3) { addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly!`, 'alert'); setPhase(GamePhase.GAME_OVER); return; }
         setPaRaCount(newCount); 
-        addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again.`, 'alert'); 
+        addLog(`PA RA (1,1)! Bonus of 2 added. Roll again.`, 'alert'); 
     } 
     else { 
         const isOpening = players[s.turnIndex].coinsInHand === COINS_PER_PLAYER;
         if (s.paRaCount > 0 && isOpening) { setIsOpeningPaRa(true); addLog(`OPENING PA RA! You can place 3 coins!`, 'alert'); }
-        const movePool = [...Array(s.paRaCount).fill(2), total];
-        setPendingMoveValues(movePool); setPaRaCount(0); setPhase(GamePhase.MOVING); 
+        setPendingMoveValues(prev => [...prev, total]);
+        setPaRaCount(0); 
+        setPhase(GamePhase.MOVING); 
     }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
@@ -348,17 +372,26 @@ const App: React.FC = () => {
         }
     }
     setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
-    let nextMoves = [...s.pendingMoveValues]; 
-    move.consumedValues.forEach(val => { const idx = nextMoves.indexOf(val); if (idx > -1) nextMoves.splice(idx, 1); });
+    
+    let nextPool = [...s.pendingMoveValues]; 
+    move.consumedValues.forEach(val => { const idx = nextPool.indexOf(val); if (idx > -1) nextPool.splice(idx, 1); });
+
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
-    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode, s.isOpeningPaRa);
+    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextPool, s.isNinerMode, s.isOpeningPaRa);
     if (localExtraRollInc > 0) setExtraRolls(prev => prev + localExtraRollInc);
-    if (nextMoves.length === 0 || movesLeft.length === 0) {
+    
+    if (nextPool.length === 0 || movesLeft.length === 0) {
         setPendingMoveValues([]); setIsOpeningPaRa(false);
         const totalExtraRolls = s.extraRolls + localExtraRollInc;
-        if (totalExtraRolls > 0) { setExtraRolls(prev => prev - 1); setPhase(GamePhase.ROLLING); addLog(`${player.name} used an extra roll!`, 'info'); } 
+        if (totalExtraRolls > 0) { 
+            setExtraRolls(prev => prev - 1); 
+            setPhase(GamePhase.ROLLING); 
+            addLog(`${player.name} used an extra roll!`, 'info'); 
+        } 
         else { setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }
-    } else { setPendingMoveValues(nextMoves); }
+    } else { 
+        setPendingMoveValues(nextPool); 
+    }
   };
 
   const setupMediaCall = async (targetId: string, peerInstance: Peer) => {
@@ -571,22 +604,22 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room</h3>
-                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent.</p>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་སྣེ་ལེན་ཁང་གཉེར།</h3>
+                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གསང་རྟགས་འདི་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
                                 <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg flex items-center justify-center gap-3" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
-                                    {myPeerId ? ( <><span>ROOM CODE: {myPeerId}</span><Icons.Clipboard className="w-5 h-5" /></> ) : 'Generate Room Code'}
+                                    {myPeerId ? ( <><span>ROOM CODE རྩེད་ཁང་གསང་རྟགས: {myPeerId}</span><Icons.Clipboard className="w-5 h-5" /></> ) : 'Generate Room Code ཁང་པའི་གསང་རྟགས་བཟོ།'}
                                 </button>
                                 <div className="h-px w-full bg-stone-800" />
                                 <div className="flex flex-col gap-2">
-                                  <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
+                                  <input type="text" placeholder="ENTER ROOM CODE གསང་རྟགས་འདི་རུ་འཇུག" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
                                   <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
-                                      {isPeerConnecting ? 'Connecting...' : 'Join Room'}
+                                      {isPeerConnecting ? 'Connecting... མཐུད་བཞིན་ཡོད...' : 'Join Room རྩེད་ཁང་དུ་ཞུགས།'}
                                   </button>
                                 </div>
                              </div>
-                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel</button>
+                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel རྩིས་མེད་གཏོང་།</button>
                           </div>
                         )}
                     </div>
