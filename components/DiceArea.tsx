@@ -20,7 +20,8 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
   pendingValues, 
   waitingForPaRa, 
   paRaCount = 0,
-  extraRolls = 0
+  extraRolls = 0,
+  flexiblePool 
 }) => {
   return (
     <div className="flex flex-col items-center justify-center p-1 md:p-3 bg-stone-800/80 rounded-xl border border-stone-700 shadow-xl w-full">
@@ -32,7 +33,14 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
             </div>
         )}
 
-        {pendingValues.length > 0 && (
+        {flexiblePool !== null && (
+            <div className="w-full bg-amber-900/40 border border-amber-600/50 rounded-lg p-1 md:p-3 text-center mb-1 animate-pulse">
+                <div className="text-amber-400 text-[6px] md:text-[10px] uppercase font-bold">Flexible Pool</div>
+                <div className="text-lg md:text-3xl font-cinzel text-white">{flexiblePool}</div>
+            </div>
+        )}
+
+        {pendingValues.length > 0 && flexiblePool === null && (
             <div className="w-full mb-1">
                 <div className="flex gap-1 justify-center flex-wrap">
                     {pendingValues.map((val, idx) => (

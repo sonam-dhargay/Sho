@@ -32,6 +32,7 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
     return MoveResultType.STACK;
   } else {
     // Kill rule: Can kill if mover stack is >= target stack. 
+    // If opponent's stack is larger, you are blocked.
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -46,11 +47,9 @@ const getAvailableMoves = (
   isOpeningPaRa: boolean
 ): MoveOption[] => {
   if (pendingValues.length === 0) return [];
-  
   const moves: MoveOption[] = [];
   const player = players[playerIndex];
   const myId = player.id;
-
   const getSubsets = (arr: number[]) => {
     let results = [[] as number[]];
     for (const value of arr) {
@@ -61,70 +60,39 @@ const getAvailableMoves = (
     }
     return results.filter(s => s.length > 0);
   };
-  
-  const allSubsets = getSubsets(pendingValues).map(s => ({
-    sum: s.reduce((a, b) => a + b, 0),
-    values: s
-  })).sort((a, b) => a.sum - b.sum);
-
-  const totalSum = pendingValues.reduce((a, b) => a + b, 0);
-
-  // Helper to find consumption: 
-  // 1. Exact match preferred.
-  // 2. Smallest subset sum > distance if flexible allowed.
-  const findConsumption = (dist: number, isFlexible: boolean) => {
-    const exact = allSubsets.find(s => s.sum === dist);
-    if (exact) return exact.values;
-    if (isFlexible) {
-      const over = allSubsets.find(s => s.sum > dist);
-      if (over) return over.values;
+  const subsets = getSubsets(pendingValues);
+  const possibleMoveValues = new Map<number, number[]>();
+  for (const s of subsets) {
+    const sum = s.reduce((a, b) => a + b, 0);
+    if (!possibleMoveValues.has(sum)) {
+      possibleMoveValues.set(sum, s);
     }
-    return null;
-  };
-
-  // Check moves from hand
+  }
   if (player.coinsInHand > 0) {
     const isOpening = player.coinsInHand === COINS_PER_PLAYER;
     const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
-    
-    // In Sho, any shell on the board could be a target
-    for (let targetIdx = 1; targetIdx <= TOTAL_SHELLS; targetIdx++) {
-      const target = board.get(targetIdx);
-      const resType = getMoveResultType(myId, target, movingSize, isNinerMode);
-      if (resType === MoveResultType.INVALID) continue;
-
-      // Stacking on own pieces allows flexible distance (up to total sum)
-      // Placing on empty or killing requires exact distance
-      const consumed = findConsumption(targetIdx, resType === MoveResultType.STACK);
-      if (consumed) {
-        moves.push({ sourceIndex: 0, targetIndex: targetIdx, consumedValues: consumed, type: resType });
+    for (const [dist, consumed] of possibleMoveValues.entries()) {
+      if (dist >= 1 && dist <= TOTAL_SHELLS) {
+        const target = board.get(dist);
+        const resultType = getMoveResultType(myId, target, movingSize, isNinerMode);
+        if (resultType !== MoveResultType.INVALID) {
+          moves.push({ sourceIndex: 0, targetIndex: dist, consumedValues: consumed, type: resultType });
+        }
       }
     }
   }
-
-  // Check moves from existing board pieces
   for (const [idx, shell] of board.entries()) {
     if (shell.owner === myId && shell.stackSize > 0) {
-      for (let targetIdx = idx + 1; targetIdx <= TOTAL_SHELLS + 1; targetIdx++) {
-        const dist = targetIdx - idx;
-        if (targetIdx > TOTAL_SHELLS) {
-          // Finishing always requires enough distance (can be fuzzy)
-          if (dist <= totalSum) {
-            const consumed = findConsumption(dist, true);
-            if (consumed) {
-                moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
-            }
+      for (const [dist, consumed] of possibleMoveValues.entries()) {
+        const targetIdx = idx + dist;
+        if (targetIdx <= TOTAL_SHELLS) {
+          const target = board.get(targetIdx);
+          const resultType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
+          if (resultType !== MoveResultType.INVALID) {
+            moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resultType });
           }
-          continue;
-        }
-
-        const target = board.get(targetIdx);
-        const resType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
-        if (resType === MoveResultType.INVALID) continue;
-
-        const consumed = findConsumption(dist, resType === MoveResultType.STACK);
-        if (consumed) {
-          moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resType });
+        } else {
+          moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
         }
       }
     }
@@ -313,23 +281,18 @@ const App: React.FC = () => {
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
     if (!forcedRoll && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) { broadcastPacket({ type: 'ROLL_REQ', payload: newRoll }); }
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
-    
     if (isPaRa) { 
         SFX.playPaRa(); 
         const newCount = s.paRaCount + 1;
         if (newCount === 3) { addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly!`, 'alert'); setPhase(GamePhase.GAME_OVER); return; }
         setPaRaCount(newCount); 
-        // Pa Ra bonus (2) is added to the turn's move pool
-        setPendingMoveValues(prev => [...prev, 2]);
-        addLog(`PA RA (1,1)! Bonus of 2 added. Roll again.`, 'alert'); 
+        addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again.`, 'alert'); 
     } 
     else { 
         const isOpening = players[s.turnIndex].coinsInHand === COINS_PER_PLAYER;
         if (s.paRaCount > 0 && isOpening) { setIsOpeningPaRa(true); addLog(`OPENING PA RA! You can place 3 coins!`, 'alert'); }
-        // Final non-PaRa roll added to the pool
-        setPendingMoveValues(prev => [...prev, total]);
-        setPaRaCount(0); 
-        setPhase(GamePhase.MOVING); 
+        const movePool = [...Array(s.paRaCount).fill(2), total];
+        setPendingMoveValues(movePool); setPaRaCount(0); setPhase(GamePhase.MOVING); 
     }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
@@ -385,27 +348,17 @@ const App: React.FC = () => {
         }
     }
     setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
-    
-    // In fuzzy consumption mode for stacking, we subtract the specific values chosen
-    let nextPool = [...s.pendingMoveValues]; 
-    move.consumedValues.forEach(val => { const idx = nextPool.indexOf(val); if (idx > -1) nextPool.splice(idx, 1); });
-
+    let nextMoves = [...s.pendingMoveValues]; 
+    move.consumedValues.forEach(val => { const idx = nextMoves.indexOf(val); if (idx > -1) nextMoves.splice(idx, 1); });
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
-    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextPool, s.isNinerMode, s.isOpeningPaRa);
+    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode, s.isOpeningPaRa);
     if (localExtraRollInc > 0) setExtraRolls(prev => prev + localExtraRollInc);
-    
-    if (nextPool.length === 0 || movesLeft.length === 0) {
+    if (nextMoves.length === 0 || movesLeft.length === 0) {
         setPendingMoveValues([]); setIsOpeningPaRa(false);
         const totalExtraRolls = s.extraRolls + localExtraRollInc;
-        if (totalExtraRolls > 0) { 
-            setExtraRolls(prev => prev - 1); 
-            setPhase(GamePhase.ROLLING); 
-            addLog(`${player.name} used an extra roll!`, 'info'); 
-        } 
+        if (totalExtraRolls > 0) { setExtraRolls(prev => prev - 1); setPhase(GamePhase.ROLLING); addLog(`${player.name} used an extra roll!`, 'info'); } 
         else { setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }
-    } else { 
-        setPendingMoveValues(nextPool); 
-    }
+    } else { setPendingMoveValues(nextMoves); }
   };
 
   const setupMediaCall = async (targetId: string, peerInstance: Peer) => {
@@ -643,7 +596,7 @@ const App: React.FC = () => {
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex flex-col items-center gap-4">
                       {deferredPrompt && (
-                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-bounce mb-2">Install App</button>
+                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-bounce mb-2">Install App</button>
                       )}
                       <div className="flex gap-16">
                           <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
