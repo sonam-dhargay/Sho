@@ -25,11 +25,14 @@ const generatePlayers = (
 const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, moverStackSize: number, isNinerMode: boolean): MoveResultType => {
   if (!target) return MoveResultType.INVALID;
   if (!target.owner) return MoveResultType.PLACE;
+  
   if (target.owner === myId) {
-    if (!isNinerMode && target.stackSize + moverStackSize > 9) return MoveResultType.INVALID;
+    // Rule: A player cannot be blocked by his own stack. 
+    // Stacking is always valid if you land on your own piece.
     return MoveResultType.STACK;
   } else {
-    // Kill rule: Can kill if mover stack is >= target stack
+    // Kill rule: Can kill if mover stack is >= target stack. 
+    // If opponent's stack is larger, you are blocked.
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -323,8 +326,6 @@ const App: React.FC = () => {
             SFX.playKill(); const eIdx = players.findIndex(p => p.id === target.owner); 
             if (eIdx !== -1) newPlayers[eIdx].coinsInHand += target.stackSize; 
             
-            // Implement Shomo Killer Bonus: 
-            // If killing an opponent's Shomo, player can place 3 coins if they have extra in hand.
             let finalStackSize = movingStackSize;
             if (target.isShoMo) {
                 const bonusToTake = Math.min(newPlayers[s.turnIndex].coinsInHand, 3 - movingStackSize);
@@ -342,7 +343,6 @@ const App: React.FC = () => {
             localExtraRollInc = 1; addLog(`${player.name} stacked and earned a bonus turn!`, 'action');
         } else {
             SFX.playCoinClick(); 
-            // Set isShoMo true if this is an opening placement of 2+ coins
             const isOpeningPlacement = (move.sourceIndex === 0 && movingStackSize >= 2);
             nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: isOpeningPlacement });
         }
@@ -482,7 +482,6 @@ const App: React.FC = () => {
           @keyframes voiceActive { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
           .voice-indicator { animation: voiceActive 0.6s ease-in-out infinite; }
 
-          /* Responsive fixes for landscape mode and small heights */
           @media (max-height: 540px) and (orientation: landscape) {
             .mobile-landscape-row { flex-direction: row !important; }
             .mobile-landscape-sidebar { 
@@ -506,7 +505,6 @@ const App: React.FC = () => {
             .mobile-landscape-hide-logs { display: none !important; }
             .mobile-landscape-footer { display: none !important; }
             
-            /* Drastically reduce heights to fit buttons */
             .mobile-landscape-sidebar .grid-cols-2 { gap: 0.25rem !important; margin-top: 0.25rem !important; }
             .mobile-landscape-sidebar header { padding-bottom: 0.15rem !important; }
             .mobile-landscape-sidebar .dice-area-compact { padding: 0.15rem !important; }
