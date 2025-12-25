@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Peer, { DataConnection, MediaConnection } from 'peerjs';
 import { GoogleGenAI } from "@google/genai";
@@ -360,6 +359,11 @@ const App: React.FC = () => {
         broadcastPacket({ type: 'MOVE_REQ', payload: { sourceIdx, targetIdx } });
     }
 
+    // Advance tutorial step 4 -> 5 after successful move
+    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) {
+      setTutorialStep(5);
+    }
+
     const nb: BoardState = new Map(s.board); 
     const player = s.players[s.turnIndex]; 
     let localExtraRollInc = 0; 
@@ -578,14 +582,18 @@ const App: React.FC = () => {
     }; 
   }, [peer]);
 
-  // AI Strategic Loop
+  // AI Strategic Loop (handles AI mode and Tutorial opponent)
   useEffect(() => {
-    if (gameMode === GameMode.AI && turnIndex === 1 && phase !== GamePhase.GAME_OVER && !isRolling) {
+    const s = gameStateRef.current;
+    // Guide moves automatically in Tutorial once step 5 is reached
+    const isTutorialOpponentTurn = s.gameMode === GameMode.TUTORIAL && s.turnIndex === 1 && s.tutorialStep >= 5;
+    
+    if ((s.gameMode === GameMode.AI || isTutorialOpponentTurn) && s.turnIndex === 1 && s.phase !== GamePhase.GAME_OVER && !s.isRolling) {
       const timer = setTimeout(() => {
-        const s = gameStateRef.current;
-        if (s.phase === GamePhase.ROLLING) performRoll();
-        else if (s.phase === GamePhase.MOVING) {
-          const aiMoves = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
+        const currentS = gameStateRef.current;
+        if (currentS.phase === GamePhase.ROLLING) performRoll();
+        else if (currentS.phase === GamePhase.MOVING) {
+          const aiMoves = getAvailableMoves(currentS.turnIndex, currentS.board, currentS.players, currentS.pendingMoveValues, currentS.isNinerMode, currentS.isOpeningPaRa);
           if (aiMoves.length > 0) {
             const scores = aiMoves.map(m => {
                 let score = m.targetIndex * 10;
@@ -609,7 +617,7 @@ const App: React.FC = () => {
   const isLocalTurn = (() => {
     if (gameMode === GameMode.ONLINE_HOST) return turnIndex === 0;
     if (gameMode === GameMode.ONLINE_GUEST) return turnIndex === 1;
-    if (gameMode === GameMode.AI) return turnIndex === 0;
+    if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0;
     return true;
   })();
 
@@ -804,7 +812,21 @@ const App: React.FC = () => {
                             <div className="flex flex-col gap-1">
                                 <DiceArea currentRoll={lastRoll} onRoll={() => performRoll()} canRoll={(phase === GamePhase.ROLLING) && !isRolling && isLocalTurn} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
                                 <div className="flex gap-1">
-                                    <div onClick={() => { if (phase === GamePhase.MOVING && isLocalTurn) { if (players[turnIndex].coinsInHand > 0) setSelectedSourceIndex(0); else { SFX.playBlocked(); setHandShake(true); setTimeout(() => setHandShake(false), 400); } } }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
+                                    <div onClick={() => { 
+                                        if (phase === GamePhase.MOVING && isLocalTurn) { 
+                                          if (players[turnIndex].coinsInHand > 0) {
+                                            setSelectedSourceIndex(0);
+                                            // Advance Step 3 to 4 in Tutorial
+                                            if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) {
+                                              setTutorialStep(4);
+                                            }
+                                          } else { 
+                                            SFX.playBlocked(); 
+                                            setHandShake(true); 
+                                            setTimeout(() => setHandShake(false), 400); 
+                                          } 
+                                        } 
+                                      }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
                                         <span className={`font-bold uppercase font-cinzel text-[11px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>From Hand</span>
                                         <span className="text-[11px] md:text-[16px] text-stone-200 font-serif mt-1 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
                                     </div>
