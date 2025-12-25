@@ -11,6 +11,7 @@ import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { Icons } from './components/Icons';
+import { T } from './translations';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -27,7 +28,8 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
   if (!target.owner) return MoveResultType.PLACE;
   
   if (target.owner === myId) {
-    // Rule: A player cannot be blocked by his own stack. Landing on your own coin is always valid.
+    // Stacking is always valid if you land on your own piece, provided it doesn't exceed 9 if niner mode is off
+    if (!isNinerMode && target.stackSize + moverStackSize > 9) return MoveResultType.INVALID;
     return MoveResultType.STACK;
   } else {
     // Kill rule: Can kill if mover stack is >= target stack. 
@@ -86,8 +88,8 @@ const getAvailableMoves = (
       const resType = getMoveResultType(myId, target, movingSize, isNinerMode);
       if (resType === MoveResultType.INVALID) continue;
       
-      // Traditional Sho: Stacking on own pieces MUST be an exact landing, but never blocked.
-      const consumed = findConsumption(targetIdx, false); // Strict exact for hand placement
+      // PERMISSION: Stacking from hand is common, allow flexible distance if it's your own piece
+      const consumed = findConsumption(targetIdx, resType === MoveResultType.STACK); 
       if (consumed) {
         moves.push({ sourceIndex: 0, targetIndex: targetIdx, consumedValues: consumed, type: resType });
       }
@@ -111,8 +113,8 @@ const getAvailableMoves = (
         const resType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
         if (resType === MoveResultType.INVALID) continue;
         
-        // Stacking or Killing on board requires exact distance
-        const consumed = findConsumption(dist, false);
+        // Allow flexible distance (overshot) when landing on own pieces mid-board
+        const consumed = findConsumption(dist, resType === MoveResultType.STACK);
         if (consumed) {
           moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resType });
         }
@@ -555,8 +557,8 @@ const App: React.FC = () => {
                       <span className="text-5xl md:text-7xl text-amber-500 tracking-widest drop-shadow-lg">Sho</span>
                    </h1>
                    <div className="h-px w-32 bg-amber-900/40 mb-4" />
-                   <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
-                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2 text-center">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
+                   <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">{T.lobby.subtitle.en}</p>
+                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2 text-center">{T.lobby.subtitle.bo}</p>
                </div>
                
                <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-4 md:gap-10">
@@ -564,14 +566,14 @@ const App: React.FC = () => {
                       <div className="mb-6">
                         <label className="text-stone-500 text-[10px] uppercase flex items-center gap-2 mb-3 tracking-widest font-bold px-1">
                           <Icons.User className="w-3 h-3" />
-                          <span>Identity ཁྱེད་ཀྱི་མིང་།</span>
+                          <span>{T.lobby.nameLabel.en} {T.lobby.nameLabel.bo}</span>
                         </label>
                         <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-3 md:p-4 text-stone-100 outline-none text-center text-xl md:text-2xl font-cinzel tracking-wider" maxLength={15} />
                       </div>
                       <div>
                         <label className="text-stone-500 text-[10px] uppercase flex items-center gap-2 mb-4 tracking-widest font-bold px-1">
                           <Icons.Palette className="w-3 h-3" />
-                          <span>Banner ཚོས་གཞི་དོམ།</span>
+                          <span>{T.lobby.colorLabel.en} {T.lobby.colorLabel.bo}</span>
                         </label>
                         <div className="flex justify-between px-2 gap-2">
                           {COLOR_PALETTE.map((c) => ( 
@@ -585,13 +587,13 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 w-full px-2">
                         <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Opponent', color: COLOR_PALETTE[1].hex}); }}>
                             <Icons.Mountain className="w-8 h-8 text-amber-500" />
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Local</h3>
-                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">རང་ཤག་ཏུ་་རྩེ།</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">{T.lobby.modeLocal.en}</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">{T.lobby.modeLocal.bo}</span>
                         </button>
                         <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame({name: playerName, color: selectedColor}, {name: 'Sho Bot', color: '#999'}); }}>
                             <Icons.Bot className="w-8 h-8 text-amber-500" />
-                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">AI</h3>
-                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།</span>
+                            <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">{T.lobby.modeAI.en}</h3>
+                            <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">{T.lobby.modeAI.bo}</span>
                         </button>
                         <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
                             <Icons.Globe className="w-8 h-8 text-amber-500" />
@@ -604,12 +606,13 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་སྣེ་ལེན་ཁང་གཉེར།</h3>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room<br/><span className="text-sm font-serif">དྲ་ཐོག་སྣེ་ལེན་ཁང་གཉེར།</span></h3>
                                 <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གསང་རྟགས་འདི་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
                                 <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg flex items-center justify-center gap-3" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
-                                    {myPeerId ? ( <><span>ROOM CODE རྩེད་ཁང་གསང་རྟགས: {myPeerId}</span><Icons.Clipboard className="w-5 h-5" /></> ) : 'Generate Room Code ཁང་པའི་གསང་རྟགས་བཟོ།'}
+                                    {myPeerId ? ( <div className="flex flex-col items-center"><span>ROOM CODE: {myPeerId}</span><span className="text-[9px] font-serif">རྩེད་ཁང་གསང་རྟགས།</span></div> ) : 'Generate Room Code'}
+                                    <Icons.Clipboard className="w-5 h-5" />
                                 </button>
                                 <div className="h-px w-full bg-stone-800" />
                                 <div className="flex flex-col gap-2">
@@ -634,16 +637,19 @@ const App: React.FC = () => {
                       <div className="flex gap-16">
                           <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                               <Icons.FastForward className="w-6 h-6 mb-1 opacity-60 group-hover:opacity-100" />
-                              <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
+                              <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">{T.lobby.tutorial.en}</span>
+                              <span className="text-[10px] font-serif">{T.lobby.tutorial.bo}</span>
                           </button>
                           <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                               <Icons.HelpCircle className="w-6 h-6 mb-1 opacity-60 group-hover:opacity-100" />
-                              <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
+                              <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">{T.lobby.rules.en}</span>
+                              <span className="text-[10px] font-serif">{T.lobby.rules.bo}</span>
                           </button>
                       </div>
                   </div>
                   <div className="flex flex-col items-center">
-                      <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">Games Commenced</span>
+                      <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">{T.lobby.totalPlayed.en}</span>
+                      <span className="text-[9px] text-stone-700 font-serif">{T.lobby.totalPlayed.bo}</span>
                       <span className={`text-amber-700/80 font-bold text-4xl tabular-nums transition-all duration-700 mt-2 ${isCounterPulsing ? 'scale-110 text-amber-500 brightness-125' : ''}`}>
                         {globalPlayCount.toLocaleString()}
                       </span>
@@ -680,8 +686,6 @@ const App: React.FC = () => {
                             <div className="grid grid-cols-2 gap-1 md:gap-2 mt-2 md:mt-8 relative px-1">
                                 {players.map((p, i) => {
                                     const isActive = turnIndex === i;
-                                    const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
-                                    const isSpeaking = isMe ? isMicEnabled : isOpponentSpeaking;
                                     return (
                                         <div key={p.id} className={`relative p-1 md:p-3 rounded-xl border transition-all duration-300 ${isActive ? 'bg-stone-800 border-amber-500/50 scale-[1.03] z-10 animate-active-pulse shadow-xl' : 'border-stone-800 opacity-50'}`}>
                                             {isActive && (
@@ -706,7 +710,7 @@ const App: React.FC = () => {
                         <div className="px-2 md:px-4 pb-2 mt-auto flex flex-col gap-1 flex-shrink-0 bg-stone-950 mobile-landscape-action-section">
                             {phase === GamePhase.GAME_OVER ? ( 
                                 <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
-                                    <h2 className="text-xs md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
+                                    <h2 className="text-xs md:text-xl text-amber-400 font-cinzel">{T.game.victory.en} {T.game.victory.bo}</h2>
                                     <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1 flex items-center justify-center gap-2 mx-auto">
                                     <Icons.LogOut className="w-3 h-3 md:w-4 md:h-4" /><span>Exit Game</span>
                                     </button>
@@ -723,17 +727,17 @@ const App: React.FC = () => {
                                             else { SFX.playBlocked(); setHandShake(true); setTimeout(() => setHandShake(false), 400); } 
                                             } 
                                         }} className={`flex-1 action-btn-compact rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
-                                            <span className={`font-bold uppercase font-cinzel text-[10px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>From Hand</span>
-                                            <span className="text-[9px] md:text-[14px] text-stone-200 font-serif mt-0 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
+                                            <span className={`font-bold uppercase font-cinzel text-[10px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>{T.game.fromHand.en}</span>
+                                            <span className="text-[9px] md:text-[14px] text-stone-200 font-serif mt-0 font-bold">({players[turnIndex].coinsInHand}) {T.game.fromHand.bo}</span>
                                         </div>
                                         {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && isLocalTurn && ( 
                                             <button onClick={() => handleSkipTurn()} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel action-btn-compact">
-                                                <span className="text-[8px] md:text-[11px]">Skip</span>
-                                                <span className="text-[10px] md:text-[14px] font-serif text-center">སྐྱུར།</span>
+                                                <span className="text-[8px] md:text-[11px]">{T.game.skipTurn.en}</span>
+                                                <span className="text-[10px] md:text-[14px] font-serif text-center">{T.game.skipTurn.bo}</span>
                                             </button> 
                                         )}
                                     </div>
-                                    {!isLocalTurn && ( <div className="text-center py-1 animate-pulse"><span className="text-amber-600 text-[8px] md:text-[10px] uppercase font-bold">Opponent's Move...</span></div> )}
+                                    {!isLocalTurn && ( <div className="text-center py-1 animate-pulse"><span className="text-amber-600 text-[8px] md:text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས།</span></div> )}
                                 </div> 
                             )}
                         </div>
