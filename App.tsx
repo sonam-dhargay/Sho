@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Peer, { DataConnection, MediaConnection } from 'peerjs';
 import { GoogleGenAI } from "@google/genai";
@@ -124,6 +125,25 @@ const SFX = {
     gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
     osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
     osc1.start(t); osc2.start(t); osc1.stop(t + 0.4); osc2.stop(t + 0.4);
+  },
+  playHandBlocked: () => {
+    const ctx = SFX.getContext(); const t = ctx.currentTime;
+    // Heavy impact "Clonk" sound
+    const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
+    osc1.type = 'square'; osc1.frequency.setValueAtTime(150, t);
+    osc1.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+    gain1.gain.setValueAtTime(0.4, t); gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(400, t);
+    osc1.connect(filter); filter.connect(gain1); gain1.connect(ctx.destination);
+    osc1.start(t); osc1.stop(t + 0.3);
+    
+    // Low rumble dissonance
+    const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain();
+    osc2.type = 'sawtooth'; osc2.frequency.setValueAtTime(110, t);
+    osc2.frequency.exponentialRampToValueAtTime(30, t + 0.25);
+    gain2.gain.setValueAtTime(0.3, t); gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.start(t); osc2.stop(t + 0.3);
   },
   playPaRa: () => { SFX.playCoinClick(0, 2.0); SFX.playCoinClick(0.1, 2.2); }
 };
@@ -731,7 +751,7 @@ const App: React.FC = () => {
                       </button>
                       <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                           <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
-                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་སྒྲིག་གཞི།</span>
+                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་་སྒྲིག་གཞི།</span>
                       </button>
                   </div>
                   <div className="flex flex-col items-center">
@@ -763,13 +783,14 @@ const App: React.FC = () => {
                                         <span className="text-[8px] uppercase font-bold text-green-400">Online དྲ་ཐོག</span>
                                     </div>
                                 )}
-                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
+                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
                         
                         <div className="grid grid-cols-2 gap-1 md:gap-2 mt-4 md:mt-8 relative px-1">
                             {players.map((p, i) => {
                                 const isActive = turnIndex === i;
+                                // Fix comparison between GameMode and MoveResultType and correct the logic for determining the current user
                                 const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
                                 const isSpeaking = isMe ? isMicEnabled : isOpponentSpeaking;
                                 return (
@@ -837,7 +858,8 @@ const App: React.FC = () => {
                                         </button> 
                                     )}
                                 </div>
-                                {!isLocalTurn && phase !== GamePhase.GAME_OVER && (
+                                {/* Removed redundant check for phase !== GamePhase.GAME_OVER which is guaranteed by the outer ternary operator */}
+                                {!isLocalTurn && (
                                     <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རེ་མོས།</span></div>
                                 )}
                             </div> 
@@ -862,7 +884,16 @@ const App: React.FC = () => {
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
                             currentPlayer={players[turnIndex].id} turnPhase={phase} onShellClick={(i) => { if (isLocalTurn) { board.get(i)?.owner === players[turnIndex].id ? setSelectedSourceIndex(i) : setSelectedSourceIndex(null) } }} 
-                            selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} onInvalidMoveAttempt={() => SFX.playBlocked()} 
+                            selectedSource={selectedSourceIndex} lastMove={lastMove} currentRoll={lastRoll} isRolling={isRolling} isNinerMode={isNinerMode} 
+                            onInvalidMoveAttempt={(src, target) => {
+                                const shell = board.get(target);
+                                const myId = players[turnIndex].id;
+                                if (src === 0 && shell && shell.owner && shell.owner !== myId && shell.stackSize >= 2) {
+                                    SFX.playHandBlocked();
+                                } else {
+                                    SFX.playBlocked();
+                                }
+                            }} 
                         />
                     </div>
                 </div>

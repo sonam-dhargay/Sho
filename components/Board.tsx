@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll, GamePhase } from '../types';
+import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll, GamePhase, BoardShell } from '../types';
 import { CENTER_X, CENTER_Y, TOTAL_SHELLS } from '../constants';
 import * as d3 from 'd3';
 
@@ -18,56 +18,6 @@ interface BoardProps {
   onInvalidMoveAttempt?: (sourceIdx: number, targetIdx: number) => void;
   isNinerMode?: boolean; 
 }
-
-// Localized Synthesizer for Blocked Feedback
-const playBlockedSFX = (() => {
-  let ctx: AudioContext | null = null;
-  return () => {
-    try {
-      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
-      if (!AudioContextClass) return;
-      if (!ctx) ctx = new AudioContextClass();
-      if (ctx.state === 'suspended') ctx.resume();
-      
-      const t = ctx.currentTime;
-      
-      // Primary "Thud" Oscillator
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'triangle';
-      osc1.frequency.setValueAtTime(160, t);
-      osc1.frequency.exponentialRampToValueAtTime(40, t + 0.12);
-      
-      gain1.gain.setValueAtTime(0.6, t);
-      gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-      
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      
-      osc1.start(t);
-      osc1.stop(t + 0.2);
-
-      // Deep resonance "Donk" Oscillator
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(100, t + 0.04);
-      osc2.frequency.exponentialRampToValueAtTime(20, t + 0.25);
-      
-      gain2.gain.setValueAtTime(0, t);
-      gain2.gain.linearRampToValueAtTime(0.4, t + 0.05);
-      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-      
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      
-      osc2.start(t + 0.04);
-      osc2.stop(t + 0.35);
-    } catch (e) {
-      console.warn("Audio blocked or unavailable", e);
-    }
-  };
-})();
 
 const CowrieShell: React.FC<{ angle: number; isTarget: boolean; isHovered?: boolean; isBlocked?: boolean }> = ({ angle, isTarget, isHovered, isBlocked }) => {
   const rotation = (angle * 180 / Math.PI) + 90;
@@ -205,13 +155,11 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
   const triggerBlockedFeedback = (targetId: number, sourceIdx: number | null) => {
     const targetShell = boardState.get(targetId);
     let msg = "";
-    let playBlocked = false;
     const p1 = players.find(p => p.id === currentPlayer);
     
     if (sourceIdx === null) {
         if (targetShell?.owner && targetShell.owner !== currentPlayer) {
             msg = "BLOCKED: SELECT PIECE རྡབ་སོང་། ལག་ཁྱི་འདོམ།";
-            playBlocked = true;
         } else return;
     } else {
         let moverSize = sourceIdx === 0 ? (p1?.coinsInHand === 9 ? 2 : 1) : (boardState.get(sourceIdx)?.stackSize || 1);
@@ -219,14 +167,12 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             if (targetShell.owner && targetShell.owner !== currentPlayer) {
                 if (targetShell.stackSize > moverSize) {
                     msg = "BLOCKED: TOO LARGE རྡབ་སོང་།";
-                    playBlocked = true;
                 } else {
                     msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
                 }
             } else if (targetShell.owner === currentPlayer) {
                 if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
                     msg = "BLOCKED: 9 LIMIT དགུ་བརྩེགས་མི་ཆོག།";
-                    playBlocked = true;
                 } else {
                     msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
                 }
@@ -239,10 +185,9 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
     if (msg) {
         setShakeShellId(targetId); 
         setBlockedFeedback({ shellId: targetId, message: msg, id: Date.now() });
-        if (playBlocked) playBlockedSFX();
         setTimeout(() => setShakeShellId(null), 500); 
         setTimeout(() => setBlockedFeedback(null), 1800);
-        onInvalidMoveAttempt?.(sourceIdx || 0, targetId);
+        onInvalidMoveAttempt?.(sourceIdx ?? 0, targetId);
     }
   };
 
@@ -324,7 +269,7 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             const stackOffX = Math.cos(shell.angle) * 28 + Math.cos(shell.angle + Math.PI / 2) * -10; const stackOffY = Math.sin(shell.angle) * 28 + Math.sin(shell.angle + Math.PI / 2) * -10;
             return (
                 <div key={shell.id} data-shell-id={shell.id} className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'} ${isShaking ? 'animate-blocked-outline rounded-full' : ''}`} style={{ left: shell.x, top: shell.y, width: 40, height: 40, transform: 'translate(-50%, -50%)', touchAction: 'none' }}
-                    onClick={(e) => { e.stopPropagation(); if (!dragState.isDragging) { if (isTarget && moveTarget) { onSelectMove(moveTarget); } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) { if (owner === currentPlayer) { onShellClick?.(shell.id); } else { triggerBlockedFeedback(shell.id, selectedSource); } } else { triggerBlockedFeedback(shell.id, selectedSource || null); onShellClick?.(shell.id); } } }}
+                    onClick={(e) => { e.stopPropagation(); if (!dragState.isDragging) { if (isTarget && moveTarget) { onSelectMove(moveTarget); } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) { if (owner === currentPlayer) { onShellClick?.(shell.id); } else { triggerBlockedFeedback(shell.id, selectedSource); } } else { triggerBlockedFeedback(shell.id, selectedSource ?? null); onShellClick?.(shell.id); } } }}
                 >
                     <div style={{ transform: `translate(${shellOffX}px, ${shellOffY}px)` }}><CowrieShell angle={shell.angle} isTarget={isTarget} isHovered={isHovered && isTarget} isBlocked={isShaking} /></div>
                     {isTarget && <div className={`absolute w-14 h-14 rounded-full border-2 border-green-500 animate-ping opacity-75 pointer-events-none transition-all ${isHovered ? 'scale-150 border-amber-400' : ''}`}></div>}
