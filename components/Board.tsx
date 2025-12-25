@@ -163,22 +163,20 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             msg = "BLOCKED: SELECT PIECE རྡབ་སོང་། ལག་ཁྱི་འདོམ།";
         } else return;
     } else {
-        let moverSize = sourceIdx === 0 ? (p1?.coinsInHand === 9 ? 2 : 1) : (boardState.get(sourceIdx)?.stackSize || 1);
+        const sourceShell = sourceIdx === 0 ? null : boardState.get(sourceIdx);
+        let moverSize = sourceIdx === 0 ? (p1?.coinsInHand === 9 ? 2 : 1) : (sourceShell?.stackSize || 1);
+        
         if (targetShell) {
             if (targetShell.owner && targetShell.owner !== currentPlayer) {
                 if (targetShell.stackSize > moverSize) {
                     msg = "BLOCKED: TOO LARGE རྡབ་སོང་།";
-                } else {
-                    msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
                 }
+                // Flexible distance rule: "Invalid Distance" matches are no longer considered illegal
             } else if (targetShell.owner === currentPlayer) {
                 if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
                     msg = "BLOCKED: 9 LIMIT དགུ་བརྩེགས་མི་ཆོག།";
-                } else {
-                    msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
                 }
-            } else {
-                msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
+                // Flexible distance rule: Stacking is always valid if within distance budget
             }
         }
     }

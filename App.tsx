@@ -32,7 +32,6 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
     return MoveResultType.STACK;
   } else {
     // Kill rule: Can kill if mover stack is >= target stack. 
-    // If opponent's stack is larger, you are blocked.
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -46,53 +45,43 @@ const getAvailableMoves = (
   isNinerMode: boolean,
   isOpeningPaRa: boolean
 ): MoveOption[] => {
-  if (pendingValues.length === 0) return [];
+  const totalPool = pendingValues.reduce((a, b) => a + b, 0);
+  if (totalPool <= 0) return [];
+  
   const moves: MoveOption[] = [];
   const player = players[playerIndex];
   const myId = player.id;
-  const getSubsets = (arr: number[]) => {
-    let results = [[] as number[]];
-    for (const value of arr) {
-      const copy = [...results];
-      for (const prefix of copy) {
-        results.push([...prefix, value]);
-      }
-    }
-    return results.filter(s => s.length > 0);
-  };
-  const subsets = getSubsets(pendingValues);
-  const possibleMoveValues = new Map<number, number[]>();
-  for (const s of subsets) {
-    const sum = s.reduce((a, b) => a + b, 0);
-    if (!possibleMoveValues.has(sum)) {
-      possibleMoveValues.set(sum, s);
-    }
-  }
+
+  // Flexible Movement: Any distance d from 1 up to totalPool is potentially valid
   if (player.coinsInHand > 0) {
     const isOpening = player.coinsInHand === COINS_PER_PLAYER;
     const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
-    for (const [dist, consumed] of possibleMoveValues.entries()) {
-      if (dist >= 1 && dist <= TOTAL_SHELLS) {
-        const target = board.get(dist);
-        const resultType = getMoveResultType(myId, target, movingSize, isNinerMode);
-        if (resultType !== MoveResultType.INVALID) {
-          moves.push({ sourceIndex: 0, targetIndex: dist, consumedValues: consumed, type: resultType });
-        }
+    
+    // Check every possible destination within the dice budget
+    for (let dist = 1; dist <= Math.min(totalPool, TOTAL_SHELLS); dist++) {
+      const target = board.get(dist);
+      const resultType = getMoveResultType(myId, target, movingSize, isNinerMode);
+      if (resultType !== MoveResultType.INVALID) {
+        moves.push({ sourceIndex: 0, targetIndex: dist, consumedValues: [dist], type: resultType });
       }
     }
   }
+
   for (const [idx, shell] of board.entries()) {
     if (shell.owner === myId && shell.stackSize > 0) {
-      for (const [dist, consumed] of possibleMoveValues.entries()) {
+      for (let dist = 1; dist <= totalPool; dist++) {
         const targetIdx = idx + dist;
         if (targetIdx <= TOTAL_SHELLS) {
           const target = board.get(targetIdx);
           const resultType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
           if (resultType !== MoveResultType.INVALID) {
-            moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resultType });
+            moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: [dist], type: resultType });
           }
         } else {
-          moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
+          // Can finish the coin at any distance that exceeds TOTAL_SHELLS
+          moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: [dist], type: MoveResultType.FINISH });
+          // If we can finish with distance 'dist', we've covered the exit; don't need further distances for this piece
+          break;
         }
       }
     }
@@ -257,8 +246,8 @@ const App: React.FC = () => {
     const s = gameStateRef.current;
     setPendingMoveValues([]); setIsOpeningPaRa(false);
     if (!isRemote && (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST)) { broadcastPacket({ type: 'SKIP_REQ' }); }
-    if (s.extraRolls > 0) { setExtraRolls(prev => prev - 1); setPhase(GamePhase.ROLLING); addLog(`${players[turnIndex].name} used an extra roll!`, 'info'); } 
-    else { setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); addLog(`${players[turnIndex].name} skipped their turn.`, 'info'); }
+    if (s.extraRolls > 0) { setExtraRolls(prev => prev - 1); setPhase(GamePhase.ROLLING); addLog(`${players[turnIndex].name} used a bonus roll!`, 'info'); } 
+    else { setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); addLog(`${players[turnIndex].name} finished their turn.`, 'info'); }
   }, [players, turnIndex, addLog, gameMode, broadcastPacket]);
 
   const performRoll = async (forcedRoll?: DiceRoll) => {
@@ -281,18 +270,23 @@ const App: React.FC = () => {
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
     if (!forcedRoll && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) { broadcastPacket({ type: 'ROLL_REQ', payload: newRoll }); }
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
+    
     if (isPaRa) { 
         SFX.playPaRa(); 
         const newCount = s.paRaCount + 1;
         if (newCount === 3) { addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly!`, 'alert'); setPhase(GamePhase.GAME_OVER); return; }
         setPaRaCount(newCount); 
-        addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again.`, 'alert'); 
+        // In flexible movement, Pa Ra bonus (2) is added to the turn's budget
+        setPendingMoveValues(prev => [...prev, 2]);
+        addLog(`PA RA (1,1)! Bonus distance 2 added. Roll again.`, 'alert'); 
     } 
     else { 
         const isOpening = players[s.turnIndex].coinsInHand === COINS_PER_PLAYER;
         if (s.paRaCount > 0 && isOpening) { setIsOpeningPaRa(true); addLog(`OPENING PA RA! You can place 3 coins!`, 'alert'); }
-        const movePool = [...Array(s.paRaCount).fill(2), total];
-        setPendingMoveValues(movePool); setPaRaCount(0); setPhase(GamePhase.MOVING); 
+        // Final roll added to the pool
+        setPendingMoveValues(prev => [...prev, total]);
+        setPaRaCount(0); 
+        setPhase(GamePhase.MOVING); 
     }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) setTutorialStep(3);
   };
@@ -337,10 +331,10 @@ const App: React.FC = () => {
             }
             
             nb.set(move.targetIndex, { ...target, stackSize: finalStackSize, owner: player.id, isShoMo: false }); 
-            localExtraRollInc = 1; addLog(`${player.name} killed a stack and earned an extra roll!`, 'alert');
+            localExtraRollInc = 1; addLog(`${player.name} killed a stack and earned a bonus roll!`, 'alert');
         } else if (move.type === MoveResultType.STACK) { 
             SFX.playStack(); nb.set(move.targetIndex, { ...target, stackSize: target.stackSize + movingStackSize, owner: player.id, isShoMo: false }); 
-            localExtraRollInc = 1; addLog(`${player.name} stacked and earned a bonus turn!`, 'action');
+            localExtraRollInc = 1; addLog(`${player.name} stacked and earned a bonus roll!`, 'action');
         } else {
             SFX.playCoinClick(); 
             const isOpeningPlacement = (move.sourceIndex === 0 && movingStackSize >= 2);
@@ -348,17 +342,29 @@ const App: React.FC = () => {
         }
     }
     setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
-    let nextMoves = [...s.pendingMoveValues]; 
-    move.consumedValues.forEach(val => { const idx = nextMoves.indexOf(val); if (idx > -1) nextMoves.splice(idx, 1); });
+    
+    // In flexible mode, we subtract the moved distance from the turn's pool
+    const distUsed = move.consumedValues[0];
+    const currentTotal = s.pendingMoveValues.reduce((a, b) => a + b, 0);
+    const remaining = currentTotal - distUsed;
+    const nextPool = remaining > 0 ? [remaining] : [];
+    
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
-    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode, s.isOpeningPaRa);
+    const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextPool, s.isNinerMode, s.isOpeningPaRa);
     if (localExtraRollInc > 0) setExtraRolls(prev => prev + localExtraRollInc);
-    if (nextMoves.length === 0 || movesLeft.length === 0) {
+    
+    if (nextPool.length === 0 || movesLeft.length === 0) {
         setPendingMoveValues([]); setIsOpeningPaRa(false);
         const totalExtraRolls = s.extraRolls + localExtraRollInc;
-        if (totalExtraRolls > 0) { setExtraRolls(prev => prev - 1); setPhase(GamePhase.ROLLING); addLog(`${player.name} used an extra roll!`, 'info'); } 
+        if (totalExtraRolls > 0) { 
+            setExtraRolls(prev => prev - 1); 
+            setPhase(GamePhase.ROLLING); 
+            addLog(`${player.name} used a bonus roll!`, 'info'); 
+        } 
         else { setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }
-    } else { setPendingMoveValues(nextMoves); }
+    } else { 
+        setPendingMoveValues(nextPool); 
+    }
   };
 
   const setupMediaCall = async (targetId: string, peerInstance: Peer) => {
