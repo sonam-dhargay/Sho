@@ -758,7 +758,7 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཁང་མིག་བཟོས།</h3>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཏུ་སྣེ་ལེན་ཁང་གཉེར།</h3>
                                 <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་གྲངས་དེ་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
