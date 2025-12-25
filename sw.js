@@ -1,11 +1,17 @@
-const CACHE_NAME = 'sho-v2';
+const CACHE_NAME = 'sho-v3';
 const ASSETS = [
+  './',
   './index.html',
   './index.tsx',
   './App.tsx',
   './types.ts',
   './constants.ts',
-  './manifest.json'
+  './translations.ts',
+  './manifest.json',
+  './components/Board.tsx',
+  './components/DiceArea.tsx',
+  './components/RulesModal.tsx',
+  './components/TutorialOverlay.tsx'
 ];
 
 // High-quality SVG logo of a Sho cup and dice
@@ -17,6 +23,7 @@ const LOGO_SVG = `
       <stop offset="100%" style="stop-color:#3e2723" />
     </radialGradient>
   </defs>
+  <rect width="100%" height="100%" fill="#0c0a09"/>
   <path d="M100,180 Q256,120 412,180 L370,440 Q256,500 142,440 Z" fill="url(#cupGrad)" stroke="#2d1d1a" stroke-width="8"/>
   <ellipse cx="256" cy="180" rx="156" ry="40" fill="#4e342e" stroke="#2d1d1a" stroke-width="4"/>
   <rect x="190" y="270" width="70" height="70" rx="12" fill="#fff9c4" stroke="#fbc02d" stroke-width="3" transform="rotate(-15 225 305)"/>
@@ -30,6 +37,21 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
+    })
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
     })
   );
 });
@@ -46,9 +68,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Cache-first strategy for local assets, network-first for external
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).catch(() => {
+        // Fallback for offline mode if needed
+      });
     })
   );
 });

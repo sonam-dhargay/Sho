@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Peer, { DataConnection, MediaConnection } from 'peerjs';
 import { GoogleGenAI } from "@google/genai";
@@ -188,6 +187,7 @@ const App: React.FC = () => {
   const [handShake, setHandShake] = useState(false);
   const [isMicEnabled, setIsMicEnabled] = useState(false);
   const [isOpponentSpeaking, setIsOpponentSpeaking] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Online Multiplayer State
@@ -208,6 +208,15 @@ const App: React.FC = () => {
   useEffect(() => { 
     gameStateRef.current = { board, players, turnIndex, phase: phase as GamePhase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
   }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
@@ -654,8 +663,17 @@ const App: React.FC = () => {
     }
   };
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row overflow-hidden">
         {phase === GamePhase.SETUP && gameMode !== null && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-amber-500 font-cinzel">Initializing...</div>}
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
@@ -671,7 +689,7 @@ const App: React.FC = () => {
         `}} />
         
         {!gameMode && (
-          <div className="fixed inset-0 z-50 bg-stone-950 text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
+          <div className="fixed inset-0 z-50 bg-[#0c0a09] text-amber-500 overflow-y-auto flex flex-col items-center justify-between p-6 py-12 md:py-24">
                <div className="flex flex-col items-center flex-shrink-0 w-full max-w-sm md:max-w-md">
                    <h1 className="flex items-center gap-6 mb-4 font-cinzel">
                       <span className="text-7xl md:text-9xl text-amber-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">ཤོ</span>
@@ -744,15 +762,22 @@ const App: React.FC = () => {
                </div>
 
                <div className="w-full flex flex-col items-center gap-10 mt-10">
-                  <div className="flex gap-16">
-                      <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
-                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
-                          <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
-                      </button>
-                      <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
-                          <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
-                          <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་་སྒྲིག་གཞི།</span>
-                      </button>
+                  <div className="flex flex-col items-center gap-4">
+                      {deferredPrompt && (
+                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-bounce mb-2">
+                            Install App རྩེད་མོ་འཇོག་པ།
+                        </button>
+                      )}
+                      <div className="flex gap-16">
+                          <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
+                              <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
+                              <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
+                          </button>
+                          <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
+                              <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
+                              <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་་སྒྲིག་གཞི།</span>
+                          </button>
+                      </div>
                   </div>
                   <div className="flex flex-col items-center">
                       <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">Games Commenced</span>
@@ -783,14 +808,13 @@ const App: React.FC = () => {
                                         <span className="text-[8px] uppercase font-bold text-green-400">Online དྲ་ཐོག</span>
                                     </div>
                                 )}
-                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
+                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
                             </div>
                         </header>
                         
                         <div className="grid grid-cols-2 gap-1 md:gap-2 mt-4 md:mt-8 relative px-1">
                             {players.map((p, i) => {
                                 const isActive = turnIndex === i;
-                                // Fix comparison between GameMode and MoveResultType and correct the logic for determining the current user
                                 const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
                                 const isSpeaking = isMe ? isMicEnabled : isOpponentSpeaking;
                                 return (
@@ -858,7 +882,6 @@ const App: React.FC = () => {
                                         </button> 
                                     )}
                                 </div>
-                                {/* Removed redundant check for phase !== GamePhase.GAME_OVER which is guaranteed by the outer ternary operator */}
                                 {!isLocalTurn && (
                                     <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རེ་མོས།</span></div>
                                 )}
