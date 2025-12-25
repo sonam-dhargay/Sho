@@ -469,7 +469,7 @@ const App: React.FC = () => {
           @media (max-height: 540px) and (orientation: landscape) {
             .mobile-landscape-row { flex-direction: row !important; }
             .mobile-landscape-sidebar { 
-                width: 260px !important; 
+                width: 250px !important; 
                 height: 100% !important; 
                 border-bottom: none !important; 
                 border-right: 1px solid #292524 !important; 
@@ -480,12 +480,22 @@ const App: React.FC = () => {
             .mobile-landscape-sidebar-scroll { 
                 flex-grow: 1 !important; 
                 overflow-y: auto !important; 
-                padding-bottom: 20px !important;
+                padding-bottom: 10px !important;
+                display: flex !important;
+                flex-direction: column !important;
             }
             .mobile-landscape-board { width: 100% !important; height: 100% !important; flex-grow: 1 !important; }
-            .mobile-landscape-compact-stats { padding: 0.5rem !important; }
+            .mobile-landscape-compact-stats { padding: 0.25rem !important; }
             .mobile-landscape-hide-logs { display: none !important; }
             .mobile-landscape-footer { display: none !important; }
+            
+            /* Drastically reduce heights to fit buttons */
+            .mobile-landscape-sidebar .grid-cols-2 { gap: 0.25rem !important; margin-top: 0.5rem !important; }
+            .mobile-landscape-sidebar header { padding-bottom: 0.25rem !important; }
+            .mobile-landscape-sidebar .dice-area-compact { padding: 0.25rem !important; }
+            .mobile-landscape-sidebar .action-btn-compact { padding: 0.5rem !important; font-size: 0.75rem !important; }
+            .mobile-landscape-sidebar .action-btn-compact span { font-size: 0.7rem !important; }
+            .mobile-landscape-action-section { margin-top: 0 !important; padding-bottom: 0.5rem !important; }
           }
         `}} />
         
@@ -596,98 +606,93 @@ const App: React.FC = () => {
 
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[42dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar no-scrollbar">
-                    <div className="mobile-landscape-sidebar-scroll flex flex-col h-full">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[40dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar no-scrollbar">
+                    <div className="mobile-landscape-sidebar-scroll flex flex-col h-full no-scrollbar">
                         <div className="p-2 md:p-4 flex flex-col gap-0 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                             <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
                                 <div className="flex items-center gap-1 cursor-pointer" onClick={() => { if (peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }}>
                                     <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel whitespace-nowrap">ཤོ Sho</h1>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={toggleMic} className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${isMicEnabled ? 'bg-amber-600 border-amber-400 text-white' : 'bg-stone-800 border-stone-700 text-stone-500'}`}>
-                                        {isMicEnabled ? <Icons.Mic className="w-4 h-4" /> : <Icons.MicOff className="w-4 h-4" />}
+                                    <button onClick={toggleMic} className={`w-6 h-6 md:w-8 md:h-8 rounded-full border flex items-center justify-center transition-all ${isMicEnabled ? 'bg-amber-600 border-amber-400 text-white' : 'bg-stone-800 border-stone-700 text-stone-500'}`}>
+                                        {isMicEnabled ? <Icons.Mic className="w-3 h-3 md:w-4 md:h-4" /> : <Icons.MicOff className="w-3 h-3 md:w-4 md:h-4" />}
                                     </button>
                                     {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && (
-                                        <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                            <span className="text-[8px] uppercase font-bold text-green-400">Online</span>
+                                        <div className="flex items-center gap-1 bg-green-950/40 border border-green-700/50 px-1.5 md:px-2 py-0.5 rounded-full">
+                                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[7px] md:text-[8px] uppercase font-bold text-green-400">Online</span>
                                         </div>
                                     )}
-                                    <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center">
-                                    <Icons.HelpCircle className="w-4 h-4" />
+                                    <button onClick={() => setShowRules(true)} className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center">
+                                    <Icons.HelpCircle className="w-3 h-3 md:w-4 md:h-4" />
                                     </button>
                                 </div>
                             </header>
                             
-                            <div className="grid grid-cols-2 gap-1 md:gap-2 mt-4 md:mt-8 relative px-1">
+                            <div className="grid grid-cols-2 gap-1 md:gap-2 mt-2 md:mt-8 relative px-1">
                                 {players.map((p, i) => {
                                     const isActive = turnIndex === i;
                                     const isMe = (gameMode === GameMode.ONLINE_HOST && i === 0) || (gameMode === GameMode.ONLINE_GUEST && i === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && i === 0);
                                     const isSpeaking = isMe ? isMicEnabled : isOpponentSpeaking;
                                     return (
-                                        <div key={p.id} className={`relative p-1.5 md:p-3 rounded-xl border transition-all duration-300 ${isActive ? 'bg-stone-800 border-amber-500/50 scale-[1.05] z-10 animate-active-pulse shadow-xl' : 'border-stone-800 opacity-50'}`}>
+                                        <div key={p.id} className={`relative p-1 md:p-3 rounded-xl border transition-all duration-300 ${isActive ? 'bg-stone-800 border-amber-500/50 scale-[1.03] z-10 animate-active-pulse shadow-xl' : 'border-stone-800 opacity-50'}`}>
                                             {isActive && (
-                                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator z-20">
-                                                    <div className="w-3 h-3 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,1)] border border-white/20" />
-                                                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-amber-500 mt-[-2px]" />
+                                                <div className="absolute -top-4 md:-top-6 left-1/2 -translate-x-1/2 flex flex-col items-center animate-turn-indicator z-20">
+                                                    <div className="w-2 h-2 md:w-3 md:h-3 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,1)]" />
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-1.5 mb-1.5 relative">
+                                            <div className="flex items-center gap-1 mb-1 relative">
                                                 <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
-                                                <h3 className={`font-bold truncate text-[9px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
-                                                {isSpeaking && ( <div className="absolute -right-1 -top-1 w-2 h-2 bg-amber-500 rounded-full voice-indicator" /> )}
+                                                <h3 className={`font-bold truncate text-[8px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
                                             </div>
-                                            <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold font-cinzel">
-                                                <div className="flex flex-col"><span className="text-[7px] text-stone-500">Hand</span><span>{p.coinsInHand}</span></div>
-                                                <div className="flex flex-col items-end"><span className="text-[7px] text-stone-500">Done</span><span className="text-amber-500">{p.coinsFinished}</span></div>
+                                            <div className="flex justify-between text-[9px] md:text-[14px] text-stone-100 font-bold font-cinzel">
+                                                <div className="flex flex-col"><span className="text-[6px] md:text-[7px] text-stone-500">Hand</span><span>{p.coinsInHand}</span></div>
+                                                <div className="flex flex-col items-end"><span className="text-[6px] md:text-[7px] text-stone-500">Done</span><span className="text-amber-500">{p.coinsFinished}</span></div>
                                             </div>
-                                            {isActive && (
-                                                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-600 px-1.5 py-0.5 rounded-md shadow-lg border border-amber-400/30 whitespace-nowrap">
-                                                    <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN" : "WAITING..."}</span>
-                                                </div>
-                                            )}
                                         </div>
                                     );
                                 })}
                             </div>
                         </div>
                         
-                        <div className="px-2 md:px-4 pb-2 mt-auto flex flex-col gap-1 flex-shrink-0 bg-stone-950">
+                        <div className="px-2 md:px-4 pb-2 mt-0 md:mt-auto flex flex-col gap-1 flex-shrink-0 bg-stone-950 mobile-landscape-action-section">
                             {phase === GamePhase.GAME_OVER ? ( 
                                 <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
-                                    <h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
-                                    <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] mt-2 flex items-center justify-center gap-2 mx-auto">
-                                    <Icons.LogOut className="w-4 h-4" /><span>Exit Game</span>
+                                    <h2 className="text-xs md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
+                                    <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1 flex items-center justify-center gap-2 mx-auto">
+                                    <Icons.LogOut className="w-3 h-3 md:w-4 md:h-4" /><span>Exit Game</span>
                                     </button>
                                 </div> 
                             ) : ( 
                                 <div className="flex flex-col gap-1">
-                                    <DiceArea currentRoll={lastRoll} onRoll={() => performRoll()} canRoll={(phase === GamePhase.ROLLING) && !isRolling && isLocalTurn} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
+                                    <div className="dice-area-compact">
+                                        <DiceArea currentRoll={lastRoll} onRoll={() => performRoll()} canRoll={(phase === GamePhase.ROLLING) && !isRolling && isLocalTurn} pendingValues={pendingMoveValues} waitingForPaRa={paRaCount > 0} paRaCount={paRaCount} extraRolls={extraRolls} flexiblePool={null} />
+                                    </div>
                                     <div className="flex gap-1">
                                         <div onClick={() => { 
                                             if (phase === GamePhase.MOVING && isLocalTurn) { 
                                             if (players[turnIndex].coinsInHand > 0) { setSelectedSourceIndex(0); if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) { setTutorialStep(4); } } 
                                             else { SFX.playBlocked(); setHandShake(true); setTimeout(() => setHandShake(false), 400); } 
                                             } 
-                                        }} className={`flex-1 p-2 md:p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
-                                            <span className={`font-bold uppercase font-cinzel text-[11px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>From Hand</span>
-                                            <span className="text-[10px] md:text-[14px] text-stone-200 font-serif mt-0.5 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
+                                        }} className={`flex-1 action-btn-compact rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
+                                            <span className={`font-bold uppercase font-cinzel text-[10px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>From Hand</span>
+                                            <span className="text-[9px] md:text-[14px] text-stone-200 font-serif mt-0 font-bold">({players[turnIndex].coinsInHand}) ལག་ཁྱི་བཙུགས།</span>
                                         </div>
                                         {currentValidMovesList.length === 0 && phase === GamePhase.MOVING && !isRolling && paRaCount === 0 && isLocalTurn && ( 
-                                            <button onClick={() => handleSkipTurn()} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 p-1 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel">
-                                                <span className="text-[9px] md:text-[11px]">Skip</span>
-                                                <span className="text-[11px] md:text-[14px] font-serif text-center">སྐྱུར།</span>
+                                            <button onClick={() => handleSkipTurn()} className="flex-1 bg-amber-800/50 hover:bg-amber-700 text-amber-200 border border-amber-600/50 rounded-xl font-bold flex flex-col items-center justify-center font-cinzel action-btn-compact">
+                                                <span className="text-[8px] md:text-[11px]">Skip</span>
+                                                <span className="text-[10px] md:text-[14px] font-serif text-center">སྐྱུར།</span>
                                             </button> 
                                         )}
                                     </div>
-                                    {!isLocalTurn && ( <div className="text-center py-1 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move...</span></div> )}
+                                    {!isLocalTurn && ( <div className="text-center py-1 animate-pulse"><span className="text-amber-600 text-[8px] md:text-[10px] uppercase font-bold">Opponent's Move...</span></div> )}
                                 </div> 
                             )}
                         </div>
                         
-                        <div className="flex-grow flex flex-col gap-1 p-2 bg-stone-900 overflow-y-auto no-scrollbar mobile-landscape-hide-logs min-h-[100px]">
+                        <div className="flex-grow flex flex-col gap-1 p-2 bg-stone-900 overflow-y-auto no-scrollbar mobile-landscape-hide-logs min-h-[50px]">
                             {logs.map((log) => (
-                                <div key={log.id} className={`text-[9px] md:text-[10px] p-2 rounded border border-stone-800/50 transition-all ${log.type === 'alert' ? 'bg-red-950/30 text-red-400 border-red-900/30' : log.type === 'action' ? 'bg-amber-950/30 text-amber-300 border-amber-900/30' : 'bg-stone-800/30 text-stone-400'}`}>
+                                <div key={log.id} className={`text-[8px] md:text-[10px] p-1.5 rounded border border-stone-800/50 transition-all ${log.type === 'alert' ? 'bg-red-950/30 text-red-400 border-red-900/30' : log.type === 'action' ? 'bg-amber-950/30 text-amber-300 border-amber-900/30' : 'bg-stone-800/30 text-stone-400'}`}>
                                     <span className="font-serif leading-tight">{log.message}</span>
                                 </div>
                             ))}
@@ -695,7 +700,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[58dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
+                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[60dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
