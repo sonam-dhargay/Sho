@@ -759,7 +759,7 @@ const App: React.FC = () => {
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
                                 <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཏུ་སྣེ་ལེན་ཁང་གཉེར།</h3>
-                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་གྲངས་དེ་ཁ་གཏད་ལ་གཏོང་།</p>
+                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་གྲངས་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
                                 <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg flex items-center justify-center gap-3" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
