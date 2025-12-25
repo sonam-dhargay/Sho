@@ -170,13 +170,17 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             if (targetShell.owner && targetShell.owner !== currentPlayer) {
                 if (targetShell.stackSize > moverSize) {
                     msg = "BLOCKED: TOO LARGE རྡབ་སོང་།";
+                } else {
+                    msg = "INVALID DISTANCE ཤོ་མིག་མ་བབས།";
                 }
-                // Flexible distance rule: "Invalid Distance" matches are no longer considered illegal
             } else if (targetShell.owner === currentPlayer) {
-                if (!isNinerMode && targetShell.stackSize + moverSize === 9) {
+                if (!isNinerMode && targetShell.stackSize + moverSize > 9) {
                     msg = "BLOCKED: 9 LIMIT དགུ་བརྩེགས་མི་ཆོག།";
+                } else {
+                    msg = "INVALID DISTANCE ཤོ་མིག་མ་བབས།";
                 }
-                // Flexible distance rule: Stacking is always valid if within distance budget
+            } else {
+                msg = "INVALID DISTANCE ཤོ་མིག་མ་བབས།";
             }
         }
     }
