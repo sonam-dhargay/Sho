@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sho-v3';
+const CACHE_NAME = 'sho-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,9 @@ const ASSETS = [
   './components/Board.tsx',
   './components/DiceArea.tsx',
   './components/RulesModal.tsx',
-  './components/TutorialOverlay.tsx'
+  './components/TutorialOverlay.tsx',
+  './components/Icons.tsx',
+  './components/MusicPlayer.tsx'
 ];
 
 // High-quality SVG logo of a Sho cup and dice
@@ -31,6 +33,7 @@ const LOGO_SVG = `
   <rect x="270" y="320" width="70" height="70" rx="12" fill="#fff9c4" stroke="#fbc02d" stroke-width="3" transform="rotate(10 305 355)"/>
   <circle cx="290" cy="340" r="5" fill="#212121" transform="rotate(10 305 355)"/>
   <circle cx="320" cy="370" r="5" fill="#212121" transform="rotate(10 305 355)"/>
+  <text x="256" y="100" font-family="Cinzel, serif" font-size="64" fill="#eab308" text-anchor="middle" font-weight="bold">ཤོ</text>
 </svg>`.trim();
 
 self.addEventListener('install', (event) => {
@@ -59,8 +62,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Intercept requests for the virtual logo file
-  if (url.pathname.endsWith('sho_logo.png')) {
+  // Intercept requests for the sho_logo
+  if (url.pathname.endsWith('sho_logo.png') || url.pathname.endsWith('sho_logo.svg')) {
     const response = new Response(LOGO_SVG, {
       headers: { 'Content-Type': 'image/svg+xml' }
     });
@@ -68,7 +71,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first strategy for local assets, network-first for external
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request).catch(() => {
