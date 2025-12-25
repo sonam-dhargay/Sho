@@ -29,6 +29,7 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
     if (!isNinerMode && target.stackSize + moverStackSize > 9) return MoveResultType.INVALID;
     return MoveResultType.STACK;
   } else {
+    // Kill rule: Can kill if mover stack is >= target stack
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -321,13 +322,29 @@ const App: React.FC = () => {
         if (move.type === MoveResultType.KILL) { 
             SFX.playKill(); const eIdx = players.findIndex(p => p.id === target.owner); 
             if (eIdx !== -1) newPlayers[eIdx].coinsInHand += target.stackSize; 
-            nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: false }); 
+            
+            // Implement Shomo Killer Bonus: 
+            // If killing an opponent's Shomo, player can place 3 coins if they have extra in hand.
+            let finalStackSize = movingStackSize;
+            if (target.isShoMo) {
+                const bonusToTake = Math.min(newPlayers[s.turnIndex].coinsInHand, 3 - movingStackSize);
+                if (bonusToTake > 0) {
+                    newPlayers[s.turnIndex].coinsInHand -= bonusToTake;
+                    finalStackSize = movingStackSize + bonusToTake;
+                    addLog(`SHOMO KILLER BONUS! Replacement stack of ${finalStackSize} placed.`, 'alert');
+                }
+            }
+            
+            nb.set(move.targetIndex, { ...target, stackSize: finalStackSize, owner: player.id, isShoMo: false }); 
             localExtraRollInc = 1; addLog(`${player.name} killed a stack and earned an extra roll!`, 'alert');
         } else if (move.type === MoveResultType.STACK) { 
             SFX.playStack(); nb.set(move.targetIndex, { ...target, stackSize: target.stackSize + movingStackSize, owner: player.id, isShoMo: false }); 
             localExtraRollInc = 1; addLog(`${player.name} stacked and earned a bonus turn!`, 'action');
         } else {
-            SFX.playCoinClick(); nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize >= 2) });
+            SFX.playCoinClick(); 
+            // Set isShoMo true if this is an opening placement of 2+ coins
+            const isOpeningPlacement = (move.sourceIndex === 0 && movingStackSize >= 2);
+            nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: isOpeningPlacement });
         }
     }
     setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
@@ -470,32 +487,32 @@ const App: React.FC = () => {
             .mobile-landscape-row { flex-direction: row !important; }
             .mobile-landscape-sidebar { 
                 width: 250px !important; 
-                height: 100% !important; 
+                height: 100dvh !important; 
                 border-bottom: none !important; 
                 border-right: 1px solid #292524 !important; 
                 flex-shrink: 0 !important;
                 display: flex !important;
                 flex-direction: column !important;
+                overflow: hidden !important;
             }
             .mobile-landscape-sidebar-scroll { 
-                flex-grow: 1 !important; 
+                flex: 1 1 0% !important;
                 overflow-y: auto !important; 
-                padding-bottom: 10px !important;
                 display: flex !important;
                 flex-direction: column !important;
             }
             .mobile-landscape-board { width: 100% !important; height: 100% !important; flex-grow: 1 !important; }
-            .mobile-landscape-compact-stats { padding: 0.25rem !important; }
+            .mobile-landscape-compact-stats { padding: 0.25rem !important; flex-shrink: 0 !important; }
             .mobile-landscape-hide-logs { display: none !important; }
             .mobile-landscape-footer { display: none !important; }
             
             /* Drastically reduce heights to fit buttons */
-            .mobile-landscape-sidebar .grid-cols-2 { gap: 0.25rem !important; margin-top: 0.5rem !important; }
-            .mobile-landscape-sidebar header { padding-bottom: 0.25rem !important; }
-            .mobile-landscape-sidebar .dice-area-compact { padding: 0.25rem !important; }
-            .mobile-landscape-sidebar .action-btn-compact { padding: 0.5rem !important; font-size: 0.75rem !important; }
-            .mobile-landscape-sidebar .action-btn-compact span { font-size: 0.7rem !important; }
-            .mobile-landscape-action-section { margin-top: 0 !important; padding-bottom: 0.5rem !important; }
+            .mobile-landscape-sidebar .grid-cols-2 { gap: 0.25rem !important; margin-top: 0.25rem !important; }
+            .mobile-landscape-sidebar header { padding-bottom: 0.15rem !important; }
+            .mobile-landscape-sidebar .dice-area-compact { padding: 0.15rem !important; }
+            .mobile-landscape-sidebar .action-btn-compact { padding: 0.35rem !important; font-size: 0.7rem !important; }
+            .mobile-landscape-sidebar .action-btn-compact span { font-size: 0.65rem !important; }
+            .mobile-landscape-action-section { margin-top: auto !important; padding-bottom: 0.25rem !important; flex-shrink: 0 !important; }
           }
         `}} />
         
@@ -606,7 +623,7 @@ const App: React.FC = () => {
 
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[40dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar no-scrollbar">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[35dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar no-scrollbar">
                     <div className="mobile-landscape-sidebar-scroll flex flex-col h-full no-scrollbar">
                         <div className="p-2 md:p-4 flex flex-col gap-0 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                             <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
@@ -655,7 +672,7 @@ const App: React.FC = () => {
                             </div>
                         </div>
                         
-                        <div className="px-2 md:px-4 pb-2 mt-0 md:mt-auto flex flex-col gap-1 flex-shrink-0 bg-stone-950 mobile-landscape-action-section">
+                        <div className="px-2 md:px-4 pb-2 mt-auto flex flex-col gap-1 flex-shrink-0 bg-stone-950 mobile-landscape-action-section">
                             {phase === GamePhase.GAME_OVER ? ( 
                                 <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
                                     <h2 className="text-xs md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
@@ -700,7 +717,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[60dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
+                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[65dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
