@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Icons } from './Icons';
 
 interface Track {
   id: string;
@@ -49,8 +50,6 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
   useEffect(() => {
     const audio = new Audio();
     audio.loop = true;
-    // REMOVED crossOrigin = "anonymous" as it often causes "Format Not Supported" 
-    // when the remote server doesn't explicitly handle CORS for audio streams.
     audioRef.current = audio;
 
     const handleError = (e: any) => {
@@ -109,7 +108,6 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
         if (playPromise !== undefined) {
           playPromise.catch(err => {
             console.warn("Autoplay blocked or load failed:", err);
-            // Don't set error here, let the 'error' listener handle real network/format issues
           });
         }
       }
@@ -125,9 +123,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
 
     if (isEnabled) {
       if (audio.paused) {
-        audio.play().catch(() => {
-          // Silent catch for initial user interaction requirements
-        });
+        audio.play().catch(() => {});
       }
     } else {
       audio.pause();
@@ -175,9 +171,9 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
             {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : isEnabled ? (
-                <span className="text-lg">⏸</span>
+                <Icons.Pause className="w-5 h-5" />
             ) : (
-                <span className="text-lg translate-x-0.5">▶</span>
+                <Icons.Play className="w-5 h-5 translate-x-0.5" />
             )}
           </button>
           
@@ -192,13 +188,17 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
         </div>
 
         <div className="flex items-center gap-1">
-          <button onClick={prevTrack} className="text-stone-600 hover:text-amber-500 p-1.5 transition-colors">⏮</button>
-          <button onClick={nextTrack} className="text-stone-600 hover:text-amber-500 p-1.5 transition-colors">⏭</button>
+          <button onClick={prevTrack} className="text-stone-600 hover:text-amber-500 p-1.5 transition-colors">
+            <Icons.SkipBack className="w-4 h-4" />
+          </button>
+          <button onClick={nextTrack} className="text-stone-600 hover:text-amber-500 p-1.5 transition-colors">
+            <Icons.SkipForward className="w-4 h-4" />
+          </button>
           <button 
             onClick={() => setShowTracklist(!showTracklist)}
             className={`w-8 h-8 rounded flex items-center justify-center transition-all ${showTracklist ? 'bg-amber-800/40 text-amber-400' : 'bg-stone-800/50 text-stone-500 hover:text-amber-500'}`}
           >
-            ☰
+            <Icons.List className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -221,7 +221,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
       )}
 
       <div className="flex items-center gap-2 border-t border-stone-800/30 pt-2">
-        <span className="text-[14px] text-stone-700">🔈</span>
+        <span className="text-[14px] text-stone-700 opacity-50">Volume</span>
         <input 
           type="range" 
           min="0" 
@@ -231,7 +231,6 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({ isEnabled, onToggle })
           onChange={(e) => setVolume(parseFloat(e.target.value))}
           className="flex-grow h-1.5 bg-stone-800 rounded-lg appearance-none cursor-pointer accent-amber-600"
         />
-        <span className="text-[14px] text-stone-700">🔊</span>
       </div>
       
       {error && (

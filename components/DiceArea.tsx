@@ -1,5 +1,6 @@
 import React from 'react';
 import { DiceRoll } from '../types';
+import { Icons } from './Icons';
 
 interface DiceAreaProps {
   currentRoll: DiceRoll | null;
@@ -67,6 +68,7 @@ export const DiceArea: React.FC<DiceAreaProps> = ({
             `}
         >
             <div className="flex items-center gap-2">
+              <Icons.Dice className="w-4 h-4 md:w-6 md:h-6" />
               <span>{waitingForPaRa ? "ROLL BONUS!" : canRoll ? "ROLL DICE" : "WAITING"}</span>
               <span className="text-amber-400 text-lg md:text-2xl font-serif">ཤོ་རྒྱོབ།</span>
             </div>

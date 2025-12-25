@@ -10,6 +10,8 @@ import { Board } from './components/Board';
 import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
+import { Icons } from './components/Icons';
+import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -204,6 +206,7 @@ const App: React.FC = () => {
   const [isMicEnabled, setIsMicEnabled] = useState(false);
   const [isOpponentSpeaking, setIsOpponentSpeaking] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Online Multiplayer State
@@ -735,17 +738,17 @@ const App: React.FC = () => {
                   {onlineLobbyStatus === 'IDLE' ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 w-full px-2">
                         <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.LOCAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Opponent', color: COLOR_PALETTE[1].hex}); }}>
-                            <span className="text-2xl">🏔️</span>
+                            <Icons.Mountain className="w-8 h-8 text-amber-500" />
                             <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Local</h3>
                             <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">རང་ཤག་ཏུ་་རྩེ།</span>
                         </button>
                         <button className="bg-stone-900/40 border-2 border-stone-800/80 p-6 rounded-[2rem] hover:border-amber-600/50 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => { setGameMode(GameMode.AI); initializeGame({name: playerName, color: selectedColor}, {name: 'Sho Bot', color: '#999'}); }}>
-                            <span className="text-2xl">🤖</span>
+                            <Icons.Bot className="w-8 h-8 text-amber-500" />
                             <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">AI</h3>
                             <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">མི་བཟོས་རིག་ནུས་དང་མཉམ་དུ་རྩེ།</span>
                         </button>
                         <button className="col-span-2 md:col-span-1 bg-amber-900/20 border-2 border-amber-800/40 p-6 rounded-[2rem] hover:border-amber-500/80 transition-all active:scale-95 flex flex-col items-center justify-center gap-2" onClick={() => setOnlineLobbyStatus('WAITING')}>
-                            <span className="text-2xl">🌐</span>
+                            <Icons.Globe className="w-8 h-8 text-amber-500" />
                             <h3 className="text-sm md:text-xl font-bold uppercase font-cinzel tracking-widest text-amber-100 leading-none">Online</h3>
                             <span className="text-[8px] md:text-[10px] text-stone-500 font-serif leading-none">དྲ་ཐོག་རྩེ།</span>
                         </button>
@@ -759,8 +762,13 @@ const App: React.FC = () => {
                                 <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་གྲངས་དེ་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
-                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
-                                    {myPeerId ? `ROOM CODE: ${myPeerId} 📋` : 'Generate Room Code ཁང་མིག་ཨང་གྲངས་སྐྲུན།'}
+                                <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg flex items-center justify-center gap-3" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
+                                    {myPeerId ? (
+                                      <>
+                                        <span>ROOM CODE: {myPeerId}</span>
+                                        <Icons.Clipboard className="w-5 h-5" />
+                                      </>
+                                    ) : 'Generate Room Code ཁང་མིག་ཨང་གྲངས་སྐྲུན།'}
                                 </button>
                                 <div className="h-px w-full bg-stone-800" />
                                 <div className="flex flex-col gap-2">
@@ -786,10 +794,12 @@ const App: React.FC = () => {
                       )}
                       <div className="flex gap-16">
                           <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
+                              <Icons.FastForward className="w-6 h-6 mb-1 opacity-60 group-hover:opacity-100" />
                               <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
                               <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
                           </button>
                           <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
+                              <Icons.HelpCircle className="w-6 h-6 mb-1 opacity-60 group-hover:opacity-100" />
                               <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
                               <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་་སྒྲིག་གཞི།</span>
                           </button>
@@ -816,7 +826,7 @@ const App: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={toggleMic} className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${isMicEnabled ? 'bg-amber-600 border-amber-400 text-white' : 'bg-stone-800 border-stone-700 text-stone-500'}`}>
-                                    {isMicEnabled ? '🎙️' : '🔇'}
+                                    {isMicEnabled ? <Icons.Mic className="w-4 h-4" /> : <Icons.MicOff className="w-4 h-4" />}
                                 </button>
                                 {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && (
                                     <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
@@ -824,7 +834,9 @@ const App: React.FC = () => {
                                         <span className="text-[8px] uppercase font-bold text-green-400">Online དྲ་ཐོག</span>
                                     </div>
                                 )}
-                                <button onClick={() => setShowRules(true)} className="w-5 h-5 md:w-8 md:h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center text-[10px] md:text-xs">?</button>
+                                <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center">
+                                  <Icons.HelpCircle className="w-4 h-4" />
+                                </button>
                             </div>
                         </header>
                         
@@ -861,13 +873,20 @@ const App: React.FC = () => {
                                 );
                             })}
                         </div>
+
+                        <div className="mt-4">
+                            <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
+                        </div>
                     </div>
                     
                     <div className="px-2 md:px-4 pb-1 flex flex-col gap-1 flex-shrink-0 bg-stone-950">
                         {phase === GamePhase.GAME_OVER ? ( 
                             <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
                                 <h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
-                                <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold uppercase text-[8px] md:text-[10px] mt-1">Exit Game ཕྱིར་དོན།</button>
+                                <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] mt-2 flex items-center justify-center gap-2 mx-auto">
+                                  <Icons.LogOut className="w-4 h-4" />
+                                  <span>Exit Game ཕྱིར་དོན།</span>
+                                </button>
                             </div> 
                         ) : ( 
                             <div className="flex flex-col gap-1">
