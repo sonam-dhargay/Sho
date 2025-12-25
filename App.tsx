@@ -32,7 +32,6 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
     return MoveResultType.STACK;
   } else {
     // Kill rule: Can kill if mover stack is >= target stack. 
-    // If opponent's stack is larger, you are blocked.
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -47,9 +46,11 @@ const getAvailableMoves = (
   isOpeningPaRa: boolean
 ): MoveOption[] => {
   if (pendingValues.length === 0) return [];
+  
   const moves: MoveOption[] = [];
   const player = players[playerIndex];
   const myId = player.id;
+
   const getSubsets = (arr: number[]) => {
     let results = [[] as number[]];
     for (const value of arr) {
@@ -60,39 +61,70 @@ const getAvailableMoves = (
     }
     return results.filter(s => s.length > 0);
   };
-  const subsets = getSubsets(pendingValues);
-  const possibleMoveValues = new Map<number, number[]>();
-  for (const s of subsets) {
-    const sum = s.reduce((a, b) => a + b, 0);
-    if (!possibleMoveValues.has(sum)) {
-      possibleMoveValues.set(sum, s);
+  
+  const allSubsets = getSubsets(pendingValues).map(s => ({
+    sum: s.reduce((a, b) => a + b, 0),
+    values: s
+  })).sort((a, b) => a.sum - b.sum);
+
+  const totalSum = pendingValues.reduce((a, b) => a + b, 0);
+
+  // Helper to find consumption: 
+  // 1. Exact match preferred.
+  // 2. Smallest subset sum > distance if flexible allowed.
+  const findConsumption = (dist: number, isFlexible: boolean) => {
+    const exact = allSubsets.find(s => s.sum === dist);
+    if (exact) return exact.values;
+    if (isFlexible) {
+      const over = allSubsets.find(s => s.sum > dist);
+      if (over) return over.values;
     }
-  }
+    return null;
+  };
+
+  // Check moves from hand
   if (player.coinsInHand > 0) {
     const isOpening = player.coinsInHand === COINS_PER_PLAYER;
     const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
-    for (const [dist, consumed] of possibleMoveValues.entries()) {
-      if (dist >= 1 && dist <= TOTAL_SHELLS) {
-        const target = board.get(dist);
-        const resultType = getMoveResultType(myId, target, movingSize, isNinerMode);
-        if (resultType !== MoveResultType.INVALID) {
-          moves.push({ sourceIndex: 0, targetIndex: dist, consumedValues: consumed, type: resultType });
-        }
+    
+    // In Sho, any shell on the board could be a target
+    for (let targetIdx = 1; targetIdx <= TOTAL_SHELLS; targetIdx++) {
+      const target = board.get(targetIdx);
+      const resType = getMoveResultType(myId, target, movingSize, isNinerMode);
+      if (resType === MoveResultType.INVALID) continue;
+
+      // Stacking on own pieces allows flexible distance (up to total sum)
+      // Placing on empty or killing requires exact distance
+      const consumed = findConsumption(targetIdx, resType === MoveResultType.STACK);
+      if (consumed) {
+        moves.push({ sourceIndex: 0, targetIndex: targetIdx, consumedValues: consumed, type: resType });
       }
     }
   }
+
+  // Check moves from existing board pieces
   for (const [idx, shell] of board.entries()) {
     if (shell.owner === myId && shell.stackSize > 0) {
-      for (const [dist, consumed] of possibleMoveValues.entries()) {
-        const targetIdx = idx + dist;
-        if (targetIdx <= TOTAL_SHELLS) {
-          const target = board.get(targetIdx);
-          const resultType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
-          if (resultType !== MoveResultType.INVALID) {
-            moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resultType });
+      for (let targetIdx = idx + 1; targetIdx <= TOTAL_SHELLS + 1; targetIdx++) {
+        const dist = targetIdx - idx;
+        if (targetIdx > TOTAL_SHELLS) {
+          // Finishing always requires enough distance (can be fuzzy)
+          if (dist <= totalSum) {
+            const consumed = findConsumption(dist, true);
+            if (consumed) {
+                moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
+            }
           }
-        } else {
-          moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
+          continue;
+        }
+
+        const target = board.get(targetIdx);
+        const resType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
+        if (resType === MoveResultType.INVALID) continue;
+
+        const consumed = findConsumption(dist, resType === MoveResultType.STACK);
+        if (consumed) {
+          moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resType });
         }
       }
     }
@@ -354,7 +386,7 @@ const App: React.FC = () => {
     }
     setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
     
-    // In exact mode, we subtract the specific values consumed by the move from the pool
+    // In fuzzy consumption mode for stacking, we subtract the specific values chosen
     let nextPool = [...s.pendingMoveValues]; 
     move.consumedValues.forEach(val => { const idx = nextPool.indexOf(val); if (idx > -1) nextPool.splice(idx, 1); });
 
