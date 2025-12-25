@@ -12,8 +12,7 @@ const ASSETS = [
   './components/DiceArea.tsx',
   './components/RulesModal.tsx',
   './components/TutorialOverlay.tsx',
-  './components/Icons.tsx',
-  './components/MusicPlayer.tsx'
+  './components/Icons.tsx'
 ];
 
 // High-quality SVG logo of a Sho cup and dice

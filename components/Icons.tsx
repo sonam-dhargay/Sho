@@ -116,5 +116,80 @@ export const Icons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <polyline points="20 6 9 17 4 12"/>
     </svg>
+  ),
+  User: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  Palette: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.5-1.1-.3-.3-.5-.8-.5-1.3 0-.9.7-1.6 1.6-1.6H16c3.3 0 6-2.7 6-6 0-4.4-4.5-8-10-8z"/>
+    </svg>
+  ),
+  Flag: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+      <line x1="4" y1="22" x2="4" y2="15"/>
+    </svg>
+  ),
+  Dragon: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 3c-1.5 0-3 1-3 2.5S10.5 8 12 8s3-1 3-2.5S13.5 3 12 3z"/>
+      <path d="M19 8c-1 0-2 .7-2 1.5S18 11 19 11s2-.7 2-1.5S20 8 19 8z"/>
+      <path d="M5 8c1 0 2 .7 2 1.5S6 11 5 11s-2-.7-2-1.5S4 8 5 8z"/>
+      <path d="M12 8v13"/>
+      <path d="M7 14c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
+      <path d="M17 14l3 3"/>
+      <path d="M7 14l-3 3"/>
+    </svg>
+  ),
+  Tiger: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 18v-2"/>
+      <path d="M12 8v4l2 2"/>
+      <path d="M8 8l1 1"/>
+      <path d="M16 8l-1 1"/>
+      <path d="M9 12h.01"/>
+      <path d="M15 12h.01"/>
+    </svg>
+  ),
+  Lion: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+      <path d="M12 7l0 10"/>
+      <path d="M9 10l6 0"/>
+      <path d="M12 12l4 4"/>
+      <path d="M12 12l-4 4"/>
+    </svg>
+  ),
+  Eagle: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 10s-3-3-10-3-10 3-10 3v4s3 3 10 3 10-3 10-3v-4z"/>
+      <path d="M12 10v4"/>
+      <path d="M10 12l4 0"/>
+      <path d="M15 7l2-2"/>
+      <path d="M9 7l-2-2"/>
+    </svg>
+  ),
+  Wheel: ({ className }: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v7"/>
+      <path d="M12 15v7"/>
+      <path d="M2 12h7"/>
+      <path d="M15 12h7"/>
+      <path d="M4.9 4.9l5 5"/>
+      <path d="M14.1 14.1l5 5"/>
+      <path d="M4.9 19.1l5-5"/>
+      <path d="M14.1 9.9l5-5"/>
+    </svg>
   )
 };

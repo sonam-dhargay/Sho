@@ -11,7 +11,6 @@ import { DiceArea } from './components/DiceArea';
 import { RulesModal } from './components/RulesModal';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { Icons } from './components/Icons';
-import { MusicPlayer } from './components/MusicPlayer';
 
 const generatePlayers = (
     p1Settings: { name: string, color: string },
@@ -206,7 +205,6 @@ const App: React.FC = () => {
   const [isMicEnabled, setIsMicEnabled] = useState(false);
   const [isOpponentSpeaking, setIsOpponentSpeaking] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isMusicEnabled, setIsMusicEnabled] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Online Multiplayer State
@@ -722,11 +720,17 @@ const App: React.FC = () => {
                <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-4 md:gap-10">
                   <div className="w-full bg-stone-900/30 p-6 md:p-8 rounded-[3rem] border border-stone-800/50 backdrop-blur-2xl shadow-2xl">
                       <div className="mb-6">
-                        <label className="text-stone-500 text-[10px] uppercase block mb-3 tracking-widest font-bold px-1">Identity ཁྱེད་ཀྱི་མིང་།</label>
+                        <label className="text-stone-500 text-[10px] uppercase flex items-center gap-2 mb-3 tracking-widest font-bold px-1">
+                          <Icons.User className="w-3 h-3" />
+                          <span>Identity ཁྱེད་ཀྱི་མིང་།</span>
+                        </label>
                         <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/40 border-b-2 border-stone-800 focus:border-amber-600 p-3 md:p-4 text-stone-100 outline-none text-center text-xl md:text-2xl font-cinzel tracking-wider" maxLength={15} />
                       </div>
                       <div>
-                        <label className="text-stone-500 text-[10px] uppercase block mb-4 tracking-widest font-bold px-1">Banner ཚོས་གཞི་དོམ།</label>
+                        <label className="text-stone-500 text-[10px] uppercase flex items-center gap-2 mb-4 tracking-widest font-bold px-1">
+                          <Icons.Palette className="w-3 h-3" />
+                          <span>Banner ཚོས་གཞི་དོམ།</span>
+                        </label>
                         <div className="flex justify-between px-2 gap-2">
                           {COLOR_PALETTE.map((c) => ( 
                             <button key={c.hex} onClick={() => setSelectedColor(c.hex)} className={`w-8 h-8 md:w-10 md:h-10 rounded-xl transition-all rotate-45 ${selectedColor === c.hex ? 'border-2 border-white scale-110 shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'opacity-40 hover:opacity-100'}`} style={{ backgroundColor: c.hex }} /> 
@@ -774,7 +778,7 @@ const App: React.FC = () => {
                                 <div className="flex flex-col gap-2">
                                   <input type="text" placeholder="ENTER ROOM CODE ཁང་མིག་ཨང་གྲངས་བྲིས།" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
                                   <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
-                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room ཁང་པའི་ནང་མཉམ་དུ་འཛོམས།'}
+                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room ཁང་པའི་ནང་ mཉམ་དུ་འཛོམས།'}
                                   </button>
                                 </div>
                              </div>
@@ -872,10 +876,6 @@ const App: React.FC = () => {
                                     </div>
                                 );
                             })}
-                        </div>
-
-                        <div className="mt-4">
-                            <MusicPlayer isEnabled={isMusicEnabled} onToggle={() => setIsMusicEnabled(!isMusicEnabled)} />
                         </div>
                     </div>
                     

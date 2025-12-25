@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { BoardState, PlayerColor, MoveOption, MoveResultType, DiceRoll, GamePhase, BoardShell } from '../types';
 import { CENTER_X, CENTER_Y, TOTAL_SHELLS } from '../constants';
+import { Icons } from './Icons';
 import * as d3 from 'd3';
 
 interface BoardProps {
@@ -38,7 +39,7 @@ const CowrieShell: React.FC<{ angle: number; isTarget: boolean; isHovered?: bool
         <path d="M50 20 C 40 40, 40 90, 50 110 C 60 90, 60 40, 50 20" fill={isBlocked ? "#7f1d1d" : "#44403c"} stroke={isBlocked ? "#ef4444" : "#292524"} strokeWidth="1"/>
         <g stroke={isBlocked ? "#fca5a5" : "#e7e5e4"} strokeWidth="2" strokeLinecap="round" opacity="0.8">
            <line x1="48" y1="30" x2="42" y2="30" /><line x1="47" y1="45" x2="40" y2="45" /><line x1="47" y1="60" x2="38" y2="60" /><line x1="47" y1="75" x2="40" y2="75" /><line x1="48" y1="90" x2="42" y2="90" />
-           <line x1="52" y1="30" x2="58" y2="30" /><line x1="53" y1="45" x2="60" y2="45" /><line x1="53" y1="60" x2="62" y2="60" /><line x1="53" y1="75" x2="60" y2="75" /><line x1="52" y1="90" x2="58" y2="90" />
+           <line x1="52" y1="30" x2="58" y2="30" /><line x1="53" y1="45" x2="60" y2="45" /><line x1="53" y1="60" x2="62" y2="60" /><line x1="53" y1="75" x2="60" y2="75" /><line x1="52" y1="30" x2="58" y2="30" />
         </g>
       </svg>
     </div>
@@ -279,7 +280,7 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
                     {stackSize > 0 && owner && !isBeingDragged && (
                         <div className={`absolute z-30 ${owner === currentPlayer && turnPhase === GamePhase.MOVING ? 'cursor-grab active:cursor-grabbing' : ''}`} style={{ transform: `translate(${stackOffX}px, ${stackOffY}px)`, touchAction: 'none' }} onPointerDown={(e) => handlePointerDown(e, shell.id)}>
                            {Array.from({ length: Math.min(stackSize, 9) }).map((_, i) => ( <div key={i} className="absolute left-1/2 -translate-x-1/2 transition-all duration-500" style={{ top: `${-(i * 6)}px`, left: `${Math.sin(i * 0.8) * 3}px`, zIndex: i, transform: `translate(-50%, -50%) rotate(${Math.sin(i * 1.5 + shell.id) * 12}deg)` }}><AncientCoin color={getPlayerColor(owner)} isSelected={false} /></div> ))}
-                           <div className="absolute left-1/2 -translate-x-1/2 bg-stone-900/90 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-xl backdrop-blur-md whitespace-nowrap pointer-events-none flex items-center justify-center" style={{ top: `${-42 - (Math.min(stackSize, 9) * 6)}px`, zIndex: 100, transform: 'translate(-50%, 0)', minWidth: '24px' }}>{stackSize}</div>
+                           <div className="absolute left-1/2 -translate-x-1/2 bg-stone-900/90 text-white text-[11px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-stone-600 shadow-xl backdrop-blur-md whitespace-nowrap pointer-events-none flex items-center justify-center" style={{ top: `${42 - (Math.min(stackSize, 9) * 6)}px`, zIndex: 100, transform: 'translate(-50%, 0)', minWidth: '24px' }}>{stackSize}</div>
                         </div>
                     )}
                 </div>
@@ -306,7 +307,11 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             </div> 
         )}
 
-        <div className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${hasFinishMove ? 'opacity-100 cursor-pointer scale-110 z-50' : 'opacity-40 pointer-events-none z-10'}`} style={{ left: endBtnPos.x, top: endBtnPos.y }} onClick={() => { if (hasFinishMove) { const fm = validMoves.find(m => m.type === MoveResultType.FINISH); if (fm) onSelectMove(fm); } }}><div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transition-colors ${hasFinishMove ? 'border-amber-500 bg-amber-900/20 animate-pulse' : 'border-stone-700'}`}><span className={`font-cinzel font-bold uppercase ${hasFinishMove ? 'text-amber-500' : 'text-stone-600'}`}>END</span></div></div>
+        <div className={`absolute transition-all duration-500 transform -translate-x-1/2 -translate-y-1/2 ${hasFinishMove ? 'opacity-100 cursor-pointer scale-110 z-50' : 'opacity-40 pointer-events-none z-10'}`} style={{ left: endBtnPos.x, top: endBtnPos.y }} onClick={() => { if (hasFinishMove) { const fm = validMoves.find(m => m.type === MoveResultType.FINISH); if (fm) onSelectMove(fm); } }}>
+            <div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center border-dashed transition-colors ${hasFinishMove ? 'border-amber-500 bg-amber-900/20 animate-pulse' : 'border-stone-700'}`}>
+                <Icons.Flag className={`w-10 h-10 ${hasFinishMove ? 'text-amber-500' : 'text-stone-600'}`} />
+            </div>
+        </div>
     </div>
   );
 };

@@ -9,16 +9,14 @@ export const PLAYERS_CONFIG = [
     name: 'Red Player',
     colorHex: '#ef4444', // red-500
     coinsInHand: COINS_PER_PLAYER,
-    coinsFinished: 0,
-    avatar: '🐲'
+    coinsFinished: 0
   },
   {
     id: PlayerColor.Blue,
     name: 'Blue Player',
     colorHex: '#3b82f6', // blue-500
     coinsInHand: COINS_PER_PLAYER,
-    coinsFinished: 0,
-    avatar: '🐯'
+    coinsFinished: 0
   }
 ];
 
@@ -34,8 +32,6 @@ export const COLOR_PALETTE = [
   { id: 'gold', name: 'Gold', hex: '#eab308' },      // Yellow-500
   { id: 'amethyst', name: 'Amethyst', hex: '#a855f7' }, // Purple-500
 ];
-
-export const AVATAR_PRESETS = ["🐲", "🐯", "🦁", "🦅", "☸️"];
 
 // Point to the fetchable virtual asset handled by sw.js
 export const SHO_LOGO_URI = "sho_logo.png";
