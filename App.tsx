@@ -793,7 +793,7 @@ const App: React.FC = () => {
                                         </div>
                                         {isActive && (
                                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-600 px-1.5 py-0.5 rounded-md shadow-lg border border-amber-400/30 whitespace-nowrap">
-                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN ཁྱེད་ཀྱི་ཐེངས།" : "WAITING... སྒུག"}</span>
+                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN ཁྱེད་ཀྱི་རེ་མོས" : "WAITING... སྒུག་བཞིན་ཡོད།"}</span>
                                             </div>
                                         )}
                                     </div>
@@ -838,7 +838,7 @@ const App: React.FC = () => {
                                     )}
                                 </div>
                                 {!isLocalTurn && phase !== GamePhase.GAME_OVER && (
-                                    <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རྒྱག་ཐེངས།</span></div>
+                                    <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རེ་མོས།</span></div>
                                 )}
                             </div> 
                         )}

@@ -210,7 +210,7 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
     
     if (sourceIdx === null) {
         if (targetShell?.owner && targetShell.owner !== currentPlayer) {
-            msg = "BLOCKED: SELECT PIECE ལག་ཁྱི་འདོམ།";
+            msg = "BLOCKED: SELECT PIECE རྡབ་སོང་། ལག་ཁྱི་འདོམ།";
             playBlocked = true;
         } else return;
     } else {
@@ -218,7 +218,7 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
         if (targetShell) {
             if (targetShell.owner && targetShell.owner !== currentPlayer) {
                 if (targetShell.stackSize > moverSize) {
-                    msg = "BLOCKED: TOO LARGE བཀག།";
+                    msg = "BLOCKED: TOO LARGE རྡབ་སོང་།";
                     playBlocked = true;
                 } else {
                     msg = "INVALID DISTANCE ཐག་རིང་ཐུང་མ་འགྲིག།";
