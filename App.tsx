@@ -144,6 +144,22 @@ const SFX = {
     osc2.connect(gain2); gain2.connect(ctx.destination);
     osc2.start(t); osc2.stop(t + 0.3);
   },
+  playBoardBlocked: () => {
+    const ctx = SFX.getContext(); const t = ctx.currentTime;
+    // Metallic clash / shield hit sound
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = 'sawtooth';
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, t);
+    filter.frequency.exponentialRampToValueAtTime(400, t + 0.2);
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.linearRampToValueAtTime(110, t + 0.2);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.2);
+  },
   playPaRa: () => { SFX.playCoinClick(0, 2.0); SFX.playCoinClick(0.1, 2.2); }
 };
 
@@ -911,7 +927,9 @@ const App: React.FC = () => {
                             onInvalidMoveAttempt={(src, target) => {
                                 const shell = board.get(target);
                                 const myId = players[turnIndex].id;
-                                if (src === 0 && shell && shell.owner && shell.owner !== myId && shell.stackSize >= 2) {
+                                if (shell && shell.owner && shell.owner !== myId && shell.stackSize > (src === 0 ? 1 : (board.get(src)?.stackSize || 0))) {
+                                    SFX.playBoardBlocked();
+                                } else if (src === 0 && shell && shell.owner && shell.owner !== myId && shell.stackSize >= 2) {
                                     SFX.playHandBlocked();
                                 } else {
                                     SFX.playBlocked();
