@@ -22,7 +22,6 @@ const generatePlayers = (
     ];
 };
 
-// Internal helper for move validation logic
 const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, moverStackSize: number, isNinerMode: boolean): MoveResultType => {
   if (!target) return MoveResultType.INVALID;
   if (!target.owner) return MoveResultType.PLACE;
@@ -35,7 +34,6 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
   }
 };
 
-// Main function to calculate all valid moves based on Sho rules
 const getAvailableMoves = (
   playerIndex: number,
   board: BoardState,
@@ -45,11 +43,9 @@ const getAvailableMoves = (
   isOpeningPaRa: boolean
 ): MoveOption[] => {
   if (pendingValues.length === 0) return [];
-
   const moves: MoveOption[] = [];
   const player = players[playerIndex];
   const myId = player.id;
-
   const getSubsets = (arr: number[]) => {
     let results = [[] as number[]];
     for (const value of arr) {
@@ -60,7 +56,6 @@ const getAvailableMoves = (
     }
     return results.filter(s => s.length > 0);
   };
-
   const subsets = getSubsets(pendingValues);
   const possibleMoveValues = new Map<number, number[]>();
   for (const s of subsets) {
@@ -69,12 +64,9 @@ const getAvailableMoves = (
       possibleMoveValues.set(sum, s);
     }
   }
-
-  // 1. From Hand
   if (player.coinsInHand > 0) {
     const isOpening = player.coinsInHand === COINS_PER_PLAYER;
     const movingSize = isOpening ? (isOpeningPaRa ? 3 : 2) : 1;
-    
     for (const [dist, consumed] of possibleMoveValues.entries()) {
       if (dist >= 1 && dist <= TOTAL_SHELLS) {
         const target = board.get(dist);
@@ -85,8 +77,6 @@ const getAvailableMoves = (
       }
     }
   }
-
-  // 2. From Board
   for (const [idx, shell] of board.entries()) {
     if (shell.owner === myId && shell.stackSize > 0) {
       for (const [dist, consumed] of possibleMoveValues.entries()) {
@@ -103,7 +93,6 @@ const getAvailableMoves = (
       }
     }
   }
-
   return moves;
 };
 
@@ -117,50 +106,9 @@ const SFX = {
   playStack: () => { SFX.playCoinClick(0, 1.0); SFX.playCoinClick(0.08, 1.1); },
   playKill: () => { SFX.playCoinClick(0, 0.8); SFX.playCoinClick(0.1, 0.9); SFX.playCoinClick(0.25, 0.85); },
   playFinish: () => { SFX.playCoinClick(0, 1.2); SFX.playCoinClick(0.1, 1.5); SFX.playCoinClick(0.2, 2.0); },
-  playBlocked: () => { 
-    const ctx = SFX.getContext(); const t = ctx.currentTime;
-    const osc1 = ctx.createOscillator(); const osc2 = ctx.createOscillator();
-    const gain = ctx.createGain(); osc1.type = 'sawtooth'; osc2.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(80, t); osc2.frequency.setValueAtTime(84, t);
-    gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-    osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
-    osc1.start(t); osc2.start(t); osc1.stop(t + 0.4); osc2.stop(t + 0.4);
-  },
-  playHandBlocked: () => {
-    const ctx = SFX.getContext(); const t = ctx.currentTime;
-    // Heavy impact "Clonk" sound
-    const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
-    osc1.type = 'square'; osc1.frequency.setValueAtTime(150, t);
-    osc1.frequency.exponentialRampToValueAtTime(40, t + 0.2);
-    gain1.gain.setValueAtTime(0.4, t); gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(400, t);
-    osc1.connect(filter); filter.connect(gain1); gain1.connect(ctx.destination);
-    osc1.start(t); osc1.stop(t + 0.3);
-    
-    // Low rumble dissonance
-    const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain();
-    osc2.type = 'sawtooth'; osc2.frequency.setValueAtTime(110, t);
-    osc2.frequency.exponentialRampToValueAtTime(30, t + 0.25);
-    gain2.gain.setValueAtTime(0.3, t); gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-    osc2.connect(gain2); gain2.connect(ctx.destination);
-    osc2.start(t); osc2.stop(t + 0.3);
-  },
-  playBoardBlocked: () => {
-    const ctx = SFX.getContext(); const t = ctx.currentTime;
-    // Metallic clash / shield hit sound
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    osc.type = 'sawtooth';
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1200, t);
-    filter.frequency.exponentialRampToValueAtTime(400, t + 0.2);
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.linearRampToValueAtTime(110, t + 0.2);
-    gain.gain.setValueAtTime(0.25, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-    osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.2);
-  },
+  playBlocked: () => { const ctx = SFX.getContext(); const t = ctx.currentTime; const osc1 = ctx.createOscillator(); const osc2 = ctx.createOscillator(); const gain = ctx.createGain(); osc1.type = 'sawtooth'; osc2.type = 'sawtooth'; osc1.frequency.setValueAtTime(80, t); osc2.frequency.setValueAtTime(84, t); gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4); osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination); osc1.start(t); osc2.start(t); osc1.stop(t + 0.4); osc2.stop(t + 0.4); },
+  playHandBlocked: () => { const ctx = SFX.getContext(); const t = ctx.currentTime; const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain(); osc1.type = 'square'; osc1.frequency.setValueAtTime(150, t); osc1.frequency.exponentialRampToValueAtTime(40, t + 0.2); gain1.gain.setValueAtTime(0.4, t); gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.3); const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(400, t); osc1.connect(filter); filter.connect(gain1); gain1.connect(ctx.destination); osc1.start(t); osc1.stop(t + 0.3); const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain(); osc2.type = 'sawtooth'; osc2.frequency.setValueAtTime(110, t); osc2.frequency.exponentialRampToValueAtTime(30, t + 0.25); gain2.gain.setValueAtTime(0.3, t); gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.3); osc2.connect(gain2); gain2.connect(ctx.destination); osc2.start(t); osc2.stop(t + 0.3); },
+  playBoardBlocked: () => { const ctx = SFX.getContext(); const t = ctx.currentTime; const osc = ctx.createOscillator(); const gain = ctx.createGain(); const filter = ctx.createBiquadFilter(); osc.type = 'sawtooth'; filter.type = 'bandpass'; filter.frequency.setValueAtTime(1200, t); filter.frequency.exponentialRampToValueAtTime(400, t + 0.2); osc.frequency.setValueAtTime(180, t); osc.frequency.linearRampToValueAtTime(110, t + 0.2); gain.gain.setValueAtTime(0.25, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2); osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination); osc.start(t); osc.stop(t + 0.2); },
   playPaRa: () => { SFX.playCoinClick(0, 2.0); SFX.playCoinClick(0.1, 2.2); }
 };
 
@@ -207,7 +155,6 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  // Online Multiplayer State
   const [peer, setPeer] = useState<Peer | null>(null);
   const [connection, setConnection] = useState<DataConnection | null>(null);
   const [myPeerId, setMyPeerId] = useState<string>('');
@@ -215,29 +162,23 @@ const App: React.FC = () => {
   const [isPeerConnecting, setIsPeerConnecting] = useState(false);
   const [onlineLobbyStatus, setOnlineLobbyStatus] = useState<'IDLE' | 'WAITING' | 'CONNECTED'>('IDLE');
   
-  // Audio Streaming State
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const [mediaCall, setMediaCall] = useState<MediaConnection | null>(null);
 
-  // Fix GamePhase type inference in useRef
   const gameStateRef = useRef({ board, players, turnIndex, phase: phase as GamePhase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa });
   useEffect(() => { 
     gameStateRef.current = { board, players, turnIndex, phase: phase as GamePhase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
   }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa]);
 
   useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
+    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const addLog = useCallback((msg: string, type: GameLog['type'] = 'info') => { setLogs(prev => [{ id: Date.now().toString() + Math.random(), message: msg, type }, ...prev].slice(50)); }, []);
 
-  // Gemini "Sho Bshad" Transcription Logic
   const transcribeInvocation = async (audioBlob: Blob) => {
     try {
       const base64Audio = await blobToBase64(audioBlob);
@@ -283,7 +224,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Sync state over P2P
   const broadcastPacket = useCallback((packet: NetworkPacket) => {
     if (connection && connection.open) {
       connection.send(packet);
@@ -305,7 +245,14 @@ const App: React.FC = () => {
   }, [addLog]);
 
   useEffect(() => {
-    const handleResize = () => { if (boardContainerRef.current) { const { width, height } = boardContainerRef.current.getBoundingClientRect(); setBoardScale(Math.max(Math.min((width - 20) / 800, (height - 20) / 800, 1), 0.3)); } };
+    const handleResize = () => { 
+      if (boardContainerRef.current) { 
+        const { width, height } = boardContainerRef.current.getBoundingClientRect(); 
+        // Allow scaling beyond 1.0 for full-screen desktop experience, with a minimum floor of 0.2
+        const calculatedScale = Math.min(width - 40, height - 40) / 800;
+        setBoardScale(Math.max(calculatedScale, 0.2)); 
+      } 
+    };
     window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize);
   }, [gameMode]);
 
@@ -313,11 +260,9 @@ const App: React.FC = () => {
     const s = gameStateRef.current;
     setPendingMoveValues([]);
     setIsOpeningPaRa(false);
-    
     if (!isRemote && (gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST)) {
       broadcastPacket({ type: 'SKIP_REQ' });
     }
-
     if (s.extraRolls > 0) {
         setExtraRolls(prev => prev - 1);
         setPhase(GamePhase.ROLLING);
@@ -332,61 +277,35 @@ const App: React.FC = () => {
   const performRoll = async (forcedRoll?: DiceRoll) => {
     const s = gameStateRef.current; if (s.phase !== GamePhase.ROLLING) return;
     setIsRolling(true); SFX.playShake(); 
-    
-    // Start recording for sho bshad if it's our turn
     const isMe = (gameMode === GameMode.ONLINE_HOST && turnIndex === 0) || (gameMode === GameMode.ONLINE_GUEST && turnIndex === 1) || (gameMode !== GameMode.ONLINE_HOST && gameMode !== GameMode.ONLINE_GUEST && turnIndex === 0);
     if (isMe && !forcedRoll) startRecording();
-
     await new Promise(resolve => setTimeout(resolve, 800)); 
-    
     let d1, d2;
-    if (forcedRoll) {
-        d1 = forcedRoll.die1;
-        d2 = forcedRoll.die2;
-    } else {
-        d1 = Math.floor(Math.random() * 6) + 1;
-        d2 = Math.floor(Math.random() * 6) + 1;
-    }
-
+    if (forcedRoll) { d1 = forcedRoll.die1; d2 = forcedRoll.die2; } 
+    else { d1 = Math.floor(Math.random() * 6) + 1; d2 = Math.floor(Math.random() * 6) + 1; }
     if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 2) { d1 = 2; d2 = 6; }
-    
     const pos1 = forcedRoll?.visuals ? { x: forcedRoll.visuals.d1x, y: forcedRoll.visuals.d1y, r: forcedRoll.visuals.d1r } : getRandomDicePos();
     let pos2 = forcedRoll?.visuals ? { x: forcedRoll.visuals.d2x, y: forcedRoll.visuals.d2y, r: forcedRoll.visuals.d2r } : getRandomDicePos();
-    
     if (!forcedRoll) {
         let attempts = 0;
-        while (Math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2) < 45 && attempts < 15) {
-            pos2 = getRandomDicePos();
-            attempts++;
-        }
+        while (Math.sqrt((pos1.x - pos2.x)**2 + (pos1.y - pos2.y)**2) < 45 && attempts < 15) { pos2 = getRandomDicePos(); attempts++; }
     }
-
     const isPaRa = (d1 === 1 && d2 === 1), total = d1 + d2;
     const newRoll: DiceRoll = { die1: d1, die2: d2, isPaRa, total, visuals: { d1x: pos1.x, d1y: pos1.y, d1r: pos1.r, d2x: pos2.x, d2y: pos2.y, d2r: pos2.r } };
-    
     if (!forcedRoll && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) {
         broadcastPacket({ type: 'ROLL_REQ', payload: newRoll });
     }
-
     setLastRoll(newRoll); setIsRolling(false); SFX.playLand();
-    
     if (isPaRa) { 
         SFX.playPaRa(); 
         const newCount = s.paRaCount + 1;
-        if (newCount === 3) {
-            addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly! པ་ར་གསུམ་བརྩེགས་ཀྱི་རྒྱལ་ཁ།`, 'alert');
-            setPhase(GamePhase.GAME_OVER);
-            return;
-        }
+        if (newCount === 3) { addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly!`, 'alert'); setPhase(GamePhase.GAME_OVER); return; }
         setPaRaCount(newCount); 
-        addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again. པ་ར་བབས་སོང་།`, 'alert'); 
+        addLog(`PA RA (1,1)! Stacked bonuses: ${newCount}. Roll again.`, 'alert'); 
     } 
     else { 
         const isOpening = players[s.turnIndex].coinsInHand === COINS_PER_PLAYER;
-        if (s.paRaCount > 0 && isOpening) {
-            setIsOpeningPaRa(true);
-            addLog(`OPENING PA RA! You can place 3 coins! པ་ར་བབས་སོང་། ལག་ཁྱི་གསུམ་འཇོག་ཆོག`, 'alert');
-        }
+        if (s.paRaCount > 0 && isOpening) { setIsOpeningPaRa(true); addLog(`OPENING PA RA! You can place 3 coins!`, 'alert'); }
         const movePool = [...Array(s.paRaCount).fill(2), total];
         setPendingMoveValues(movePool); 
         setPaRaCount(0); 
@@ -400,22 +319,13 @@ const App: React.FC = () => {
     const currentMovesList = getAvailableMoves(s.turnIndex, s.board, s.players, s.pendingMoveValues, s.isNinerMode, s.isOpeningPaRa);
     const move = currentMovesList.find(m => m.sourceIndex === sourceIdx && m.targetIndex === targetIdx);
     if (!move) return;
-
     if (!isRemote && (s.gameMode === GameMode.ONLINE_HOST || s.gameMode === GameMode.ONLINE_GUEST)) {
         broadcastPacket({ type: 'MOVE_REQ', payload: { sourceIdx, targetIdx } });
     }
-
-    // Advance tutorial step 4 -> 5 after successful move
-    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) {
-      setTutorialStep(5);
-    }
-
+    if (s.gameMode === GameMode.TUTORIAL && s.tutorialStep === 4) setTutorialStep(5);
     const nb: BoardState = new Map(s.board); 
     const player = s.players[s.turnIndex]; 
-    let localExtraRollInc = 0; 
-    let movingStackSize = 0; 
-    let newPlayers = [...s.players];
-
+    let localExtraRollInc = 0; let movingStackSize = 0; let newPlayers = [...s.players];
     if (move.sourceIndex === 0) { 
         const isOpening = newPlayers[s.turnIndex].coinsInHand === COINS_PER_PLAYER; 
         movingStackSize = isOpening ? (s.isOpeningPaRa ? 3 : 2) : 1; 
@@ -426,123 +336,73 @@ const App: React.FC = () => {
         movingStackSize = source.stackSize; 
         nb.set(move.sourceIndex, { ...source, stackSize: 0, owner: null, isShoMo: false }); 
     }
-
     if (move.type === MoveResultType.FINISH) { 
-        SFX.playFinish();
-        newPlayers[s.turnIndex].coinsFinished += movingStackSize; 
+        SFX.playFinish(); newPlayers[s.turnIndex].coinsFinished += movingStackSize; 
         addLog(`${player.name} finished ${movingStackSize} coin(s)!`, 'action');
     } else {
         const target = nb.get(move.targetIndex)!;
         if (move.type === MoveResultType.KILL) { 
-            SFX.playKill();
-            const eIdx = players.findIndex(p => p.id === target.owner); 
+            SFX.playKill(); const eIdx = players.findIndex(p => p.id === target.owner); 
             if (eIdx !== -1) newPlayers[eIdx].coinsInHand += target.stackSize; 
             nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: false }); 
             localExtraRollInc = 1; 
-            addLog(`${player.name} killed a stack and earned an extra roll! གསོད་རིན་ཤོ་ཐེངས་གཅིག་ཐོབ་སོང་།`, 'alert');
+            addLog(`${player.name} killed a stack and earned an extra roll!`, 'alert');
         } else if (move.type === MoveResultType.STACK) { 
-            SFX.playStack();
-            nb.set(move.targetIndex, { ...target, stackSize: target.stackSize + movingStackSize, owner: player.id, isShoMo: false }); 
+            SFX.playStack(); nb.set(move.targetIndex, { ...target, stackSize: target.stackSize + movingStackSize, owner: player.id, isShoMo: false }); 
             localExtraRollInc = 1; 
-            addLog(`${player.name} stacked and earned a bonus turn! བརྩེགས་རིན་ཤོ་ཐེངས་གཅིག་ཐོབ་སོང་།`, 'action');
+            addLog(`${player.name} stacked and earned a bonus turn!`, 'action');
         } else {
-            SFX.playCoinClick();
-            nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize >= 2) });
+            SFX.playCoinClick(); nb.set(move.targetIndex, { ...target, stackSize: movingStackSize, owner: player.id, isShoMo: (move.sourceIndex === 0 && movingStackSize >= 2) });
         }
     }
-
-    setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); 
-    setLastMove({ ...move, id: Date.now() });
-
+    setPlayers(newPlayers); setBoard(nb); setSelectedSourceIndex(null); setLastMove({ ...move, id: Date.now() });
     let nextMoves = [...s.pendingMoveValues]; 
     move.consumedValues.forEach(val => { const idx = nextMoves.indexOf(val); if (idx > -1) nextMoves.splice(idx, 1); });
-
     if (newPlayers[s.turnIndex].coinsFinished >= COINS_PER_PLAYER) { setPhase(GamePhase.GAME_OVER); return; }
-
     const movesLeft = getAvailableMoves(s.turnIndex, nb, newPlayers, nextMoves, s.isNinerMode, s.isOpeningPaRa);
-    
     if (localExtraRollInc > 0) setExtraRolls(prev => prev + localExtraRollInc);
-
     if (nextMoves.length === 0 || movesLeft.length === 0) {
-        setPendingMoveValues([]); 
-        setIsOpeningPaRa(false);
+        setPendingMoveValues([]); setIsOpeningPaRa(false);
         const totalExtraRolls = s.extraRolls + localExtraRollInc;
-        if (totalExtraRolls > 0) {
-            setExtraRolls(prev => prev - 1);
-            setPhase(GamePhase.ROLLING);
-            addLog(`${player.name} used an extra roll!`, 'info');
-        } else {
-            setPhase(GamePhase.ROLLING); 
-            setTurnIndex((prev) => (prev + 1) % players.length);
-        }
-    } else {
-        setPendingMoveValues(nextMoves);
-    }
+        if (totalExtraRolls > 0) { setExtraRolls(prev => prev - 1); setPhase(GamePhase.ROLLING); addLog(`${player.name} used an extra roll!`, 'info'); } 
+        else { setPhase(GamePhase.ROLLING); setTurnIndex((prev) => (prev + 1) % players.length); }
+    } else { setPendingMoveValues(nextMoves); }
   };
 
-  // P2P Media Stream Management
   const setupMediaCall = async (targetId: string, peerInstance: Peer) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
       const call = peerInstance.call(targetId, stream);
       handleCall(call);
-    } catch (err) {
-      console.warn("Could not access microphone for P2P audio:", err);
-    }
+    } catch (err) { console.warn("Could not access microphone for P2P audio:", err); }
   };
 
   const handleCall = (call: MediaConnection) => {
     setMediaCall(call);
     call.on('stream', (remoteStream) => {
-      if (!remoteAudioRef.current) {
-        remoteAudioRef.current = new Audio();
-      }
+      if (!remoteAudioRef.current) { remoteAudioRef.current = new Audio(); }
       remoteAudioRef.current.srcObject = remoteStream;
       remoteAudioRef.current.play();
-      
-      // Analyze remote voice activity
       const audioCtx = new AudioContext();
       const source = audioCtx.createMediaStreamSource(remoteStream);
       const analyzer = audioCtx.createAnalyser();
       analyzer.fftSize = 256;
       source.connect(analyzer);
       const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-      
-      const checkActivity = () => {
-        analyzer.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        setIsOpponentSpeaking(average > 30);
-        requestAnimationFrame(checkActivity);
-      };
+      const checkActivity = () => { analyzer.getByteFrequencyData(dataArray); const average = dataArray.reduce((a, b) => a + b) / dataArray.length; setIsOpponentSpeaking(average > 30); requestAnimationFrame(checkActivity); };
       checkActivity();
     });
   };
 
-  // PeerJS Online Setup Logic
   const startOnlineHost = () => {
     setOnlineLobbyStatus('WAITING');
     const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const newPeer = new Peer(roomCode, {
-      config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
-    });
-    
+    const newPeer = new Peer(roomCode, { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
     newPeer.on('open', (id) => setMyPeerId(id));
-    newPeer.on('connection', (conn) => {
-      setConnection(conn);
-      setupPeerEvents(conn, true);
-    });
-    newPeer.on('call', (incomingCall) => {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            localStreamRef.current = stream;
-            incomingCall.answer(stream);
-            handleCall(incomingCall);
-        });
-    });
-    newPeer.on('error', (err) => {
-      if (err.type === 'unavailable-id') startOnlineHost();
-      else { addLog("Network Error: " + err.type, 'alert'); setOnlineLobbyStatus('IDLE'); }
-    });
+    newPeer.on('connection', (conn) => { setConnection(conn); setupPeerEvents(conn, true); });
+    newPeer.on('call', (incomingCall) => { navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { localStreamRef.current = stream; incomingCall.answer(stream); handleCall(incomingCall); }); });
+    newPeer.on('error', (err) => { if (err.type === 'unavailable-id') startOnlineHost(); else { addLog("Network Error: " + err.type, 'alert'); setOnlineLobbyStatus('IDLE'); } });
     setPeer(newPeer);
   };
 
@@ -552,59 +412,31 @@ const App: React.FC = () => {
     const newPeer = new Peer();
     newPeer.on('open', (id) => {
       const conn = newPeer.connect(roomId.toUpperCase().trim(), { reliable: true });
-      conn.on('open', () => {
-        setConnection(conn);
-        setIsPeerConnecting(false);
-        setupPeerEvents(conn, false);
-        setupMediaCall(roomId.toUpperCase().trim(), newPeer);
-      });
-      conn.on('error', () => {
-        addLog("Failed to join room. ནོར་འཛོལ།", 'alert');
-        setIsPeerConnecting(false);
-        newPeer.destroy();
-      });
+      conn.on('open', () => { setConnection(conn); setIsPeerConnecting(false); setupPeerEvents(conn, false); setupMediaCall(roomId.toUpperCase().trim(), newPeer); });
+      conn.on('error', () => { addLog("Failed to join room.", 'alert'); setIsPeerConnecting(false); newPeer.destroy(); });
     });
-    newPeer.on('call', (incomingCall) => {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            localStreamRef.current = stream;
-            incomingCall.answer(stream);
-            handleCall(incomingCall);
-        });
-    });
+    newPeer.on('call', (incomingCall) => { navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { localStreamRef.current = stream; incomingCall.answer(stream); handleCall(incomingCall); }); });
     newPeer.on('error', () => setIsPeerConnecting(false));
     setPeer(newPeer);
   };
 
   const setupPeerEvents = (conn: DataConnection, isHost: boolean) => {
-    if (!isHost) {
-      conn.send({ type: 'SYNC', payload: { playerName, color: selectedColor } });
-    }
-
+    if (!isHost) { conn.send({ type: 'SYNC', payload: { playerName, color: selectedColor } }); }
     conn.on('data', (data: any) => {
       const packet = data as NetworkPacket;
       switch (packet.type) {
         case 'SYNC':
-          if (packet.payload?.type === 'CHANT') {
-            addLog(`Opponent Chanted: ${packet.payload.text}`, 'info');
-            return;
-          }
+          if (packet.payload?.type === 'CHANT') { addLog(`Opponent Chanted: ${packet.payload.text}`, 'info'); return; }
           if (isHost) {
             let guestColor = packet.payload.color;
-            if (guestColor === selectedColor) {
-               guestColor = COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6';
-            }
+            if (guestColor === selectedColor) { guestColor = COLOR_PALETTE.find(c => c.hex !== selectedColor)?.hex || '#3b82f6'; }
             const guestInfo = { name: packet.payload.playerName, color: guestColor };
             const hostInfo = { name: playerName, color: selectedColor };
-            setGameMode(GameMode.ONLINE_HOST);
-            setOnlineLobbyStatus('CONNECTED');
-            initializeGame(hostInfo, guestInfo);
+            setGameMode(GameMode.ONLINE_HOST); setOnlineLobbyStatus('CONNECTED'); initializeGame(hostInfo, guestInfo);
             conn.send({ type: 'SYNC', payload: { hostInfo, guestInfo, isNinerMode } });
           } else {
             const { hostInfo, guestInfo, isNinerMode: serverNiner } = packet.payload;
-            setIsNinerMode(serverNiner);
-            setGameMode(GameMode.ONLINE_GUEST);
-            setOnlineLobbyStatus('CONNECTED');
-            initializeGame(hostInfo, guestInfo);
+            setIsNinerMode(serverNiner); setGameMode(GameMode.ONLINE_GUEST); setOnlineLobbyStatus('CONNECTED'); initializeGame(hostInfo, guestInfo);
           }
           break;
         case 'ROLL_REQ': performRoll(packet.payload); break;
@@ -612,28 +444,14 @@ const App: React.FC = () => {
         case 'SKIP_REQ': handleSkipTurn(true); break;
       }
     });
-
-    conn.on('close', () => {
-      addLog("Connection closed. མཐུད་ལམ་ཆད་སོང་།", 'alert');
-      setOnlineLobbyStatus('IDLE');
-      setGameMode(null);
-      if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
-    });
+    conn.on('close', () => { addLog("Connection closed.", 'alert'); setOnlineLobbyStatus('IDLE'); setGameMode(null); if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop()); });
   };
 
-  useEffect(() => { 
-    return () => { 
-        if (peer) peer.destroy(); 
-        if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
-    }; 
-  }, [peer]);
+  useEffect(() => { return () => { if (peer) peer.destroy(); if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop()); }; }, [peer]);
 
-  // AI Strategic Loop (handles AI mode and Tutorial opponent)
   useEffect(() => {
     const s = gameStateRef.current;
-    // Guide moves automatically in Tutorial once step 5 is reached
     const isTutorialOpponentTurn = s.gameMode === GameMode.TUTORIAL && s.turnIndex === 1 && s.tutorialStep >= 5;
-    
     if ((s.gameMode === GameMode.AI || isTutorialOpponentTurn) && s.turnIndex === 1 && s.phase !== GamePhase.GAME_OVER && !s.isRolling) {
       const timer = setTimeout(() => {
         const currentS = gameStateRef.current;
@@ -659,39 +477,13 @@ const App: React.FC = () => {
   const currentValidMovesList = phase === GamePhase.MOVING ? getAvailableMoves(turnIndex, board, players, pendingMoveValues, isNinerMode, isOpeningPaRa) : [];
   const visualizedMoves = selectedSourceIndex !== null ? currentValidMovesList.filter(m => m.sourceIndex === selectedSourceIndex) : [];
   const shouldHighlightHand = phase === GamePhase.MOVING && (gameMode !== GameMode.AI || turnIndex === 0) && players[turnIndex].coinsInHand > 0;
-
-  const isLocalTurn = (() => {
-    if (gameMode === GameMode.ONLINE_HOST) return turnIndex === 0;
-    if (gameMode === GameMode.ONLINE_GUEST) return turnIndex === 1;
-    if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0;
-    return true;
-  })();
-
-  const toggleMic = async () => {
-    if (!isMicEnabled) {
-        try {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
-            setIsMicEnabled(true);
-        } catch (e) {
-            addLog("Microphone access denied. ཤོ་བཤད་བེད་སྤྱོད་མི་ཐུབ།", 'alert');
-        }
-    } else {
-        setIsMicEnabled(false);
-    }
-  };
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
-  };
+  const isLocalTurn = (() => { if (gameMode === GameMode.ONLINE_HOST) return turnIndex === 0; if (gameMode === GameMode.ONLINE_GUEST) return turnIndex === 1; if (gameMode === GameMode.AI || gameMode === GameMode.TUTORIAL) return turnIndex === 0; return true; })();
+  const toggleMic = async () => { if (!isMicEnabled) { try { await navigator.mediaDevices.getUserMedia({ audio: true }); setIsMicEnabled(true); } catch (e) { addLog("Microphone access denied.", 'alert'); } } else { setIsMicEnabled(false); } };
+  const handleInstallClick = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { setDeferredPrompt(null); } };
 
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col md:flex-row fixed inset-0 font-sans mobile-landscape-row overflow-hidden">
-        {phase === GamePhase.SETUP && gameMode !== null && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-amber-500 font-cinzel">Initializing...</div>}
+        {phase === GamePhase.SETUP && gameMode !== null && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-amber-500 font-cinzel text-center">Initializing... འགོ་འཛུགས་ཀྱིན་ཡོད།</div>}
         {gameMode === GameMode.TUTORIAL && <TutorialOverlay step={tutorialStep} onNext={() => setTutorialStep(prev => prev + 1)} onClose={() => { setGameMode(null); setTutorialStep(0); }} />}
         <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} isNinerMode={isNinerMode} onToggleNinerMode={() => setIsNinerMode(prev => !prev)} />
         <style dangerouslySetInnerHTML={{__html: `
@@ -703,6 +495,22 @@ const App: React.FC = () => {
           .animate-active-pulse { animation: activePulse 2s ease-in-out infinite; }
           @keyframes voiceActive { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
           .voice-indicator { animation: voiceActive 0.6s ease-in-out infinite; }
+
+          /* Responsive fixes for landscape mode and small heights */
+          @media (max-height: 540px) and (orientation: landscape) {
+            .mobile-landscape-row { flex-direction: row !important; }
+            .mobile-landscape-sidebar { 
+                width: 280px !important; 
+                height: 100% !important; 
+                border-bottom: none !important; 
+                border-right: 1px solid #292524 !important; 
+                flex-shrink: 0 !important;
+                overflow-y: auto !important;
+            }
+            .mobile-landscape-board { width: 100% !important; height: 100% !important; flex-grow: 1 !important; }
+            .mobile-landscape-compact-stats { padding: 0.75rem !important; }
+            .mobile-landscape-hide-logs { display: none !important; }
+          }
         `}} />
         
         {!gameMode && (
@@ -714,7 +522,7 @@ const App: React.FC = () => {
                    </h1>
                    <div className="h-px w-32 bg-amber-900/40 mb-4" />
                    <p className="text-stone-400 tracking-[0.3em] uppercase text-[12px] md:text-sm text-center font-bold">Traditional Tibetan Dice Game</p>
-                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
+                   <p className="text-amber-600/60 text-lg md:text-xl font-serif mt-2 text-center">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད།</p>
                </div>
                
                <div className="flex-grow flex flex-col items-center justify-center w-full max-w-md gap-4 md:gap-10">
@@ -762,27 +570,22 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་ཏུ་སྣེ་ལེན་ཁང་གཉེར།</h3>
-                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གཤམ་གྱི་ཨང་གྲངས་ཁ་གཏད་ལ་གཏོང་།</p>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room</h3>
+                                <p className="text-stone-400 text-xs font-serif">Share this code with your opponent.</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">
                                 <button className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-amber-500 transition-colors shadow-lg flex items-center justify-center gap-3" onClick={() => { if(!myPeerId) startOnlineHost(); else navigator.clipboard.writeText(myPeerId); }}>
-                                    {myPeerId ? (
-                                      <>
-                                        <span>ROOM CODE: {myPeerId}</span>
-                                        <Icons.Clipboard className="w-5 h-5" />
-                                      </>
-                                    ) : 'Generate Room Code ཁང་མིག་ཨང་གྲངས་སྐྲུན།'}
+                                    {myPeerId ? ( <><span>ROOM CODE: {myPeerId}</span><Icons.Clipboard className="w-5 h-5" /></> ) : 'Generate Room Code'}
                                 </button>
                                 <div className="h-px w-full bg-stone-800" />
                                 <div className="flex flex-col gap-2">
-                                  <input type="text" placeholder="ENTER ROOM CODE ཁང་མིག་ཨང་གྲངས་བྲིས།" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
+                                  <input type="text" placeholder="ENTER ROOM CODE" value={targetPeerId} onChange={(e) => setTargetPeerId(e.target.value.toUpperCase())} className="bg-black/40 border border-stone-800 p-4 rounded-xl text-center font-cinzel text-lg outline-none focus:border-amber-600" />
                                   <button className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${targetPeerId.length >= 4 ? 'bg-amber-600 text-white shadow-lg' : 'bg-stone-800 text-stone-500'}`} disabled={targetPeerId.length < 4 || isPeerConnecting} onClick={() => joinOnlineGame(targetPeerId)}>
-                                      {isPeerConnecting ? 'Connecting... མཐུད་ཀྱིན་ཡོད།' : 'Join Room ཁང་པའི་ནང་ mཉམ་དུ་འཛོམས།'}
+                                      {isPeerConnecting ? 'Connecting...' : 'Join Room'}
                                   </button>
                                 </div>
                              </div>
-                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel རྩིས་མེད་གཏོང་།</button>
+                             <button className="text-stone-500 hover:text-white uppercase text-[10px] tracking-widest font-bold" onClick={() => { if(peer) peer.destroy(); setOnlineLobbyStatus('IDLE'); }}>Cancel</button>
                           </div>
                         )}
                     </div>
@@ -792,26 +595,21 @@ const App: React.FC = () => {
                <div className="w-full flex flex-col items-center gap-10 mt-10">
                   <div className="flex flex-col items-center gap-4">
                       {deferredPrompt && (
-                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-bounce mb-2">
-                            Install App རྩེད་མོ་འཇོག་པ།
-                        </button>
+                        <button onClick={handleInstallClick} className="bg-amber-100 text-stone-900 px-6 py-2 rounded-full font-bold uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.2)] animate-bounce mb-2">Install App</button>
                       )}
                       <div className="flex gap-16">
                           <button onClick={() => { setGameMode(GameMode.TUTORIAL); initializeGame({name: playerName, color: selectedColor}, {name: 'Guide', color: '#999'}, true); }} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                               <Icons.FastForward className="w-6 h-6 mb-1 opacity-60 group-hover:opacity-100" />
                               <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Tutorial</span>
-                              <span className="text-[10px] font-serif mt-1 opacity-60">རྩེ་སྟངས་མྱུར་ཁྲིད།</span>
                           </button>
                           <button onClick={() => setShowRules(true)} className="text-stone-500 hover:text-amber-500 flex flex-col items-center group transition-colors">
                               <Icons.HelpCircle className="w-6 h-6 mb-1 opacity-60 group-hover:opacity-100" />
                               <span className="font-bold uppercase text-[11px] tracking-widest font-cinzel">Rules</span>
-                              <span className="text-[10px] font-serif mt-1 opacity-60">ཤོའི་་སྒྲིག་གཞི།</span>
                           </button>
                       </div>
                   </div>
                   <div className="flex flex-col items-center">
                       <span className="text-stone-600 text-[10px] uppercase tracking-[0.4em] font-bold">Games Commenced</span>
-                      <span className="text-stone-600 text-[9px] font-serif uppercase tracking-widest mt-0.5">འཛམ་གླིང་ཁྱོན་ཡོངས་སུ་རྩེད་གྲངས།</span>
                       <span className={`text-amber-700/80 font-bold text-4xl tabular-nums transition-all duration-700 mt-2 ${isCounterPulsing ? 'scale-110 text-amber-500 brightness-125' : ''}`}>
                         {globalPlayCount.toLocaleString()}
                       </span>
@@ -822,11 +620,11 @@ const App: React.FC = () => {
 
         {gameMode && (
             <>
-                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[45dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar">
+                <div className="w-full md:w-1/4 flex flex-col border-b md:border-b-0 md:border-r border-stone-800 bg-stone-950 z-20 shadow-2xl h-[38dvh] md:h-full order-1 overflow-hidden flex-shrink-0 mobile-landscape-sidebar no-scrollbar">
                     <div className="p-1.5 md:p-4 flex flex-col gap-0 md:gap-3 flex-shrink-0 bg-stone-950 mobile-landscape-compact-stats">
                         <header className="flex justify-between items-center border-b border-stone-800 pb-1 md:pb-4">
                             <div className="flex items-center gap-1 cursor-pointer" onClick={() => { if (peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }}>
-                                <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel">ཤོ Sho</h1>
+                                <h1 className="text-amber-500 text-sm md:text-2xl font-cinzel whitespace-nowrap">ཤོ Sho</h1>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={toggleMic} className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${isMicEnabled ? 'bg-amber-600 border-amber-400 text-white' : 'bg-stone-800 border-stone-700 text-stone-500'}`}>
@@ -835,7 +633,7 @@ const App: React.FC = () => {
                                 {(gameMode === GameMode.ONLINE_HOST || gameMode === GameMode.ONLINE_GUEST) && (
                                     <div className="flex items-center gap-1.5 bg-green-950/40 border border-green-700/50 px-2 py-0.5 rounded-full">
                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                        <span className="text-[8px] uppercase font-bold text-green-400">Online དྲ་ཐོག</span>
+                                        <span className="text-[8px] uppercase font-bold text-green-400">Online</span>
                                     </div>
                                 )}
                                 <button onClick={() => setShowRules(true)} className="w-8 h-8 rounded-full border border-stone-600 text-stone-400 flex items-center justify-center">
@@ -860,9 +658,7 @@ const App: React.FC = () => {
                                         <div className="flex items-center gap-1.5 mb-1.5 relative">
                                             <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse' : ''}`} style={{ backgroundColor: p.colorHex }}></div>
                                             <h3 className={`font-bold truncate text-[9px] md:text-[11px] font-serif ${isActive ? 'brightness-125' : ''}`} style={{ color: p.colorHex }}>{p.name}</h3>
-                                            {isSpeaking && (
-                                                <div className="absolute -right-1 -top-1 w-2 h-2 bg-amber-500 rounded-full voice-indicator" />
-                                            )}
+                                            {isSpeaking && ( <div className="absolute -right-1 -top-1 w-2 h-2 bg-amber-500 rounded-full voice-indicator" /> )}
                                         </div>
                                         <div className="flex justify-between text-[11px] md:text-[14px] text-stone-100 font-bold font-cinzel">
                                             <div className="flex flex-col"><span className="text-[7px] text-stone-500">Hand ལག་པ།</span><span>{p.coinsInHand}</span></div>
@@ -870,7 +666,7 @@ const App: React.FC = () => {
                                         </div>
                                         {isActive && (
                                             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-amber-600 px-1.5 py-0.5 rounded-md shadow-lg border border-amber-400/30 whitespace-nowrap">
-                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN ཁྱེད་ཀྱི་རེ་མོས" : "WAITING... སྒུག་བཞིན་ཡོད།"}</span>
+                                                <span className="text-[7px] md:text-[9px] text-white font-bold uppercase tracking-[0.1em]">{isMe ? "YOUR TURN" : "WAITING..."}</span>
                                             </div>
                                         )}
                                     </div>
@@ -879,13 +675,12 @@ const App: React.FC = () => {
                         </div>
                     </div>
                     
-                    <div className="px-2 md:px-4 pb-1 flex flex-col gap-1 flex-shrink-0 bg-stone-950">
+                    <div className="px-2 md:px-4 pb-1 mt-auto flex flex-col gap-1 flex-shrink-0 bg-stone-950">
                         {phase === GamePhase.GAME_OVER ? ( 
                             <div className="text-center p-2 md:p-4 bg-stone-800 rounded-xl border border-amber-500 animate-pulse">
                                 <h2 className="text-base md:text-xl text-amber-400 font-cinzel">Victory རྒྱལ་ཁ།</h2>
                                 <button onClick={() => { if(peer) peer.destroy(); setGameMode(null); setOnlineLobbyStatus('IDLE'); }} className="bg-amber-600 text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] mt-2 flex items-center justify-center gap-2 mx-auto">
-                                  <Icons.LogOut className="w-4 h-4" />
-                                  <span>Exit Game ཕྱིར་དོན།</span>
+                                  <Icons.LogOut className="w-4 h-4" /><span>Exit Game</span>
                                 </button>
                             </div> 
                         ) : ( 
@@ -894,17 +689,8 @@ const App: React.FC = () => {
                                 <div className="flex gap-1">
                                     <div onClick={() => { 
                                         if (phase === GamePhase.MOVING && isLocalTurn) { 
-                                          if (players[turnIndex].coinsInHand > 0) {
-                                            setSelectedSourceIndex(0);
-                                            // Advance Step 3 to 4 in Tutorial
-                                            if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) {
-                                              setTutorialStep(4);
-                                            }
-                                          } else { 
-                                            SFX.playBlocked(); 
-                                            setHandShake(true); 
-                                            setTimeout(() => setHandShake(false), 400); 
-                                          } 
+                                          if (players[turnIndex].coinsInHand > 0) { setSelectedSourceIndex(0); if (gameMode === GameMode.TUTORIAL && tutorialStep === 3) { setTutorialStep(4); } } 
+                                          else { SFX.playBlocked(); setHandShake(true); setTimeout(() => setHandShake(false), 400); } 
                                         } 
                                       }} className={`flex-1 p-2 md:p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${handShake ? 'animate-hand-blocked' : selectedSourceIndex === 0 ? 'border-amber-500 bg-amber-900/40 shadow-inner scale-95' : (shouldHighlightHand && isLocalTurn) ? 'border-amber-500/80 bg-amber-900/10 animate-pulse' : 'border-stone-800 bg-stone-900/50'} ${!isLocalTurn ? 'opacity-30 grayscale' : ''}`}>
                                         <span className={`font-bold uppercase font-cinzel text-[11px] md:text-lg ${(shouldHighlightHand && isLocalTurn) ? 'text-amber-400' : ''}`}>From Hand</span>
@@ -917,9 +703,7 @@ const App: React.FC = () => {
                                         </button> 
                                     )}
                                 </div>
-                                {!isLocalTurn && (
-                                    <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move... ཁ་གཏད་ཀྱི་རེ་མོས།</span></div>
-                                )}
+                                {!isLocalTurn && ( <div className="text-center py-2 animate-pulse"><span className="text-amber-600 text-[10px] uppercase font-bold">Opponent's Move...</span></div> )}
                             </div> 
                         )}
                     </div>
@@ -931,13 +715,9 @@ const App: React.FC = () => {
                             </div>
                         ))}
                     </div>
-
-                    <div className="p-2 md:p-6 bg-stone-950 flex-shrink-0 text-center opacity-40 mt-auto">
-                         <span className="font-serif text-[10px] md:text-xs text-stone-500 tracking-widest">བོད་ཀྱི་སྲོལ་རྒྱུན་ཤོ་རྩེད། Traditional Sho</span>
-                    </div>
                 </div>
                 
-                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[55dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
+                <div className="flex-grow relative bg-[#1a1715] flex items-center justify-center overflow-hidden order-2 h-[62dvh] md:h-full mobile-landscape-board" ref={boardContainerRef}>
                     <div style={{ transform: `scale(${boardScale})`, width: 800, height: 800 }} className="transition-transform duration-300">
                         <Board 
                             boardState={board} players={players} validMoves={visualizedMoves} onSelectMove={(m) => { if (isLocalTurn) performMove(m.sourceIndex, m.targetIndex); }} 
@@ -946,13 +726,9 @@ const App: React.FC = () => {
                             onInvalidMoveAttempt={(src, target) => {
                                 const shell = board.get(target);
                                 const myId = players[turnIndex].id;
-                                if (shell && shell.owner && shell.owner !== myId && shell.stackSize > (src === 0 ? 1 : (board.get(src)?.stackSize || 0))) {
-                                    SFX.playBoardBlocked();
-                                } else if (src === 0 && shell && shell.owner && shell.owner !== myId && shell.stackSize >= 2) {
-                                    SFX.playHandBlocked();
-                                } else {
-                                    SFX.playBlocked();
-                                }
+                                if (shell && shell.owner && shell.owner !== myId && shell.stackSize > (src === 0 ? 1 : (board.get(src)?.stackSize || 0))) { SFX.playBoardBlocked(); } 
+                                else if (src === 0 && shell && shell.owner && shell.owner !== myId && shell.stackSize >= 2) { SFX.playHandBlocked(); } 
+                                else { SFX.playBlocked(); }
                             }} 
                         />
                     </div>
