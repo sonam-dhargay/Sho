@@ -28,11 +28,9 @@ const getMoveResultType = (myId: PlayerColor, target: BoardShell | undefined, mo
   if (!target.owner) return MoveResultType.PLACE;
   
   if (target.owner === myId) {
-    // Stacking is always valid if you land on your own piece, provided it doesn't exceed 9 if niner mode is off
     if (!isNinerMode && target.stackSize + moverStackSize > 9) return MoveResultType.INVALID;
     return MoveResultType.STACK;
   } else {
-    // Kill rule: Can kill if mover stack is >= target stack. 
     if (target.stackSize > moverStackSize) return MoveResultType.INVALID;
     return MoveResultType.KILL;
   }
@@ -73,6 +71,7 @@ const getAvailableMoves = (
   const findConsumption = (dist: number, isFlexible: boolean) => {
     const exact = allSubsets.find(s => s.sum === dist);
     if (exact) return exact.values;
+    // Only allow overshooting for finishing the game (exiting shell 64)
     if (isFlexible) {
       const over = allSubsets.find(s => s.sum > dist);
       if (over) return over.values;
@@ -88,8 +87,8 @@ const getAvailableMoves = (
       const resType = getMoveResultType(myId, target, movingSize, isNinerMode);
       if (resType === MoveResultType.INVALID) continue;
       
-      // PERMISSION: Stacking from hand is common, allow flexible distance if it's your own piece
-      const consumed = findConsumption(targetIdx, resType === MoveResultType.STACK); 
+      // Board moves must be EXACT. We removed "fuzzy" stacking logic.
+      const consumed = findConsumption(targetIdx, false); 
       if (consumed) {
         moves.push({ sourceIndex: 0, targetIndex: targetIdx, consumedValues: consumed, type: resType });
       }
@@ -101,11 +100,10 @@ const getAvailableMoves = (
       for (let targetIdx = idx + 1; targetIdx <= TOTAL_SHELLS + 1; targetIdx++) {
         const dist = targetIdx - idx;
         if (targetIdx > TOTAL_SHELLS) {
-          if (dist <= totalSum) {
-            const consumed = findConsumption(dist, true);
-            if (consumed) {
+          // Finishing is the ONLY move that allows overshooting
+          const consumed = findConsumption(dist, true);
+          if (consumed) {
                 moves.push({ sourceIndex: idx, targetIndex: TOTAL_SHELLS + 1, consumedValues: consumed, type: MoveResultType.FINISH });
-            }
           }
           continue;
         }
@@ -113,8 +111,8 @@ const getAvailableMoves = (
         const resType = getMoveResultType(myId, target, shell.stackSize, isNinerMode);
         if (resType === MoveResultType.INVALID) continue;
         
-        // Allow flexible distance (overshot) when landing on own pieces mid-board
-        const consumed = findConsumption(dist, resType === MoveResultType.STACK);
+        // Internal board moves must be exact. Stacking does not stop short.
+        const consumed = findConsumption(dist, false);
         if (consumed) {
           moves.push({ sourceIndex: idx, targetIndex: targetIdx, consumedValues: consumed, type: resType });
         }
@@ -199,6 +197,11 @@ const App: React.FC = () => {
     gameStateRef.current = { board, players, turnIndex, phase: phase as GamePhase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa }; 
   }, [board, players, turnIndex, phase, pendingMoveValues, paRaCount, extraRolls, isRolling, isNinerMode, gameMode, tutorialStep, isOpeningPaRa]);
 
+  // Clear selectedSourceIndex when turn changes to avoid incorrect glowing during opponent turns
+  useEffect(() => {
+    setSelectedSourceIndex(null);
+  }, [turnIndex]);
+
   useEffect(() => {
     const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
     window.addEventListener('beforeinstallprompt', handler);
@@ -213,14 +216,12 @@ const App: React.FC = () => {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              { text: "Listen to this short Tibetan invocation for a dice game (Sho). Transcribe the Tibetan chant. If you recognize traditional phrases like 'Para Penpa Tashi Zhug' or similar sho bshad, provide the Tibetan text. Return only the transcription." },
-              { inlineData: { mimeType: audioBlob.type, data: base64Audio } }
-            ]
-          }
-        ]
+        contents: {
+          parts: [
+            { text: "Listen to this short Tibetan invocation for a dice game (Sho). Transcribe the Tibetan chant. If you recognize traditional phrases like 'Para Penpa Tashi Zhug' or similar sho bshad, provide the Tibetan text. Return only the transcription." },
+            { inlineData: { mimeType: audioBlob.type, data: base64Audio } }
+          ]
+        }
       });
       const text = response.text?.trim();
       if (text) {
@@ -311,6 +312,8 @@ const App: React.FC = () => {
         const newCount = s.paRaCount + 1;
         if (newCount === 3) { addLog(`TRIPLE PA RA! ${players[turnIndex].name} wins instantly!`, 'alert'); setPhase(GamePhase.GAME_OVER); return; }
         setPaRaCount(newCount); 
+        // Pa Ra bonus (2) added to move pool
+        setPendingMoveValues(prev => [...prev, 2]);
         addLog(`PA RA (1,1)! Bonus of 2 added. Roll again.`, 'alert'); 
     } 
     else { 
@@ -606,7 +609,7 @@ const App: React.FC = () => {
                         {onlineLobbyStatus === 'WAITING' && (
                           <div className="flex flex-col items-center gap-6">
                              <div className="text-center">
-                                <h3 className="text-xl font-cinzel mb-2">Host Online Room<br/><span className="text-sm font-serif">དྲ་ཐོག་སྣེ་ལེན་ཁང་གཉེར།</span></h3>
+                                <h3 className="text-xl font-cinzel mb-2">Host Online Room དྲ་ཐོག་སྣེ་ལེན་ཁང་གཉེར།</h3>
                                 <p className="text-stone-400 text-xs font-serif">Share this code with your opponent. གསང་རྟགས་འདི་ཁ་གཏད་ལ་གཏོང་།</p>
                              </div>
                              <div className="flex flex-col gap-4 w-full">

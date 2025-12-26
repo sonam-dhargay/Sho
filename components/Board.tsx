@@ -109,24 +109,26 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
   const getPlayerColor = (id: PlayerColor | null): string => { if (!id) return '#666'; const p = players.find(p => p.id === id); return p ? p.colorHex : '#666'; };
 
   const shells = useMemo(() => {
-    const weights = Array.from({ length: TOTAL_SHELLS }, (_, i) => {
-        const shell = boardState.get(i + 1);
-        const hasNeighbor = (i > 0 && (boardState.get(i)?.stackSize || 0) > 0) || (i < TOTAL_SHELLS - 1 && (boardState.get(i + 2)?.stackSize || 0) > 0);
-        return 1.0 + (shell && shell.stackSize > 0 ? 1.8 : (hasNeighbor ? 0.6 : 0));
-    });
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    let cumulativeWeight = 0;
     return Array.from({ length: TOTAL_SHELLS }, (_, i) => {
-      const weight = weights[i];
-      const t = (cumulativeWeight + weight / 2) / totalWeight; cumulativeWeight += weight;
-      const baseAngle = t * Math.PI * 4.6 + 2.5; const baseRadius = 110 + (t * 270); 
-      const angle = baseAngle + (pseudoRandom((i + 1) * 13.5) - 0.5) * 0.12; const radius = baseRadius + (pseudoRandom((i + 1) * 7.2) - 0.5) * 16;
-      const x = CENTER_X + radius * Math.cos(angle); const y = CENTER_Y + radius * Math.sin(angle);
-      const nextT = Math.min(1, t + 0.01); const nextAngle = nextT * Math.PI * 4.6 + 2.5; const nextRadius = 110 + (nextT * 270);
-      const nextX = CENTER_X + nextRadius * Math.cos(nextAngle); const nextY = CENTER_Y + nextRadius * Math.sin(nextAngle);
+      const t = (i + 0.5) / TOTAL_SHELLS;
+      const baseAngle = t * Math.PI * 4.6 + 2.5; 
+      const baseRadius = 110 + (t * 270); 
+      
+      const angle = baseAngle + (pseudoRandom((i + 1) * 13.5) - 0.5) * 0.12; 
+      const radius = baseRadius + (pseudoRandom((i + 1) * 7.2) - 0.5) * 16;
+      
+      const x = CENTER_X + radius * Math.cos(angle); 
+      const y = CENTER_Y + radius * Math.sin(angle);
+      
+      const nextT = Math.min(1, (i + 1.5) / TOTAL_SHELLS); 
+      const nextAngle = nextT * Math.PI * 4.6 + 2.5; 
+      const nextRadius = 110 + (nextT * 270);
+      const nextX = CENTER_X + nextRadius * Math.cos(nextAngle); 
+      const nextY = CENTER_Y + nextRadius * Math.sin(nextAngle);
+      
       return { id: i + 1, x, y, angle: Math.atan2(nextY - y, nextX - x), data: boardState.get(i + 1) };
     });
-  }, [boardState]);
+  }, []); 
 
   const endBtnPos = useMemo(() => { if (shells.length === 0) return { x: 700, y: 700 }; const last = shells[shells.length - 1]; return { x: last.x + Math.cos(last.angle) * 95, y: last.y + Math.sin(last.angle) * 95 }; }, [shells]);
 
@@ -266,8 +268,12 @@ export const Board: React.FC<BoardProps> = ({ boardState, players, validMoves, o
             const shellData = boardState.get(shell.id); const stackSize = shellData?.stackSize || 0; const owner = shellData?.owner;
             const isBeingDragged = dragState.isDragging && dragState.sourceIndex === shell.id; const isSource = selectedSource === shell.id;
             const isShaking = shakeShellId === shell.id; const hasBlockedMsg = blockedFeedback?.shellId === shell.id;
-            const shellOffX = Math.cos(shell.angle) * -12 + Math.cos(shell.angle + Math.PI / 2) * -10; const shellOffY = Math.sin(shell.angle) * -12 + Math.sin(shell.angle + Math.PI / 2) * -10;
-            const stackOffX = Math.cos(shell.angle) * 28 + Math.cos(shell.angle + Math.PI / 2) * -10; const stackOffY = Math.sin(shell.angle) * 28 + Math.sin(shell.angle + Math.PI / 2) * -10;
+            // Updated longitudinal and lateral offsets for Cowrie Shell
+            const shellOffX = Math.cos(shell.angle) * -15 + Math.cos(shell.angle + Math.PI / 2) * -12;
+            const shellOffY = Math.sin(shell.angle) * -15 + Math.sin(shell.angle + Math.PI / 2) * -12;
+            // Increased repulsive weight for Stack (past and beside)
+            const stackOffX = Math.cos(shell.angle) * 44 + Math.cos(shell.angle + Math.PI / 2) * -36;
+            const stackOffY = Math.sin(shell.angle) * 44 + Math.sin(shell.angle + Math.PI / 2) * -36;
             return (
                 <div key={shell.id} data-shell-id={shell.id} className={`absolute flex items-center justify-center transition-all duration-500 ease-in-out ${isTarget ? 'z-40' : 'z-20'} ${isShaking ? 'animate-blocked-outline rounded-full' : ''}`} style={{ left: shell.x, top: shell.y, width: 40, height: 40, transform: 'translate(-50%, -50%)', touchAction: 'none' }}
                     onClick={(e) => { e.stopPropagation(); if (!dragState.isDragging) { if (isTarget && moveTarget) { onSelectMove(moveTarget); } else if (selectedSource !== undefined && selectedSource !== null && selectedSource !== shell.id) { if (owner === currentPlayer) { onShellClick?.(shell.id); } else { triggerBlockedFeedback(shell.id, selectedSource); } } else { triggerBlockedFeedback(shell.id, selectedSource ?? null); onShellClick?.(shell.id); } } }}
