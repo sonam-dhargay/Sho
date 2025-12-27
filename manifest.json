@@ -2,7 +2,7 @@
   "name": "Sho - Traditional Tibetan Dice Game",
   "short_name": "Sho",
   "description": "Race through 64 shells, stack coins, and yell Sho Bshad in this traditional Tibetan dice game.",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#0c0a09",
   "theme_color": "#d97706",
